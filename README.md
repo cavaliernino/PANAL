@@ -28,3 +28,10 @@ available information to enhance the help provided.
 The last intended escalation of this solution must be using governments resources around the world, to make medics that 
 provides positive test results to COVID-19, input this info to PANAL platform and thus, provide the best possible input 
 to the PANAL system. In this way, PANAL can link the medic input to the patient's phone, being able to calculate the risk of infection with the best granularity, without any data related to the infected individual, keeping inbound of any risk to people privacity. PANAL is completely an Open Source project, to be able to ensure this. The world's population need to be assured that the information is not used en any other means that to help to stop this COVID-19 and any pandemic with rapid spreading abilities. The medical software needs to be trusted to be effective, and PANAL is designed with this base principle as a solid foundation.
+
+The PANAL Space Apps Challenge COVID-19 team is:
+
+Carolina Retamal - Concepción, Chile
+Marcos Maldonado - Santiago, Chile
+Nino Bozzi - Viña del Mar, Chile
+Patricio Alarcón - Viña del Mar, Chile
