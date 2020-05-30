@@ -1,4 +1,11 @@
 <resources>
     <string name="app_name">PANAL</string>
     <string name="title_activity_maps">Map</string>
+
+    <string name="title_activity_splash">SplashActivity</string>
+    <string name="dummy_button">Dummy Button</string>
+    <string name="dummy_content">DUMMY\nCONTENT</string>
+    <string name="splash_logo">PANAL Splash Logo</string>
+
+    <string name="title_activity_alert">AlertActivity</string>
 </resources>
