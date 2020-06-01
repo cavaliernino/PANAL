@@ -6,6 +6,8 @@
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
     <string name="splash_logo">PANAL Splash Logo</string>
+    <string name="text_you_are_home">YOU ARE HOME</string>
+    <string name="text_still">STILL, YOUR CHANCE OF INFECTION IS</string>
 
     <string name="title_activity_alert">AlertActivity</string>
 </resources>
