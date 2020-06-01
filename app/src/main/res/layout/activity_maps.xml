@@ -51,12 +51,32 @@
                     android:textSize="12sp" />
             </androidx.appcompat.widget.LinearLayoutCompat>
 
-            <ProgressBar
+            <RelativeLayout
                 android:layout_width="80dp"
                 android:layout_height="80dp"
-                android:layout_marginTop="33dp"
-                android:indeterminate="false"
-                android:progress="37"/>
+                android:layout_marginTop="33dp">
+
+                <ProgressBar
+                    android:id="@+id/prog"
+                    style="?android:progressBarStyleHorizontal"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:indeterminate="false"
+                    android:progress="90"
+                    android:progressDrawable="@drawable/circle" />
+
+                <TextView
+                    android:id="@+id/prog_text"
+                    android:layout_width="55dp"
+                    android:layout_height="33dp"
+                    android:layout_marginLeft="17dp"
+                    android:layout_marginTop="20dp"
+                    android:fontFamily="@font/audiowide_regular"
+                    android:text="37%"
+                    android:textColor="#FFFFFF"
+                    android:textSize="24sp" />
+            </RelativeLayout>
+
 
         </androidx.appcompat.widget.LinearLayoutCompat>
         <fragment

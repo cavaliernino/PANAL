@@ -1,8 +1,11 @@
 package cl.panal
 
+import android.app.DownloadManager
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
+import android.net.ConnectivityManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -21,6 +24,13 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import kotlinx.android.synthetic.main.activity_maps.*
+import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.longToast
+import org.jetbrains.anko.uiThread
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListener, OnMapClickListener {
 
@@ -146,6 +156,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             //latLngList.add(p0)
             //markerList.add(marker)
             drawGrid(p0)
+            getPointInfo(latLngList)
         }
 
     }
@@ -179,6 +190,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
             point.latitude, point.longitude + 0.1, results)
         val lngConv = results[0] * 10
 
+        latLngList.clear()
         for (i in 0 until 361 step 60) {
             val y = radius * Math.cos(i * Math.PI / 180)
             val x = radius * Math.sin(i * Math.PI / 180)
@@ -192,7 +204,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
         polygon?.strokeColor = strokeColor
         polygon?.strokeWidth = 10.0F
         polygon?.fillColor = fillColor
-        latLngList.clear()
     }
 
     private fun setUpMap() {
@@ -206,5 +217,48 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback, OnMarkerClickListe
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
+    }
+
+    /**
+     * Communicates with server, sends a point and gets array with risk percentage for grid
+     */
+    private fun getPointInfo(pointArray: ArrayList<LatLng>): IntArray{
+
+        val gridRisk = IntArray(7){ 0 }
+
+        val json = "{'input':[{'lat':0.0,'lng':0.0},{'lat':0.0,'lng':0.0},{'lat':0.0,'lng':0.0},{'lat':0.0,'lng':0.0},{'lat':0.0,'lng':0.0},{'lat':0.0,'lng':0.0},{'lat':0.0,'lng':0.0}]}"
+        val url = "http://fuego.bozzialvarez.cl:8444?x="+json
+        val obj = URL(url)
+        var responseStr = ""
+        doAsync {
+            with(obj.openConnection() as HttpURLConnection) {
+                requestMethod = "GET"
+                BufferedReader(InputStreamReader(inputStream)).use {
+                    val response = StringBuffer()
+
+                    var inputLine = it.readLine()
+                    while (inputLine != null) {
+                        response.append(inputLine)
+                        inputLine = it.readLine()
+                    }
+                    it.close()
+                    responseStr = "$response"
+                }
+            }
+            uiThread { changePercent(50) }
+        }
+
+        return gridRisk
+    }
+
+    private fun changePercent(percent: Int) {
+        prog.progress = percent
+        prog_text.text = "" + percent + "%"
+    }
+
+    private fun isNetworkConnected(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager //1
+        val networkInfo = connectivityManager.activeNetworkInfo //2
+        return networkInfo != null && networkInfo.isConnected //3
     }
 }
