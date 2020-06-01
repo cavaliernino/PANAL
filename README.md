@@ -35,3 +35,7 @@ Carolina Retamal - Concepción, Chile
 Marcos Maldonado - Santiago, Chile
 Nino Bozzi - Viña del Mar, Chile
 Patricio Alarcón - Viña del Mar, Chile
+
+
+Branches: master  --> Android App
+          backend --> Django backend
