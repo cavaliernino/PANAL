@@ -12,7 +12,6 @@ import argparse
 import datetime as dt
 import sys
 import tempfile
-import urllib.request
 from pathlib import Path
 
 import pandas as pd
@@ -32,8 +31,7 @@ def ingest_scan(scan: goes.Scan, res: int = DEFAULT_RES) -> pd.DataFrame:
     import h3
 
     with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
-        urllib.request.urlretrieve(scan.url, tmp.name)
-        path = tmp.name
+        path = goes.download(scan.url, tmp.name)
 
     try:
         df = goes.extract_detections(path)

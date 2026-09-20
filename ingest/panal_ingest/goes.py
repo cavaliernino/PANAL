@@ -12,9 +12,10 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import time
 from datetime import date as dt_date
 from dataclasses import dataclass
-from typing import Iterator
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 import numpy as np
@@ -141,6 +142,30 @@ def latest_scan(now: dt.datetime | None = None) -> Scan:
     if not scans:
         raise RuntimeError("no GOES scans published in the last two hours")
     return scans[-1]
+
+
+def download(url: str, dest: str, attempts: int = 4, backoff: float = 1.5) -> str:
+    """Fetch a file, retrying transient network failures.
+
+    S3 resets connections often enough that a single reset must not kill an
+    ingest that is meant to run every ten minutes, or a backfill that is
+    sixty files deep.
+    """
+    import shutil
+
+    last: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            with urlopen(url, timeout=120) as resp, open(dest, "wb") as fh:
+                shutil.copyfileobj(resp, fh)
+            return dest
+        except (ConnectionResetError, TimeoutError, URLError, HTTPError, OSError) as exc:
+            last = exc
+            if isinstance(exc, HTTPError) and 400 <= exc.code < 500 and exc.code != 429:
+                raise  # not transient: a missing key will never appear
+            if attempt < attempts - 1:
+                time.sleep(backoff * (2 ** attempt))
+    raise RuntimeError(f"download failed after {attempts} attempts: {url}") from last
 
 
 def geolocate(x: np.ndarray, y: np.ndarray, proj) -> tuple[np.ndarray, np.ndarray]:

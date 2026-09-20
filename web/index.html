@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PANAL · Replay</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css">
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b23; --panel-2:#1d232d; --line:#2a323f;
+    --ink:#e8edf4; --ink-dim:#94a3b8; --ink-faint:#64748b;
+    --accent:#f59e0b; --hot:#ef4444;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    overflow:hidden;
+  }
+  #map{position:absolute; inset:0}
+  .maplibregl-ctrl-attrib{font-size:10px}
+
+  /* ── cabecera ───────────────────────────── */
+  header{
+    position:absolute; z-index:3; top:0; left:0; right:0;
+    padding:calc(10px + var(--safe-t)) 14px 10px;
+    background:linear-gradient(180deg,rgba(14,17,22,.94) 60%,transparent);
+    pointer-events:none; display:flex; gap:12px; align-items:flex-start;
+  }
+  .brand{font-weight:700; letter-spacing:.14em; font-size:13px; color:var(--accent)}
+  .ttl{font-weight:600; font-size:15px; margin-top:1px}
+  .sub{color:var(--ink-dim); font-size:12px}
+  .badge{
+    margin-left:auto; pointer-events:auto; display:flex; gap:6px; flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  .chip{
+    background:var(--panel); border:1px solid var(--line); border-radius:999px;
+    padding:4px 10px; font-size:11px; color:var(--ink-dim); white-space:nowrap;
+  }
+  .chip b{color:var(--ink); font-weight:600}
+
+  /* ── panel de estado ────────────────────── */
+  .stats{
+    position:absolute; z-index:3; top:calc(74px + var(--safe-t)); left:14px;
+    background:rgba(22,27,35,.93); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; min-width:190px; backdrop-filter:blur(8px);
+  }
+  .clock{font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1}
+  .clock small{font-size:12px; font-weight:500; color:var(--ink-faint); margin-left:6px}
+  .kv{display:flex; justify-content:space-between; gap:18px; margin-top:7px; font-size:12px}
+  .kv span{color:var(--ink-dim)}
+  .kv b{font-variant-numeric:tabular-nums}
+  .spark{display:block; width:100%; height:38px; margin-top:10px}
+
+  /* ── leyenda ────────────────────────────── */
+  .legend{
+    position:absolute; z-index:3; right:14px; bottom:calc(112px + var(--safe-b));
+    background:rgba(22,27,35,.93); border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; font-size:11px; backdrop-filter:blur(8px); max-width:200px;
+  }
+  .legend h4{margin:0 0 7px; font-size:11px; color:var(--ink-dim); font-weight:600;
+    text-transform:uppercase; letter-spacing:.06em}
+  .ramp{display:flex; height:9px; border-radius:3px; overflow:hidden; margin-bottom:4px}
+  .ramp i{flex:1}
+  .ramp-lbl{display:flex; justify-content:space-between; color:var(--ink-faint)}
+  .legend hr{border:0; border-top:1px solid var(--line); margin:9px 0}
+  .lrow{display:flex; align-items:center; gap:7px; margin-top:5px; color:var(--ink-dim)}
+  .swatch{width:15px; height:13px; border-radius:2px; background:#ef4444; flex:none}
+
+  /* ── controles ──────────────────────────── */
+  .dock{
+    position:absolute; z-index:3; left:0; right:0; bottom:0;
+    padding:10px 14px calc(10px + var(--safe-b));
+    background:linear-gradient(0deg,rgba(14,17,22,.96) 65%,transparent);
+  }
+  .bar{display:flex; align-items:center; gap:12px}
+  button.play{
+    flex:none; width:42px; height:42px; border-radius:50%; border:1px solid var(--line);
+    background:var(--accent); color:#1a1205; font-size:17px; cursor:pointer;
+    display:grid; place-items:center;
+  }
+  button.play:hover{filter:brightness(1.08)}
+  input[type=range]{
+    flex:1; min-width:0; accent-color:var(--accent); height:26px; cursor:pointer;
+  }
+  .rate{
+    flex:none; background:var(--panel); border:1px solid var(--line); color:var(--ink);
+    border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer;
+  }
+  .foot{
+    margin-top:7px; font-size:10.5px; color:var(--ink-faint); line-height:1.5;
+  }
+  .foot b{color:var(--ink-dim); font-weight:600}
+
+  .loading{
+    position:absolute; inset:0; z-index:5; display:grid; place-items:center;
+    background:var(--bg); color:var(--ink-dim); font-size:13px; text-align:center;
+    padding:24px;
+  }
+
+  @media (max-width:640px){
+    .stats{left:10px; right:10px; top:calc(78px + var(--safe-t)); min-width:0}
+    .clock{font-size:24px}
+    .spark{height:30px}
+    .legend{display:none}
+    header{flex-wrap:wrap}
+    .badge{margin-left:0; width:100%; justify-content:flex-start}
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<header>
+  <div>
+    <div class="brand">PANAL</div>
+    <div class="ttl" id="h-title">—</div>
+    <div class="sub" id="h-sub">—</div>
+  </div>
+  <div class="badge">
+    <span class="chip" id="c-sat">—</span>
+    <span class="chip">cadencia <b>10 min</b></span>
+    <span class="chip">píxel <b>2 km</b></span>
+    <span class="chip" id="c-style" style="cursor:pointer">mapa: oscuro</span>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="clock"><span id="s-clock">--:--</span><small>hora de Chile</small></div>
+  <div class="kv"><span>píxeles</span><b id="s-px">0</b></div>
+  <div class="kv"><span>FRP total</span><b id="s-frp">0 MW</b></div>
+  <div class="kv"><span>celdas H3</span><b id="s-cells">0</b></div>
+  <svg class="spark" id="spark" preserveAspectRatio="none"></svg>
+</div>
+
+<div class="legend">
+  <h4>Potencia radiativa</h4>
+  <div class="ramp">
+    <i style="background:#fde68a"></i><i style="background:#fbbf24"></i>
+    <i style="background:#f97316"></i><i style="background:#ef4444"></i>
+    <i style="background:#b91c1c"></i>
+  </div>
+  <div class="ramp-lbl"><span>0</span><span>100</span><span>500</span><span>1500</span><span>3200+ MW</span></div>
+  <hr>
+  <h4>Confianza</h4>
+  <div class="lrow"><span class="swatch" style="opacity:.85"></span> confirmada</div>
+  <div class="lrow"><span class="swatch" style="opacity:.5"></span> probable</div>
+  <div class="lrow"><span class="swatch" style="opacity:.3; outline:1px dashed #ef4444; outline-offset:-1px"></span> baja</div>
+</div>
+
+<div class="dock">
+  <div class="bar">
+    <button class="play" id="btn" aria-label="Reproducir">▶</button>
+    <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Línea de tiempo">
+    <select class="rate" id="rate" aria-label="Velocidad">
+      <option value="260">1×</option>
+      <option value="130" selected>2×</option>
+      <option value="60">4×</option>
+      <option value="25">10×</option>
+    </select>
+  </div>
+  <div class="foot" id="foot">—</div>
+</div>
+
+<div class="loading" id="loading">Cargando el replay…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.js"></script>
+<script>
+const STYLES = [
+  ["oscuro",   "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"],
+  ["claro",    "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"],
+  ["callejero","https://tiles.openfreemap.org/styles/liberty"],
+];
+let styleIdx = 0;
+
+// Confidence drives opacity; colour is reserved for intensity. Paired with a
+// dashed outline on the weakest tier so it does not rely on opacity alone.
+const OPACITY = {
+  good: .85, saturated: .85, high_probability: .6,
+  medium_probability: .45, cloud_contaminated: .35, low_probability: .3,
+};
+const WEAK = new Set(["low_probability", "cloud_contaminated"]);
+
+const $ = id => document.getElementById(id);
+let DATA, map, i = 0, timer = null;
+
+// Calibrated against the observed per-cell FRP distribution in the Viña 2024
+// replay: median 254 MW, p90 1,259 MW, max 3,195 MW. A plain log10 ramp put
+// the median already in the reds, which washes the whole map hot and destroys
+// the growth story the replay exists to show. The floor spreads the low end.
+const FRP_FLOOR = 20, FRP_MAX = 3200;
+
+function frpColor(mw) {
+  const s = Math.max(0, Math.min(1,
+    Math.log10(1 + Math.max(0, mw) / FRP_FLOOR) / Math.log10(1 + FRP_MAX / FRP_FLOOR)));
+  const stops = [[0,[253,230,138]],[.3,[251,191,36]],[.55,[249,115,22]],
+                 [.78,[239,68,68]],[1,[185,28,28]]];
+  for (let k = 1; k < stops.length; k++) {
+    if (s <= stops[k][0]) {
+      const [a, ca] = stops[k-1], [b, cb] = stops[k];
+      const u = (s - a) / (b - a || 1);
+      return `rgb(${ca.map((v,j)=>Math.round(v+(cb[j]-v)*u)).join(",")})`;
+    }
+  }
+  return "rgb(185,28,28)";
+}
+
+function featuresFor(frame) {
+  return {
+    type: "FeatureCollection",
+    features: frame.cells.map(c => ({
+      type: "Feature",
+      properties: {
+        color: frpColor(c.f),
+        opacity: OPACITY[c.c] ?? .4,
+        weak: WEAK.has(c.c) ? 1 : 0,
+        frp: c.f, n: c.n, conf: c.c,
+      },
+      geometry: { type: "Polygon", coordinates: [DATA.geometry[c.h].concat([DATA.geometry[c.h][0]])] },
+    })),
+  };
+}
+
+function paint(idx) {
+  i = Math.max(0, Math.min(idx, DATA.frames.length - 1));
+  const f = DATA.frames[i];
+  map.getSource("cells")?.setData(featuresFor(f));
+
+  $("s-clock").textContent = f.local;
+  $("s-px").textContent = f.px;
+  $("s-frp").textContent = f.frp.toLocaleString("es-CL") + " MW";
+  $("s-cells").textContent = f.cells.length;
+  $("scrub").value = i;
+  drawSpark();
+}
+
+function drawSpark() {
+  const svg = $("spark"), W = 200, H = 38;
+  const max = Math.max(1, ...DATA.frames.map(f => f.frp));
+  const pts = DATA.frames.map((f, k) => [
+    (k / (DATA.frames.length - 1)) * W,
+    H - (f.frp / max) * (H - 3) - 1.5,
+  ]);
+  const d = pts.map((p, k) => (k ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const x = pts[i][0].toFixed(1);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML =
+    `<path d="${d} L${W} ${H} L0 ${H} Z" fill="rgba(245,158,11,.16)"/>` +
+    `<path d="${d}" fill="none" stroke="#f59e0b" stroke-width="1.4"/>` +
+    `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#e8edf4" stroke-width="1" opacity=".75"/>`;
+}
+
+function addLayers() {
+  if (map.getSource("cells")) return;
+  map.addSource("cells", { type: "geojson", data: featuresFor(DATA.frames[i]) });
+  map.addLayer({
+    id: "cells-fill", type: "fill", source: "cells",
+    paint: { "fill-color": ["get","color"], "fill-opacity": ["get","opacity"] },
+  });
+  // line-dasharray is not a data-driven property in MapLibre, so the two
+  // confidence treatments need their own layers rather than one expression.
+  map.addLayer({
+    id: "cells-line", type: "line", source: "cells",
+    filter: ["==", ["get","weak"], 0],
+    paint: { "line-color": ["get","color"], "line-width": 1.6, "line-opacity": .9 },
+  });
+  map.addLayer({
+    id: "cells-line-weak", type: "line", source: "cells",
+    filter: ["==", ["get","weak"], 1],
+    paint: {
+      "line-color": ["get","color"], "line-width": 1,
+      "line-opacity": .9, "line-dasharray": [2, 2],
+    },
+  });
+}
+
+function play(on) {
+  clearInterval(timer); timer = null;
+  $("btn").textContent = on ? "❚❚" : "▶";
+  if (!on) return;
+  timer = setInterval(() => {
+    if (i >= DATA.frames.length - 1) { paint(0); }
+    else paint(i + 1);
+  }, +$("rate").value);
+}
+
+function setStyle(idx) {
+  styleIdx = idx % STYLES.length;
+  const [name, url] = STYLES[styleIdx];
+  $("c-style").textContent = "mapa: " + name;
+  map.setStyle(url);
+  map.once("styledata", addLayers);
+}
+
+(async function init() {
+  try {
+    DATA = await (await fetch("data/vina2024.json")).json();
+  } catch (e) {
+    $("loading").textContent = "No se pudo cargar data/vina2024.json. " +
+      "Genera el replay con: python scripts/build_replay.py --preset vina2024 -o ../web/data/vina2024.json";
+    return;
+  }
+  const m = DATA.meta;
+
+  $("h-title").textContent = m.title;
+  $("h-sub").textContent = m.subtitle;
+  $("c-sat").textContent = m.satellite.replace("noaa-", "").toUpperCase();
+  $("foot").innerHTML =
+    `Detecciones de <b>${m.product}</b> sobre celdas <b>H3 r${m.res}</b>. ` +
+    `Primera detección <b>${m.first_detection}</b>, máximo <b>${m.peak_local}</b> ` +
+    `(${m.peak_frp.toLocaleString("es-CL")} MW). ` +
+    `Datos geoestacionarios de fuego son <b>provisionales</b> y de 2 km: indican ` +
+    `que algo ocurre cerca, no una posición exacta. ` +
+    `Esto es un <b>registro de detección, no un contrafactual</b> — no implica que ` +
+    `nadie hubiera actuado distinto.`;
+
+  map = new maplibregl.Map({
+    container: "map", style: STYLES[0][1],
+    center: m.center, zoom: m.zoom, attributionControl: { compact: true },
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+
+  // MapLibre emits `load` from inside its render loop, so a tab that is
+  // backgrounded or render-throttled never fires it and the page would sit
+  // on the spinner forever. Boot from whichever signal arrives first, and
+  // make it idempotent.
+  let booted = false;
+  function boot() {
+    if (booted || !map.isStyleLoaded()) return;
+    booted = true;
+    addLayers();
+    $("loading")?.remove();
+    $("scrub").max = DATA.frames.length - 1;
+    paint(0);
+  }
+  map.on("load", boot);
+  map.on("styledata", boot);
+  map.on("idle", boot);
+  boot();
+
+  map.on("click", "cells-fill", e => {
+    const p = e.features[0].properties;
+    new maplibregl.Popup({ closeButton: false })
+      .setLngLat(e.lngLat)
+      .setHTML(`<div style="font:12px system-ui;color:#111">
+        <b>${(+p.frp).toLocaleString("es-CL")} MW</b><br>
+        ${p.n} píxel${p.n > 1 ? "es" : ""} · ${p.conf}</div>`)
+      .addTo(map);
+  });
+  map.on("mouseenter", "cells-fill", () => map.getCanvas().style.cursor = "pointer");
+  map.on("mouseleave", "cells-fill", () => map.getCanvas().style.cursor = "");
+
+  $("btn").onclick = () => play(!timer);
+  $("scrub").oninput = e => { play(false); paint(+e.target.value); };
+  $("rate").onchange = () => { if (timer) play(true); };
+  $("c-style").onclick = () => setStyle(styleIdx + 1);
+  addEventListener("keydown", e => {
+    if (e.code === "Space") { e.preventDefault(); play(!timer); }
+    if (e.code === "ArrowRight") { play(false); paint(i + 1); }
+    if (e.code === "ArrowLeft")  { play(false); paint(i - 1); }
+  });
+})();
+</script>
+</body>
+</html>
