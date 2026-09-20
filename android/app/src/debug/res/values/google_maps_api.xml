@@ -1,0 +1,18 @@
+<resources>
+    <!--
+    The Google Maps API key that used to live here was committed in plain text
+    in May 2020 (commit 5fbffd7) and was public for six years. It was revoked
+    during the 2026 Phase 0 cleanup.
+
+    Do NOT paste a new key here. If you need to build this legacy module, put
+
+        MAPS_API_KEY=your_key_here
+
+    in local.properties (git-ignored) and wire it through a manifest
+    placeholder in android/app/build.gradle.
+
+    PANAL is moving to MapLibre GL, which needs no API key at all, so this
+    module is expected to drop the dependency entirely in Phase 6.
+    -->
+    <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">YOUR_KEY_HERE</string>
+</resources>

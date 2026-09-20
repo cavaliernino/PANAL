@@ -83,3 +83,45 @@ lint/generated/
 lint/outputs/
 lint/tmp/
 # lint/reports/
+
+# ─────────────────────────────────────────────────────────────
+# PANAL 2026 monorepo
+# ─────────────────────────────────────────────────────────────
+
+# Python (ingest/, engine/, api/)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+# The 2020 'backend' branch committed an entire Python 2.7 virtualenv.
+# Never again.
+lib/python*/
+bin/activate*
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node (web/)
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+secrets.toml
+
+# Data artifacts - these are large and re-downloadable, never commit them
+data/raw/
+data/interim/
+data/processed/
+*.parquet
+*.sqlite3
+*.db
+
+# OS
+.DS_Store
