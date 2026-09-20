@@ -147,6 +147,112 @@ Queried per H3 cell centroid, cached, and refreshed on the ingest schedule.
 
 ---
 
+## 4. Wildfire
+
+Fire is not a fourth silo. In Chile it is **seasonally complementary** to
+respiratory illness — respiratory risk peaks in winter (June–August), fire
+peaks in summer (November–March) — and the two are causally linked through
+smoke. See [`risk-model.md`](risk-model.md) for how it enters the index.
+
+### NASA FIRMS — active fire detections
+
+| | |
+|---|---|
+| Publisher | NASA / MODAPS EOSDIS |
+| Latency | Near-real-time, <60 min from satellite pass |
+| **API key** | **Not required** for the regional CSV endpoints |
+
+Verified working on 2026-09-20 with no registration:
+
+```
+https://firms.modaps.eosdis.nasa.gov/data/active_fire/{product}/csv/{FILE}_24h.csv
+
+noaa-20-viirs-c2/csv/J1_VIIRS_C2_South_America_24h.csv      200 OK  24,341 rows
+suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_South_America_24h.csv 200 OK  24,294 rows
+modis/csv/MODIS_C6_1_South_America_24h.csv                  200 OK   3,378 rows
+```
+
+Also available as `_48h` and `_7d`. Columns:
+
+```
+latitude, longitude, bright_ti4, scan, track, acq_date, acq_time,
+satellite, confidence, version, bright_ti5, frp, daynight
+```
+
+`frp` (Fire Radiative Power, MW) is the key field: it proxies fire intensity
+and therefore smoke emission rate. VIIRS resolution is 375 m, MODIS 1 km, so
+prefer VIIRS and use MODIS to corroborate.
+
+A free `MAP_KEY` unlocks the `/api/area/` endpoint for arbitrary bounding
+boxes and historical dates (1–5 day ranges, 5,000 transactions per 10 min).
+Worth registering for backfill, but **not needed to start**.
+
+> **Trap 1 — a bounding box over Chile is 90% wrong.** Chile is narrow and the
+> Andes run its whole length. A naive box (`lon -76..-66, lat -56..-17`)
+> returned 260 detections, of which only **25 were west of the Andean divide**.
+> The other 235 were Argentine and Bolivian. Clip against real geometry — the
+> INE census cartography we already need for demographics — never a box.
+
+> **Trap 2 — FIRMS detects industry, not just fire.** On 2026-09-20 the
+> strongest persistent Chilean cluster sat at `-22.316, -68.882`: nine
+> detections, two satellites, two days, scattered over ±0.2 × ±0.4 km with a
+> stable ~3.7 MW FRP. That is **Chuquicamata**, an open-pit copper mine, not a
+> wildfire. Northern Chile is full of smelters and mines that read as permanent
+> thermal anomalies. A real fire moves and grows; a plant does not. Mask
+> persistent sources by building a static exclusion layer from a full season of
+> detections before trusting any alert.
+
+> **Trap 3 — we are out of season.** Chile's fire season runs roughly November
+> to March. September detections are near zero, so the pipeline **cannot be
+> validated on live data until summer**. Build and backfill against history.
+
+### CONAF — official fire statistics
+
+| | |
+|---|---|
+| Publisher | Corporación Nacional Forestal |
+| Coverage | Season 2002–03 to present |
+| Granularity | Per event: region, province, comuna, latitude, longitude |
+
+Per-event fields include fire number and name, start and containment dates,
+**cause**, initial and affected fuel type, slope, topography, and burned area
+broken down by vegetation type.
+
+Two things FIRMS cannot give us:
+
+1. **Ground truth on burned area.** Satellite detections say where heat was;
+   CONAF says how many hectares actually burned. Needed to calibrate FRP into
+   anything physical.
+2. **Cause.** Chilean forest fires are overwhelmingly human-caused, and CONAF
+   classifies them. This is the most literal possible answer to the Space Apps
+   *Human Factors* challenge: a human activity that drives an environmental
+   hazard that drives respiratory disease.
+
+Reference seasons for validation: **2016–17 is the worst on record at ~466,700
+ha burned**; 2022–23 (Biobío/Ñuble) and February 2024 (Valparaíso/Viña del Mar)
+were both catastrophic. All three fall inside the SADU health record, which
+starts in 2014.
+
+### SINCA — air quality, the bridge to health
+
+| | |
+|---|---|
+| Publisher | Ministerio del Medio Ambiente |
+| Portal | `https://sinca.mma.gob.cl` |
+| Pollutants | PM2.5, PM10, O₃, SO₂, NO₂, CO |
+| Cadence | Hourly, per station |
+
+This is the measured link between fire and health. FIRMS says a fire is
+burning; SINCA says whether people are breathing it. PM2.5 is the variable
+that connects a fire front to an emergency-room visit, and it is also a
+year-round hazard in Chile from winter wood-smoke heating in the central and
+southern cities — which means the same ingest serves both seasons.
+
+Station coverage is sparse compared to a hex grid, so SINCA calibrates and
+validates a dispersion estimate; it does not replace one.
+
+---
+
 ## Licensing — read before building a business on this
 
 | Source | License | Consequence |
@@ -155,6 +261,9 @@ Queried per H3 cell centroid, cached, and refreshed on the ingest schedule.
 | Establecimientos de Salud | Check per-resource | — |
 | Censo 2024 (INE) | Check INE terms | — |
 | NASA POWER | Open, no restriction | Free to use. |
+| NASA FIRMS | Open, attribution requested | Free to use. |
+| CONAF statistics | Check CONAF terms | — |
+| SINCA (MMA) | Check MMA terms | — |
 | PANAL's own code | GPL-3.0 | Derivatives stay open. |
 
 The CC-NC clause on the health data is the sharpest constraint on the project.
@@ -171,4 +280,6 @@ When publishing anything derived from these sources:
 > Data produced by the Ministerio de Salud de Chile and obtained from the
 > Portal de Datos Abiertos (datos.gob.cl). Census data from the Instituto
 > Nacional de Estadísticas, Censo 2024. Meteorological data from the NASA
-> POWER Project.
+> POWER Project. Active fire data from NASA FIRMS (MODIS and VIIRS). Forest
+> fire statistics from CONAF. Air quality data from SINCA, Ministerio del
+> Medio Ambiente.

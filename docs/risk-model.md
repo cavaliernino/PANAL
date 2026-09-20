@@ -119,6 +119,80 @@ Weights live in a config file, not in code.
 
 ---
 
+## Wildfire: a driver, not a fourth component
+
+The obvious move is to bolt fire on as a fourth weighted term. That would be
+wrong. Fire is not a peer of the health signal — it is partly a **cause** of
+it, and adding both would double-count the same people.
+
+Fire enters in two places, because it produces two hazards with different time
+constants and different actions for the person holding the phone:
+
+### A. Acute fire hazard — hours
+
+```
+fire_hazard(cell) = f(distance to active detections, FRP, wind direction)
+```
+
+From NASA FIRMS, refreshed several times a day. The question it answers is
+*"is there fire near me right now"*, and the action is evacuation. This is a
+**separate output layer**, not folded into the respiratory index, because
+mixing a 15-minute-old fire front into a two-week-lagged health average would
+destroy both.
+
+### B. Smoke exposure — days
+
+```
+smoke(cell) = g(upwind FRP, distance, wind, PM2.5 from SINCA)
+```
+
+This **feeds the health component** as an acute exposure term, alongside the
+seasonal-baseline excess:
+
+```
+health = w1 · excess_respiratory
+       + w2 · vulnerability
+       + w3 · access_deficit
+       + w4 · smoke_exposure      ← new
+```
+
+Smoke also raises the vulnerability weighting for the under-1 and 65+ bands
+that SADU already breaks out.
+
+### Why this is the strongest part of the project
+
+PANAL has, in one place, twelve years of weekly geolocated respiratory
+emergency attendances **and** a satellite fire record covering the same period
+and territory. Chile's catastrophic seasons — 2016–17, 2022–23, and Valparaíso
+in February 2024 — all fall inside the SADU record that starts in 2014.
+
+So the smoke-to-health link is not an assumption we have to make. **It is a
+hypothesis we can test against history**, cell by cell and week by week: did
+respiratory attendances rise downwind of large fires, above the seasonal
+baseline, controlling for population? If yes, the coefficient is measured
+rather than guessed, and PANAL can forecast respiratory load from a fire that
+is burning today. If no, we report that and drop the term.
+
+This is also the most direct possible answer to the Space Apps *Human Factors*
+challenge, which asked for human activities that drive disease spread. Chilean
+forest fires are overwhelmingly human-caused, and CONAF records the cause of
+each one. The chain is: human activity → fire → smoke → respiratory disease,
+and every link in it is measurable from open data.
+
+### What it does for the product
+
+Respiratory risk peaks June–August. Fire risk peaks November–March. Adding
+fire turns PANAL from a four-month winter app into a **year-round** one, with
+no dead season.
+
+### Timing
+
+Chile's fire season opens around November. The FIRMS ingest should be running
+**before then** so the 2026–27 season is captured live rather than backfilled.
+That is the one real external deadline on this roadmap.
+
+---
+
 ## Honesty requirements
 
 Non-negotiable properties of the output:
@@ -146,3 +220,10 @@ Non-negotiable properties of the output:
 - [ ] Are the 2020 weights (15/35/50) supportable at all, or does backtesting
       demand different ones? **We should be willing to contradict the
       award-winning presentation.**
+- [ ] Smoke dispersion: is a simple upwind-FRP decay good enough, or do we
+      need a real plume model? Validate against SINCA PM2.5 stations.
+- [ ] How do we mask persistent industrial thermal anomalies (Chuquicamata
+      and the northern smelters) without suppressing real fires near them?
+- [ ] Does fire hazard belong in the same map as respiratory risk, or in a
+      separate view? Two hazards with different time constants may not
+      belong on one colour scale.

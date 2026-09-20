@@ -1,12 +1,17 @@
 # PANAL
 
-**Georeferenced respiratory risk for Chile, on a hexagonal grid.**
+**Georeferenced environmental health risk for Chile, on a hexagonal grid.**
 
-PANAL tells you how much respiratory illness risk is elevated *where you
-actually are*, by combining public health surveillance, census demographics and
-NASA meteorological data on an H3 hex grid — and by reporting the excess over
-what is normal for that place at that time of year, rather than a raw number
-that turns red every winter.
+PANAL tells you how much risk is elevated *where you actually are*, by
+combining public health surveillance, census demographics, NASA meteorological
+data and NASA satellite fire detections on an H3 hex grid — and by reporting
+the excess over what is normal for that place at that time of year, rather than
+a raw number that turns red every winter.
+
+Two hazards, one map, complementary seasons: **respiratory illness**, which
+peaks in winter, and **wildfire and its smoke**, which peaks in summer. They
+are not independent — fire smoke drives respiratory emergencies, and PANAL has
+twelve years of data on both to measure exactly how much.
 
 > 🏆 PANAL won the **Galactic Impact Award** at the NASA Space Apps Challenge
 > COVID-19 in May 2020 — *"the solution with the most potential to improve life
@@ -29,12 +34,12 @@ otherwise until it does.
 |---|---|---|
 | 0 | Repo hygiene, key revocation, monorepo, docs | ✅ done |
 | 1 | The risk engine — H3 aggregation, seasonal baselines | next |
-| 2 | Ingest pipelines for all four sources | |
+| 2 | Ingest pipelines for every source, **FIRMS first** | |
 | 3 | API | |
 | 4 | Web PWA — the first time PANAL is visible | |
 | 5 | Forecasting, with honest backtesting | |
 | 6 | Android, rebuilt against the same API | |
-| 7 | Air quality, heat waves, alerts, public API | |
+| 7 | Heat waves, evacuation alerts, public API | |
 
 ---
 
@@ -51,6 +56,7 @@ The replacement is better than what the project had in 2020:
 | Health | MinCiencia COVID, comuna-level *(dead)* | MINSAL SADU — **635 establishments, 100% geocoded, weekly, 2014→2026** |
 | Demographics | Global gridded raster, coarse | **Censo 2024 at block level**, 189 variables |
 | Weather | Manual NOAA downloads | **NASA POWER API**, `T2M` + `RH2M` by coordinate |
+| Fire | not covered | **NASA FIRMS** (VIIRS/MODIS, no API key) + CONAF + SINCA |
 | Grid | Hexagons drawn by hand | **H3**, stable global cell ids |
 
 And the disease changed. In 2026 Chile, COVID-19 emergency attendances run
@@ -67,7 +73,7 @@ Full verification of every source, including the traps, is in
 ## Repository layout
 
 ```
-ingest/    Python ETL — SADU, NASA POWER, Censo 2024 → H3 → PostGIS
+ingest/    Python ETL — SADU, FIRMS, NASA POWER, Censo 2024, SINCA → H3 → PostGIS
 engine/    the risk index and seasonal baselines (pure, testable library)
 api/       FastAPI — /risk, /forecast, /timeseries
 web/       PWA — MapLibre GL + deck.gl H3HexagonLayer
@@ -90,18 +96,26 @@ yield an **excess over expected** for that epidemiological week. That health
 term carries 50% of the index, demographics 35% and weather 15%, following the
 2020 hypothesis — weights we intend to test against 12 years of history and to
 revise if the data disagrees, including with the presentation that won the
-award. Details and open questions: [`docs/risk-model.md`](docs/risk-model.md).
+award.
+
+Wildfire is deliberately **not** a fourth weighted term, because it is partly a
+*cause* of the health signal and adding both would double-count. Smoke feeds
+the health component as an acute exposure term; the acute fire front is a
+separate layer on its own time constant. Details and open questions:
+[`docs/risk-model.md`](docs/risk-model.md).
 
 ---
 
 ## Ground rules
 
 1. **Show the lag.** SADU runs ~2 weeks behind. Never imply live surveillance.
-2. **Show the breakdown.** One number is not actionable; expose all three
-   components.
+2. **Show the breakdown.** One number is not actionable; expose every
+   component that went into it.
 3. **Show the uncertainty.** Small-population cells are unstable and must look
    different from confident ones, never silently safe.
-4. **Never invent granularity.** The data is establishment-level and weekly.
+4. **Never invent granularity.** Health data is establishment-level and
+   weekly; fire detections are 375 m and sub-daily. Never render one at the
+   other's resolution, or blend them onto a single colour scale.
 5. **Validate before shipping.** If the index has no predictive skill, publish
    that finding too.
 6. **No personal data, ever.** PANAL models places, not people. The 2020
@@ -123,7 +137,9 @@ When publishing derived work:
 > Data produced by the Ministerio de Salud de Chile and obtained from the
 > Portal de Datos Abiertos (datos.gob.cl). Census data from the Instituto
 > Nacional de Estadísticas, Censo 2024. Meteorological data from the NASA
-> POWER Project.
+> POWER Project. Active fire data from NASA FIRMS (MODIS and VIIRS). Forest
+> fire statistics from CONAF. Air quality data from SINCA, Ministerio del
+> Medio Ambiente.
 
 ---
 
