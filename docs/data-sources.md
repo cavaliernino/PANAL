@@ -294,9 +294,21 @@ requirement, not a nicety.
 | Source | Status |
 |---|---|
 | **OpenStreetMap** | ✅ Road network for static egress capacity. No API, no licence problem, available now. |
-| **TomTom Traffic** | ✅ **Recommended for live traffic.** 2,500 non-tile requests/day and 50,000 tiles/day free, and explicitly no restriction on displaying over non-TomTom basemaps. |
+| **Waze for Cities** | ✅ **via the agency partnership.** Free two-way GeoRSS feed, updated every 2 minutes. Restricted to public-sector partners and non-commercial use — both of which PANAL satisfies through CONAF/SENAPRED. |
+| **TomTom Traffic** | ✅ **Recommended as the independent path.** 2,500 non-tile requests/day and 50,000 tiles/day free, and explicitly no restriction over non-TomTom basemaps. |
 | **Google Maps traffic** | ❌ Prohibited on non-Google basemaps. Incompatible with our MapLibre choice. |
-| **Waze for Cities** | ❌ for PANAL. Free two-way GeoRSS feed updated every 2 minutes, but restricted to public-sector partners with no commercial use. Reachable only through the Phase 5 agency channel. |
+
+**Where TomTom's data comes from:** crowd-sourced probe data from mobile
+phone users and connected devices, combined with traditional infrastructure
+sources — induction loops and traffic cameras. Chile is in TomTom's coverage
+list and has its own TomTom Traffic Index country page, so the probe density
+is real.
+
+That said, **Waze's penetration in Chile is almost certainly deeper than
+TomTom's navigation install base**, which matters because both are ultimately
+probe-density plays: the provider with more phones on Chilean roads sees the
+jam first. Use both — Waze through the agency channel for density, TomTom as
+the independent fallback that works without a partnership.
 
 Static egress capacity — dwellings behind each exit road, dead ends,
 single-access neighbourhoods — comes from OSM joined to Censo 2024 and needs
@@ -313,13 +325,32 @@ forests.
 
 It is **cell-based**, which pairs naturally with an H3 grid.
 
+| | |
+|---|---|
+| `github.com/fire2a/C2F-W` | Unified version with Kitral and Scott & Burgan. Last push Aug 2026. **Preferred.** |
+| `github.com/fire2a/C2FK` | Kitral-only version. Last push Jun 2026. |
+| License | **GPL-3.0 — the same as PANAL.** No licence friction. |
+
+C2F+K adds rate-of-spread and length-to-breadth equations as functions of
+wind speed under an elliptical growth model, plus a crown fire module. It
+generates **burn probability maps through parallel Monte Carlo ensembles**,
+which is not just a Phase 4 tool: it means the Phase 2 exposure map can be
+*simulated* rather than only inferred from where fires happened to burn
+before.
+
 ---
 
 ## Licensing — read before building a business on this
 
+**Resolved: PANAL is non-commercial by design.** The project will not charge
+for use — charging would cost it global reach and, more importantly, the
+ability to connect with the government institutions that could give it real
+operational capacity. That decision removes the sharpest constraint in this
+table and unlocks Waze for Cities through the agency partnership.
+
 | Source | License | Consequence |
 |---|---|---|
-| SADU respiratory (MINSAL) | **CC Non-Commercial** | **Blocks commercial use of the primary health signal.** |
+| SADU respiratory (MINSAL) | CC Non-Commercial | ✅ Compatible — PANAL is non-commercial. |
 | Establecimientos de Salud | Check per-resource | — |
 | Censo 2024 (INE) | Check INE terms | — |
 | NASA POWER | Open, no restriction | Free to use. |

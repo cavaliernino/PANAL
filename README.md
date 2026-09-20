@@ -42,7 +42,7 @@ otherwise until it does.
 | 0 | Repo hygiene, key revocation, monorepo, docs | — | ✅ done |
 | 1 | Fire foundation — H3 grid, GOES + FIRMS ingest, map v1 | **Nov 2026** | next |
 | 2 | WUI exposure — which neighbourhoods are built to burn | **Nov 2026** | |
-| 3 | Crowdsourced first alarm — burst capture, triangulation | | |
+| 3 | Crowdsourced first alarm — burst capture, bearing triangulation | | |
 | 4 | Fire behaviour — spread vector, C2F+K, egress, traffic | | |
 | 5 | Agency channel — CONAF/SENAPRED write official zones | | |
 | 6 | Respiratory — the original PANAL index | autumn 2027 | |
@@ -105,6 +105,7 @@ No single source is fast and precise at once:
 | Layer | Latency | Resolution | Role |
 |---|---|---|---|
 | Crowd burst (in-app) | seconds | eyewitness | first alarm on a new fire |
+| CONAF lookout tower | seconds | surveyed cross-fix | first alarm at T1 trust, ~20 bytes |
 | GOES-East ABI | 10 min cadence, ~20–30 min lag | 2 km | tempo — detection and tracking |
 | VIIRS / MODIS | ~3 h | 375 m | precision — confirm and map perimeter |
 | CONAF / SENAPRED | human | authoritative | overrides everything |
@@ -157,10 +158,14 @@ separate layer on its own time constant. Details and open questions:
 
 Code is **GPL-3.0** (see [LICENSE](LICENSE)).
 
-⚠️ The MINSAL respiratory dataset is **Creative Commons Non-Commercial**. That
-permits public-good deployment, research and an open API; it rules out a paid
-product built on that feed without a separate agreement with MINSAL. This needs
-a decision before Phase 3.
+**PANAL is non-commercial and will not charge for use.** This is a decision,
+not a constraint: charging would cost the project global reach and, more
+importantly, the ability to connect with the government institutions that
+could give it real operational capacity.
+
+It also resolves the licensing question outright. The MINSAL respiratory
+dataset is Creative Commons Non-Commercial, and Waze for Cities is free but
+restricted to non-commercial public-sector partners — PANAL satisfies both.
 
 When publishing derived work:
 

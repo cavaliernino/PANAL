@@ -63,7 +63,7 @@ Never a boolean. Every cell carries a tier, rendered as opacity plus stroke.
 | Tier | Source | Effect |
 |---|---|---|
 | **T0** | Satellite (GOES / VIIRS) | Paints the cell |
-| **T1** | Official (CONAF / SENAPRED) | Authoritative, overrides all |
+| **T1** | Official — CONAF / SENAPRED, **including lookout towers** | Authoritative, overrides all |
 | **T2** | Corroborated crowd | Raises cell confidence |
 | **T3** | Single uncorroborated burst | Shown as unverified. Triggers nothing. |
 
@@ -83,6 +83,53 @@ standing between a bad report and a rendered cell.
 **Human moderation is required** before anything reaches T2 in a populated
 area. The precedent that works is Watch Duty in the United States: trusted
 humans in the loop, not full automation. A crowd report never auto-escalates.
+
+---
+
+## Fixed observer stations — CONAF lookout towers
+
+The best version of the cross-bearing idea is not the crowd. It is a
+**surveyed station with a trained observer**, and CONAF already operates a
+network of them.
+
+A lookout tower beats every other source on the one metric that matters for
+initial attack:
+
+| | Crowd burst | Lookout tower |
+|---|---|---|
+| Observer position | GPS, metres of error, unverified | **Surveyed, known to the centimetre** |
+| Observer | anyone | **trained, accountable** |
+| Trust tier | T3 → T2 with corroboration | **T1 immediately** |
+| Latency | seconds | seconds |
+
+Because the station's position is *known*, a single azimuth is already a line
+of position with no estimation error in its origin. Two towers give a fix
+whose only error is angular. This is the Osborne Firefinder method with the
+towers it was designed for, and many lookouts already have an alidade.
+
+### Why this is the most resilient input in the system
+
+**A bearing is about twenty bytes.** Where a photo burst needs a working data
+connection, a bearing survives almost anything: SMS, a radio call relayed by a
+dispatcher and typed in, a satellite messenger. In the conditions where PANAL
+matters most — towers congested, power out, a fire between the observer and
+the nearest cell site — the bearing gets through and the photograph does not.
+
+Design accordingly:
+
+- **Station registry**: surveyed position, elevation, horizon mask, the sectors
+  each tower can actually see.
+- **Bearing entry**: azimuth, optional elevation angle and distance estimate.
+  The interface is a compass dial and nothing else.
+- **Out-of-band paths are first class**, not fallbacks: SMS gateway and a
+  dispatcher console for radio-relayed reports.
+- **Automatic fix** when two or more stations report consistent bearings inside
+  a time window, with the residual error published rather than hidden.
+- A tower's horizon mask is also **negative evidence**: if a tower that can see
+  a sector reports nothing, that is information.
+
+This layer needs the Phase 5 agency relationship, but it is cheap to build and
+it is the highest-value non-satellite input in the project.
 
 ---
 

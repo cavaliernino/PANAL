@@ -43,6 +43,7 @@ No single source is good enough. Each covers another's blind spot:
 | Layer | Latency | Resolution | What it is for |
 |---|---|---|---|
 | **Crowd burst** (in-app) | seconds | eyewitness | **First alarm on a new fire** |
+| **Lookout tower bearing** | seconds | surveyed cross-fix | **First alarm, T1 trust, ~20 bytes** |
 | **GOES-East ABI** | new look every 10 min, ~20–30 min lag | 2 km | **Tempo** — early detection and tracking a moving front |
 | **VIIRS / MODIS** (FIRMS) | ~3 h, few passes daily | 375 m / 1 km | **Precision** — confirm location, map perimeter |
 | **CONAF / SENAPRED** | human | authoritative | **Truth.** Overrides everything above. |
@@ -85,6 +86,8 @@ anything, no false-alarm risk, and the highest preventive value in the project.
 - Slope and topography from a DEM; fire spreads uphill fast.
 - Fuel: vegetation cover adjacent to housing.
 - Fire history from CONAF and the FIRMS archive — where fire recurs.
+- **Burn probability** from C2F+K Monte Carlo ensembles — simulated, not just
+  inferred from where fires happened to burn before.
 - **Egress capacity** (see below).
 
 The output is a map of the condition that killed more than 130 people in
@@ -103,9 +106,11 @@ Where the fire is going, how fast, and whether people can get out ahead of it.
 
 - **Observed spread vector.** GOES's 10-minute cadence gives successive
   detection centroids — direction and rate of spread measured, not modelled.
-- **Modelled rate of spread** via **Cell2Fire + Kitral (C2F+K)**, the Chilean
-  system CONAF's lineage already uses. Kitral takes slope, wind, fuel moisture
-  and fuel type; it is cell-based, which pairs naturally with H3.
+- **Modelled rate of spread** via **Cell2Fire + Kitral**, the Chilean system
+  CONAF's lineage already uses. Open source at `github.com/fire2a/C2F-W`,
+  **GPL-3.0 — the same licence as PANAL**, actively maintained. Kitral takes
+  slope, wind, fuel moisture and fuel type; elliptical growth with a crown
+  fire module; cell-based, so it pairs naturally with H3.
 - **Traffic.** Congestion turns an evacuation into a death trap.
 
 ### Phase 5 — Agency channel
@@ -117,9 +122,13 @@ never issues an evacuation order; authorities do, through PANAL.
 - Authenticated agency role, fully audited, every write attributed.
 - Official polygons render as authoritative and visually distinct from
   anything PANAL derived.
+- **CONAF lookout towers** as registered observer stations — surveyed
+  positions, trained observers, T1 trust at seconds of latency, and a payload
+  small enough to arrive by SMS when nothing else does. See
+  [`crowdsourcing.md`](crowdsourcing.md).
 - This is the legitimate channel for **Waze for Cities** data, which is free
-  but restricted to public-sector partners. PANAL cannot join that programme.
-  CONAF and SENAPRED can.
+  and non-commercial but restricted to public-sector partners. PANAL is
+  non-commercial, so the only missing piece is the partner.
 
 ### Phase 6 — Respiratory *(autumn 2027, before winter)*
 
@@ -149,8 +158,8 @@ worth more than knowing about the jam while it is happening.
 | Provider | Verdict |
 |---|---|
 | **Google Maps** | ❌ Traffic content is **prohibited on non-Google basemaps**. Dead end with MapLibre. |
-| **Waze for Cities** | ❌ for PANAL — public-sector partners only, no commercial use. ✅ via Phase 5. |
-| **TomTom** | ✅ **Recommended.** 2,500 non-tile requests/day and 50,000 tiles/day free, and explicitly no restriction on non-TomTom basemaps. |
+| **Waze for Cities** | ✅ via Phase 5. Free, non-commercial, public-sector partners only — PANAL qualifies through CONAF/SENAPRED. Probably the deeper probe density in Chile. |
+| **TomTom** | ✅ The independent path, needing no partnership. 2,500 non-tile requests/day and 50,000 tiles/day free, no restriction on non-TomTom basemaps. |
 
 ---
 
