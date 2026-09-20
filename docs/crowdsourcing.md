@@ -128,8 +128,30 @@ Design accordingly:
 - A tower's horizon mask is also **negative evidence**: if a tower that can see
   a sector reports nothing, that is information.
 
-This layer needs the Phase 5 agency relationship, but it is cheap to build and
-it is the highest-value non-satellite input in the project.
+### The binding constraint is the operator's time, not the technology
+
+This layer is cheap to build and it is the highest-value non-satellite input
+in the project. It will still fail if it is designed as though tower
+operators were waiting for something to do.
+
+Entering a bearing is **additional work on top of existing duties**. That sets
+hard requirements:
+
+- **Under ten seconds, end to end.** Open, dial, send. No login per report, no
+  form, no free text. Anything longer competes with their actual job and
+  loses.
+- **Never in the critical path.** Their first obligation is the radio call to
+  CONAF dispatch. PANAL must never sit between an observer and that call.
+- **The lowest-friction path may not be the tower at all.** Operators already
+  radio bearings to dispatch. A **dispatcher console** lets the person
+  receiving that call enter it, adding zero burden to the tower. Build that
+  first; the tower-side app is the optimisation, not the starting point.
+- **Give something back.** An operator who sends a bearing should immediately
+  see the resulting cross-fix and what other towers reported. Reciprocity is
+  what sustains voluntary data entry; pure extraction does not.
+
+A half-adopted observer network is worse than none, because a tower's silence
+only carries information if that tower reliably reports.
 
 ---
 

@@ -304,11 +304,15 @@ sources — induction loops and traffic cameras. Chile is in TomTom's coverage
 list and has its own TomTom Traffic Index country page, so the probe density
 is real.
 
-That said, **Waze's penetration in Chile is almost certainly deeper than
-TomTom's navigation install base**, which matters because both are ultimately
-probe-density plays: the provider with more phones on Chilean roads sees the
-jam first. Use both — Waze through the agency channel for density, TomTom as
-the independent fallback that works without a partnership.
+**Both are in scope, fused rather than chosen between.** They are independent
+probe networks, so their errors are largely independent and agreement between
+them is a quality signal in itself. Waze's penetration in Chile is almost
+certainly deeper than TomTom's navigation install base, which matters because
+both are ultimately probe-density plays. TomTom ships first because it needs
+no one's permission; Waze joins with the alliance.
+
+Where the two disagree on a segment, **take the worse of the two**. During an
+evacuation an optimistic travel time is the dangerous error.
 
 Static egress capacity — dwellings behind each exit road, dead ends,
 single-access neighbourhoods — comes from OSM joined to Censo 2024 and needs

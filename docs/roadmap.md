@@ -115,6 +115,12 @@ Where the fire is going, how fast, and whether people can get out ahead of it.
 
 ### Phase 5 — Agency channel
 
+> **Start this conversation in Phase 1.** The alliance has a long lead time
+> and it gates three separate things — lookout towers, Waze for Cities, and
+> official zone publishing. The engineering can wait; the relationship cannot.
+> The route in is through firefighters who work or have worked at CONAF, and
+> through firefighter contacts inside SENAPRED.
+
 An authenticated write path so CONAF and SENAPRED can publish official zones
 directly into PANAL. This is also what resolves the alerting boundary: PANAL
 never issues an evacuation order; authorities do, through PANAL.
@@ -126,6 +132,12 @@ never issues an evacuation order; authorities do, through PANAL.
   positions, trained observers, T1 trust at seconds of latency, and a payload
   small enough to arrive by SMS when nothing else does. See
   [`crowdsourcing.md`](crowdsourcing.md).
+
+  ⚠️ **This tier depends entirely on the CONAF alliance**, and not only for
+  access: tower entry is *additional work* for operators who already have
+  duties. If it is not nearly frictionless it will not get used, and a
+  half-used observer network is worse than none because its silence stops
+  meaning anything.
 - This is the legitimate channel for **Waze for Cities** data, which is free
   and non-commercial but restricted to public-sector partners. PANAL is
   non-commercial, so the only missing piece is the partner.
@@ -155,11 +167,22 @@ worth more than knowing about the jam while it is happening.
 
 ### Live traffic: what is actually available
 
-| Provider | Verdict |
-|---|---|
-| **Google Maps** | ❌ Traffic content is **prohibited on non-Google basemaps**. Dead end with MapLibre. |
-| **Waze for Cities** | ✅ via Phase 5. Free, non-commercial, public-sector partners only — PANAL qualifies through CONAF/SENAPRED. Probably the deeper probe density in Chile. |
-| **TomTom** | ✅ The independent path, needing no partnership. 2,500 non-tile requests/day and 50,000 tiles/day free, no restriction on non-TomTom basemaps. |
+**Both Waze and TomTom are in scope**, fused rather than chosen between.
+They are independent probe networks, so their errors are largely independent
+and agreement between them is itself a quality signal.
+
+| Provider | Verdict | Available |
+|---|---|---|
+| **TomTom** | ✅ The independent path, no partnership needed. 2,500 non-tile requests/day and 50,000 tiles/day free, no restriction over non-TomTom basemaps. | **now** |
+| **Waze for Cities** | ✅ Free two-way GeoRSS, every 2 minutes. Non-commercial public-sector partners only — PANAL qualifies through CONAF/SENAPRED. Deeper probe density in Chile. | with the alliance |
+| **Google Maps** | ❌ Traffic content **prohibited on non-Google basemaps**. Dead end with MapLibre. | — |
+
+Fusion notes: build the TomTom path first since it needs no one's permission,
+and design the road-segment model provider-agnostic so Waze slots in beside
+it rather than replacing it. Where they disagree on a segment, take the worse
+of the two — during an evacuation, an optimistic travel time is the dangerous
+error. Attribution requirements differ per provider and must be rendered per
+layer.
 
 ---
 
