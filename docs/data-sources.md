@@ -241,6 +241,64 @@ stations. Global Near Real-Time is ~3 hours. Standard Processing is 2–3
 months. **Chile's floor through polar orbiters is 3 hours; through GOES it is
 about 30 minutes.**
 
+### Fire department dispatch feeds
+
+A dispatch is the strongest human signal available: someone called, and a
+unit rolled. It is T1-quality evidence arriving in real time, and it carries
+something no satellite has — a street address and a incident classification
+made by a professional.
+
+Chilean corps publish dispatches to automated X accounts:
+
+```
+X-1 CLAVE 2 U-32 U-11 U-31 U-51 U-61 U-73 U-41 U-62
+Autopista Troncal Sur con Camino El Olivar, sector El Salto
+info -> cbvm132.cl/Sisgemer.aspx?sid=dLI%2fKcSo8qw%3d
+```
+
+The structure is better than it looks. `CLAVE 2` is a forest emergency in the
+Valparaíso region (other regions use codes like `10-2`); `CLAVE 8` is support
+to another corps, which is how a neighbouring fire shows up in a corps' own
+feed. The unit list gives committed resources, so escalation is visible —
+`USAR-1` appearing means urban search and rescue. **The `sid` is an incident
+id**, shared across every dispatch for the same fire, which turns a stream of
+messages into a per-incident resource timeline.
+
+#### Do not build on X
+
+Tested on 2026-09-20 against `@CBVM132` for the February 2024 Viña del Mar
+fire, using an authenticated session:
+
+- **Search caps results.** Every query returned about 15 posts regardless of
+  the date window, so a dispatch timeline cannot be reconstructed.
+- **Date filters behave inconsistently.** `since:2024-02-02 until:2024-02-03`
+  returned only 3 February; widening to 1–5 February returned only 5
+  February. Timestamps are exact once retrieved (`<time datetime>`), but the
+  result set is not trustworthy.
+- **`@CBQuilpue` returned nothing** for the period — and Quilpué is where
+  that fire started, so the origin dispatch is unreachable this way.
+- **`cbvm132.cl` no longer resolves**, so every historical SISGEMER link is
+  dead.
+
+X is also fragile and contractually awkward as a production input.
+
+#### The upstream exists: VIPER
+
+Every one of those posts is marked *Automatizado por `@viper_cl`*. VIPER
+(`viper.cl`, Santiago) is a Chilean emergency-management platform — products
+VIPER APP, CREW, ONE, GO and MASS — selling dispatch and critical-information
+systems to organisations including fire corps.
+
+That changes the approach entirely. Rather than scraping one X account per
+corps, **one integration with VIPER could reach many corps at once**, with
+structured data instead of parsed text, and without depending on a social
+network's indexing. It is the same kind of conversation as the CONAF and
+SENAPRED partnership, and it belongs in Phase 5 beside them.
+
+Worth asking VIPER directly whether a read feed is available to a
+non-commercial public-good project, and worth asking the corps whether their
+own SISGEMER instance can expose one.
+
 ### CONAF — official fire statistics
 
 | | |

@@ -44,6 +44,7 @@ No single source is good enough. Each covers another's blind spot:
 |---|---|---|---|
 | **Crowd burst** (in-app) | seconds | eyewitness | **First alarm on a new fire** |
 | **Lookout tower bearing** | seconds | surveyed cross-fix | **First alarm, T1 trust, ~20 bytes** |
+| **Fire corps dispatch** | seconds | street address | **Someone called and a unit rolled** — T1, with incident id and committed resources |
 | **GOES-East ABI** | new look every 10 min, ~20–30 min lag | 2 km | **Tempo** — early detection and tracking a moving front |
 | **VIIRS / MODIS** (FIRMS) | ~3 h, few passes daily | 375 m / 1 km | **Precision** — confirm location, map perimeter |
 | **CONAF / SENAPRED** | human | authoritative | **Truth.** Overrides everything above. |
