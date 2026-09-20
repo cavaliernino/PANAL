@@ -144,14 +144,52 @@ hard requirements:
   CONAF dispatch. PANAL must never sit between an observer and that call.
 - **The lowest-friction path may not be the tower at all.** Operators already
   radio bearings to dispatch. A **dispatcher console** lets the person
-  receiving that call enter it, adding zero burden to the tower. Build that
-  first; the tower-side app is the optimisation, not the starting point.
+  receiving that call enter it, adding zero burden to the tower. But it adds
+  a transcription step, and that is a real cost — see below.
 - **Give something back.** An operator who sends a bearing should immediately
   see the resulting cross-fix and what other towers reported. Reciprocity is
   what sustains voluntary data entry; pure extraction does not.
 
 A half-adopted observer network is worse than none, because a tower's silence
 only carries information if that tower reliably reports.
+
+### Tower-direct vs. dispatcher: how much does transcription cost?
+
+Entry at the tower has no transcription step; entry at dispatch does, and a
+misheard or mistyped azimuth becomes a position error that grows with range.
+Cross-track error is `d · tan(ε)`:
+
+| Range | 1° | 2° | 3° | 5° | GOES pixel |
+|---|---|---|---|---|---|
+| 10 km | 175 m | 349 m | 524 m | 875 m | 2000 m |
+| 20 km | 349 m | 698 m | 1048 m | 1750 m | 2000 m |
+| 30 km | 524 m | 1048 m | 1572 m | 2625 m | 2000 m |
+| 40 km | 698 m | 1397 m | 2096 m | 3500 m | 2000 m |
+
+The useful way to read this is against the alternative. For the dispatcher
+path to be *worse than the satellite we already have*, the azimuth error
+would have to reach:
+
+```
+at 10 km  →  11.3°     at 30 km  →  3.8°
+at 20 km  →   5.7°     at 40 km  →  2.9°
+```
+
+Standard radio procedure includes read-back confirmation, which is error
+correction, so errors above a few degrees should be rare at the ranges towers
+typically work. **Within about 20 km both paths beat GOES comfortably**, and
+the choice is therefore about adoption, not accuracy. Beyond 30 km
+transcription starts to matter and tower-direct entry pulls ahead.
+
+Two caveats before treating that as settled: error compounds in a cross-fix,
+since each of the two bearings carries its own; and this assumes the
+transcription error distribution is tight, which is exactly what CONAF's own
+procedures would tell us.
+
+**So build one bearing-entry component with a `source` field** (`tower` or
+`dispatcher`) and support both. The decision costs nothing to defer, and it
+should be made with CONAF's error-correction procedures on the table rather
+than guessed at from outside.
 
 ---
 
