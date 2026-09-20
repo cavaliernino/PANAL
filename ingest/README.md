@@ -3,39 +3,109 @@
 Pulls each source, normalises it onto the H3 grid and loads PostGIS. One module
 per source, each idempotent and re-runnable, scheduled via GitHub Actions.
 
-| Source | Cadence | Notes |
-|---|---|---|
-| GOES-East ABI FDC | **every 10 min** | the tempo layer; 2 km, beta quality, high-confidence only |
-| NASA FIRMS active fire | several times daily | no API key; regional CSV; **clip to real geometry, not a bbox** |
-| OpenStreetMap roads | once, refreshed | static egress capacity |
-| TomTom Traffic | live, during events | free tier; OK over non-TomTom basemaps |
-| MINSAL SADU respiratory | weekly | ~65 MB parquet; **comma decimal separator** in lat/lon |
-| SINCA air quality | hourly | PM2.5/PM10 per station; validates smoke dispersion |
-| NASA POWER | daily | per H3 centroid, cached |
-| CONAF fire statistics | per season | ground truth on burned area and cause |
-| Censo 2024 (INE) | once | block level → H3, static reference |
-| Establecimientos de Salud | monthly | distance-to-care term |
+| Source | Cadence | Status | Notes |
+|---|---|---|---|
+| **GOES-East ABI FDC** | **every 10 min** | ✅ **working** | the tempo layer; 2 km, provisional, high-confidence filtering |
+| NASA FIRMS active fire | several times daily | | no API key; regional CSV |
+| OpenStreetMap roads | once, refreshed | | static egress capacity |
+| TomTom Traffic | live, during events | | free tier; OK over non-TomTom basemaps |
+| Waze for Cities | every 2 min | | needs the agency partnership |
+| MINSAL SADU respiratory | weekly | | ~65 MB parquet; **comma decimal separator** in lat/lon |
+| SINCA air quality | hourly | | PM2.5/PM10 per station |
+| NASA POWER | daily | | per H3 centroid, cached |
+| CONAF fire statistics | per season | | ground truth on burned area and cause |
+| Censo 2024 (INE) | once | | block level → H3 |
+| Establecimientos de Salud | monthly | | distance-to-care term |
 
-See [`../docs/data-sources.md`](../docs/data-sources.md) for verified schemas
-and the parsing traps. Three of them will cost you a day each if you meet them
-the hard way:
+---
 
-1. SADU lat/lon parse to **100% null** if read without `str.replace(",", ".")`.
+## Running it
+
+```bash
+python -m venv ../.venv && ../.venv/bin/pip install -r requirements.txt
+
+# latest scan
+../.venv/bin/python -m panal_ingest.pipeline
+
+# backfill the last 6 hours
+../.venv/bin/python -m panal_ingest.pipeline --hours 6
+
+# replay a past fire at its native cadence
+../.venv/bin/python scripts/backfill_event.py --preset vina2024
+```
+
+Output lands in `data/processed/` as parquet: raw detections, plus the H3
+aggregate at the chosen resolution (default r7, ~5.2 km² per cell — larger
+than a 2 km GOES pixel, so a cell never implies more precision than the
+sensor has).
+
+---
+
+## What is verified, and how
+
+Measured on 2026-09-20 against live and archive data, not from documentation:
+
+**Latency.** A full-disk file covering 22:00:20–22:09:51 UTC was readable from
+the public bucket at 22:11 — roughly **one minute after the scan closed**.
+That is better than FIRMS's ~20–30 minute republication of the same product.
+Files are ~1.8 MB and download in about 1.5 s.
+
+**Coverage.** GOES-19 sits at 75.2°W, almost on Chile's meridian. Every
+Chilean latitude band from Arica to Magallanes came back **100% usable** —
+zero pixels lost to the LZA or glint block-out zones. Verified with
+`goes.blocked_fraction()`. Caveat: that is one scan at 18:00 local, and glint
+block-out is a daytime, solar-angle effect, so coverage should be re-checked
+across the diurnal cycle before the claim is treated as permanent.
+
+**Geometry.** Chile clipping is tested against known points: Santiago, Viña
+del Mar, Punta Arenas, Rapa Nui and Chuquicamata accepted; Mendoza,
+Bariloche, La Paz and open ocean rejected. Mendoza and Bariloche are exactly
+the false positives that made the bounding-box approach 90% wrong.
+
+**Detection, against a known event.** Replaying 2 February 2024 over
+Valparaíso, GOES-16 first saw the Viña del Mar / Quilpué fire at **15:10 UTC,
+12:10 local** — one pixel, 170 MW — and the file was public about ten minutes
+later. Growth was monotonic and unambiguous: 4 pixels by 12:30, 10 by 14:00,
+42 and 21 GW by 18:20.
+
+> What that does **not** establish is a counterfactual. CONAF has its own
+> detection and the public calls 130; the satellite signal existing early
+> does not by itself mean anyone would have learned anything new from it.
+> Whether this adds to what the agencies already had is a question for them,
+> and it is the right first question to ask in that conversation.
+
+---
+
+## Traps
+
+Three that will cost you a day each:
+
+1. SADU lat/lon parse to **100% null** without `str.replace(",", ".")`.
 2. Four of SADU's twelve causes are **subtotals** that double-count when summed.
-3. A bounding box over Chile is **90% Argentina and Bolivia**. Clip against the
-   INE census cartography.
+3. A bounding box over Chile is **90% Argentina and Bolivia**.
 
-And one that will cost you credibility rather than time: FIRMS reports
-**persistent industrial thermal anomalies** — Chuquicamata and the northern
-smelters read as permanent fires. Mask them before anything alerts a human.
+One that costs credibility instead of time: satellites report **persistent
+industrial thermal anomalies**. Chuquicamata and the northern smelters read
+as permanent fires. Mask them before anything reaches a human.
 
-## Build order
+And one that is easy to miss: **GOES-East changed satellites on 2025-04-07.**
+Backfill before that date must read `noaa-goes16`, after it `noaa-goes19`.
+`goes.bucket_for()` handles this; do not hardcode a bucket.
 
-**GOES first, then FIRMS.** GOES carries the tempo (10-minute cadence) and
-FIRMS the precision (375 m). Chile's fire season opens around November and
-both should be capturing the 2026–27 season live rather than backfilling it.
-That is the only externally imposed deadline in the project.
+---
 
-## Status
+## Layout
 
-Not implemented. Phase 1.
+```
+panal_ingest/
+  goes.py       S3 listing, ABI fixed-grid geolocation, mask → detections
+  chile.py      territory clipping against real geometry
+  pipeline.py   fetch → extract → clip → H3 → parquet
+  reference/    boundary geometry (provisional, see its README)
+scripts/
+  backfill_event.py   replay a past fire at 10-minute cadence
+```
+
+`goes.geolocate()` reads the projection parameters from each file's own
+`goes_imager_projection` variable rather than hardcoding them, so it keeps
+working if the satellite is repositioned.
