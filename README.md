@@ -8,10 +8,17 @@ data and NASA satellite fire detections on an H3 hex grid — and by reporting
 the excess over what is normal for that place at that time of year, rather than
 a raw number that turns red every winter.
 
-Two hazards, one map, complementary seasons: **respiratory illness**, which
-peaks in winter, and **wildfire and its smoke**, which peaks in summer. They
-are not independent — fire smoke drives respiratory emergencies, and PANAL has
-twelve years of data on both to measure exactly how much.
+**Wildfire is the main line.** Megafires start as small fires, and the window
+in which one can still be stopped by a rapid initial attack is measured in tens
+of minutes. PANAL does not fight fires; it compresses the time between a fire
+starting and someone competent knowing exactly where it is — and, before any of
+that, shows which neighbourhoods are built in the condition that turns a small
+fire into a catastrophe.
+
+Respiratory risk remains, and follows. The two hazards are seasonally
+opposite — fire peaks November to March, respiratory illness June to August —
+and they are linked, because fire smoke drives respiratory emergencies. That
+calendar sets the build order.
 
 > 🏆 PANAL won the **Galactic Impact Award** at the NASA Space Apps Challenge
 > COVID-19 in May 2020 — *"the solution with the most potential to improve life
@@ -30,16 +37,20 @@ award-winning submission was never implemented in code. Phase 1 is the first
 time PANAL will actually calculate anything, and this README will not claim
 otherwise until it does.
 
-| Phase | Scope | Status |
-|---|---|---|
-| 0 | Repo hygiene, key revocation, monorepo, docs | ✅ done |
-| 1 | The risk engine — H3 aggregation, seasonal baselines | next |
-| 2 | Ingest pipelines for every source, **FIRMS first** | |
-| 3 | API | |
-| 4 | Web PWA — the first time PANAL is visible | |
-| 5 | Forecasting, with honest backtesting | |
-| 6 | Android, rebuilt against the same API | |
-| 7 | Heat waves, evacuation alerts, public API | |
+| Phase | Scope | Deadline | Status |
+|---|---|---|---|
+| 0 | Repo hygiene, key revocation, monorepo, docs | — | ✅ done |
+| 1 | Fire foundation — H3 grid, GOES + FIRMS ingest, map v1 | **Nov 2026** | next |
+| 2 | WUI exposure — which neighbourhoods are built to burn | **Nov 2026** | |
+| 3 | Crowdsourced first alarm — burst capture, triangulation | | |
+| 4 | Fire behaviour — spread vector, C2F+K, egress, traffic | | |
+| 5 | Agency channel — CONAF/SENAPRED write official zones | | |
+| 6 | Respiratory — the original PANAL index | autumn 2027 | |
+| 7 | Android, hardening, public API | | |
+
+Phases 1 and 2 have a real external deadline: Chile's fire season opens in
+November, and missing it costs a year of validation. Full detail in
+[`docs/roadmap.md`](docs/roadmap.md).
 
 ---
 
@@ -56,7 +67,7 @@ The replacement is better than what the project had in 2020:
 | Health | MinCiencia COVID, comuna-level *(dead)* | MINSAL SADU — **635 establishments, 100% geocoded, weekly, 2014→2026** |
 | Demographics | Global gridded raster, coarse | **Censo 2024 at block level**, 189 variables |
 | Weather | Manual NOAA downloads | **NASA POWER API**, `T2M` + `RH2M` by coordinate |
-| Fire | not covered | **NASA FIRMS** (VIIRS/MODIS, no API key) + CONAF + SINCA |
+| Fire | not covered | **GOES-East** (10 min) + **FIRMS** VIIRS/MODIS + CONAF + SINCA |
 | Grid | Hexagons drawn by hand | **H3**, stable global cell ids |
 
 And the disease changed. In 2026 Chile, COVID-19 emergency attendances run
@@ -87,7 +98,26 @@ database or a network.
 
 ---
 
-## The model in one paragraph
+## Detection is a latency stack
+
+No single source is fast and precise at once:
+
+| Layer | Latency | Resolution | Role |
+|---|---|---|---|
+| Crowd burst (in-app) | seconds | eyewitness | first alarm on a new fire |
+| GOES-East ABI | 10 min cadence, ~20–30 min lag | 2 km | tempo — detection and tracking |
+| VIIRS / MODIS | ~3 h | 375 m | precision — confirm and map perimeter |
+| CONAF / SENAPRED | human | authoritative | overrides everything |
+
+FIRMS's sub-hour tiers are **US and Canada only**; Chile's floor is ~30 min
+through GOES. A 2 km pixel cannot resolve a fire running up an urban ravine,
+and a three-hour-old fix arrives after the initial-attack window has shut —
+which is exactly why the crowd layer exists. See
+[`docs/crowdsourcing.md`](docs/crowdsourcing.md).
+
+---
+
+## The respiratory model in one paragraph
 
 Respiratory emergency attendances are attributed to their establishment's H3
 cell and spread across a catchment, normalised per 100,000 inhabitants from
@@ -148,3 +178,13 @@ When publishing derived work:
 PANAL was built by **Carolina Retamal**, **Marcos Maldonado**,
 **Nino Bozzi** and **Patricio Alarcón** — Concepción, Santiago and
 Viña del Mar, Chile.
+
+---
+
+## What PANAL does not do
+
+PANAL publishes a heat map and associated risk information. **It does not
+issue evacuation orders.** Official alerts in Chile are SENAPRED's, through
+SAE; PANAL's role is to surface and amplify them, never to imitate one. The
+Phase 5 agency channel exists so CONAF and SENAPRED can publish official zones
+through PANAL directly — which makes this a design, not a limitation.

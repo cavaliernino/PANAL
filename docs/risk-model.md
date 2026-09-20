@@ -1,8 +1,11 @@
 # The PANAL risk index
 
-**Status: specification, not yet implemented.** This document is the Phase 1
-contract. `engine/` implements exactly what is written here, and nothing here
-is considered settled until it has a test.
+**Status: specification, not yet implemented.** This is the **Phase 6**
+contract — the respiratory index, which follows the fire work. For the fire
+products and the build order, see [`roadmap.md`](roadmap.md).
+
+`engine/` implements exactly what is written here, and nothing here is
+considered settled until it has a test.
 
 ---
 
@@ -19,7 +22,8 @@ The Space Apps submission described a weighted index over three groups:
 **None of this existed in code.** The 2020 backend returned a hardcoded
 `HttpResponse("{[50,50,50,50,50]}")` and the app displayed a hardcoded `50%`.
 The weights come from the presentation, so they are a starting hypothesis, not
-a validated model. Phase 1 is the first time PANAL actually computes anything.
+a validated model. Phase 1 is the first time PANAL computes anything at all, and it computes
+fire, not this.
 
 ---
 
@@ -68,7 +72,7 @@ So the health term is not *"how many respiratory cases are there here"* but
 Baseline method is open: a per-week-of-year robust central estimate
 (median plus MAD, or a Farrington-style approach) over the pre-2025 years,
 excluding 2020–2021 as pandemic-distorted outliers. **To be decided with data
-in hand during Phase 1.**
+in hand during Phase 6.**
 
 ---
 
@@ -119,11 +123,16 @@ Weights live in a config file, not in code.
 
 ---
 
-## Wildfire: a driver, not a fourth component
+## Wildfire
 
-The obvious move is to bolt fire on as a fourth weighted term. That would be
-wrong. Fire is not a peer of the health signal — it is partly a **cause** of
-it, and adding both would double-count the same people.
+**Fire is now the project's main line** — see [`roadmap.md`](roadmap.md). This
+section covers only how it relates to the respiratory index; the fire products
+themselves (detection stack, WUI exposure, spread vector, egress) are
+specified in the roadmap and in [`crowdsourcing.md`](crowdsourcing.md).
+
+Within the respiratory index, fire is **not** a fourth weighted term. That
+would be wrong: fire is partly a **cause** of the health signal, and adding
+both would double-count the same people.
 
 Fire enters in two places, because it produces two hazards with different time
 constants and different actions for the person holding the phone:
@@ -134,11 +143,11 @@ constants and different actions for the person holding the phone:
 fire_hazard(cell) = f(distance to active detections, FRP, wind direction)
 ```
 
-From NASA FIRMS, refreshed several times a day. The question it answers is
-*"is there fire near me right now"*, and the action is evacuation. This is a
-**separate output layer**, not folded into the respiratory index, because
-mixing a 15-minute-old fire front into a two-week-lagged health average would
-destroy both.
+From the detection stack in [`roadmap.md`](roadmap.md) — GOES every 10
+minutes, VIIRS for precision. The question it answers is *"is there fire near
+me right now"*, and it is a **separate output layer**, never folded into the
+respiratory index: mixing a 30-minute-old fire front into a two-week-lagged
+health average would destroy both.
 
 ### B. Smoke exposure — days
 
@@ -187,9 +196,8 @@ no dead season.
 
 ### Timing
 
-Chile's fire season opens around November. The FIRMS ingest should be running
-**before then** so the 2026–27 season is captured live rather than backfilled.
-That is the one real external deadline on this roadmap.
+The fire ingest must run before November 2026 — see
+[`roadmap.md`](roadmap.md) for the seasonal build order.
 
 ---
 

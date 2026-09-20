@@ -206,6 +206,41 @@ Worth registering for backfill, but **not needed to start**.
 > to March. September detections are near zero, so the pipeline **cannot be
 > validated on live data until summer**. Build and backfill against history.
 
+### GOES-East — geostationary, the tempo layer
+
+| | |
+|---|---|
+| Satellite | GOES-19, operational as GOES-East since April 2025, at 75.2°W |
+| Product | ABI Level 2 Fire / Hot Spot Characterization (FDC) |
+| Cadence | **Full disk every 10 minutes**, 24 h, no revisit gaps |
+| Latency | ~20–30 min via FIRMS; ~10–15 min direct from NOAA on AWS Open Data |
+| Resolution | 2 km |
+
+The fire mask comes with fire temperature, fire area and FRP per pixel.
+
+GOES-East sits almost on Chile's meridian, so viewing geometry over the
+central and southern zone — Valparaíso, Ñuble, Biobío, La Araucanía, where
+the fires and the towns are — is good. It degrades toward Magallanes.
+
+The trade against VIIRS is stark and both directions matter:
+
+```
+GOES   every 10 min, 2 km,  beta quality  -> sees fast, not fine
+VIIRS  every ~6 h,  375 m,  reliable      -> sees fine, not fast
+```
+
+> **Trap — geostationary fire data is beta.** FIRMS classifies all of it as
+> provisional and shows only high-confidence detections, because the current
+> generation of geostationary algorithms is "prone to significant errors of
+> commission and/or omission". Treat a GOES detection as *something is
+> happening near here*, never as a fix.
+
+FIRMS latency tiers, for the record: Ultra Real-Time (<1 min) and Real-Time
+(<1 h) exist but are **US and Canada only**, served by direct-readout ground
+stations. Global Near Real-Time is ~3 hours. Standard Processing is 2–3
+months. **Chile's floor through polar orbiters is 3 hours; through GOES it is
+about 30 minutes.**
+
 ### CONAF — official fire statistics
 
 | | |
@@ -250,6 +285,33 @@ southern cities — which means the same ingest serves both seasons.
 
 Station coverage is sparse compared to a hex grid, so SINCA calibrates and
 validates a dispersion estimate; it does not replace one.
+
+### Traffic and road network
+
+Congestion turns an evacuation into a death trap, so egress is a data
+requirement, not a nicety.
+
+| Source | Status |
+|---|---|
+| **OpenStreetMap** | ✅ Road network for static egress capacity. No API, no licence problem, available now. |
+| **TomTom Traffic** | ✅ **Recommended for live traffic.** 2,500 non-tile requests/day and 50,000 tiles/day free, and explicitly no restriction on displaying over non-TomTom basemaps. |
+| **Google Maps traffic** | ❌ Prohibited on non-Google basemaps. Incompatible with our MapLibre choice. |
+| **Waze for Cities** | ❌ for PANAL. Free two-way GeoRSS feed updated every 2 minutes, but restricted to public-sector partners with no commercial use. Reachable only through the Phase 5 agency channel. |
+
+Static egress capacity — dwellings behind each exit road, dead ends,
+single-access neighbourhoods — comes from OSM joined to Censo 2024 and needs
+no traffic provider at all.
+
+### Fire behaviour modelling
+
+**Cell2Fire + Kitral (C2F+K).** Kitral is the Chilean fire behaviour system
+developed at the Universidad de Chile in the mid-1990s — the name is
+Mapudungun for fire — and its algorithm still underlies the prediction models
+CONAF's lineage uses. It takes slope, wind, fuel moisture and fuel type.
+C2F+K combines it with the Cell2Fire growth simulator, tuned for Chilean
+forests.
+
+It is **cell-based**, which pairs naturally with an H3 grid.
 
 ---
 
