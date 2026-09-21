@@ -133,10 +133,40 @@ consistent, official source.
 Replaces the manual NOAA dataset downloads used in 2020, and keeps PANAL
 anchored to a NASA source, which matters for a Space Apps project.
 
-| Parameter | Meaning | Maps to the 2020 formula |
+| Parameter | Meaning | Used for |
 |---|---|---|
-| `T2M` | Temperature at 2 m (MERRA-2) | "surface temperature" |
-| `RH2M` | Relative humidity at 2 m (MERRA-2) | "relative humidity" |
+| `T2M` | Temperature at 2 m (MERRA-2) | 2020 formula; 30-30-30 |
+| `RH2M` | Relative humidity at 2 m (MERRA-2) | 2020 formula; 30-30-30 |
+| `WS10M` | Wind speed at 10 m | 30-30-30; smoke drift; rate of spread |
+| `WD10M` | Wind direction at 10 m | where the fire runs; plume bearing check |
+
+10 m is the fire-weather standard height for wind, not 2 m.
+
+#### The 30-30-30 factor
+
+Chile's fire services use a pre-alert heuristic — **temperature ≥ 30 °C,
+relative humidity ≤ 30%, wind ≥ 30 km/h** — treated as extreme conditions for
+fire spread. PANAL computes it per frame from POWER and shows which of the
+three legs are met.
+
+Two things to be careful about:
+
+- **The unit is km/h in every published Chilean source we found.** Some
+  services state the wind limit in knots, which is nearly double
+  (30 kt = 55.6 km/h) and therefore trips far less often. On 2 February 2024
+  over Viña del Mar, the 30 km/h threshold was met from 16:00 to 18:50 local,
+  while 30 kt would never have been met — the peak was 17.1 kt. The threshold
+  and its unit are configurable (`power.Factor30`) rather than assumed.
+- **It is a heuristic, not a model.** Chilean academics have criticised it as
+  lacking scientific backing and as insufficient for the severity now seen.
+  PANAL shows it because it is what the services act on. Cell2Fire + Kitral
+  is the physics.
+
+> **Resolution trap.** MERRA-2 is a ~50 km global reanalysis. In terrain like
+> Valparaíso's ravines, local wind can differ sharply from the grid-cell
+> average, so POWER is right for regional context and for replaying past
+> events, and wrong as the sole input to an operational alert. Local stations
+> — DMC, or a corps' own — are what an alert should eventually read.
 
 - Endpoints: hourly, daily and monthly, queried by point coordinates.
 - Limits: 20 parameters per request for daily, 15 for hourly.

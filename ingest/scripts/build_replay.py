@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from panal_ingest import goes, pipeline  # noqa: E402
+from panal_ingest import goes, pipeline, power  # noqa: E402
 
 PRESETS = {
     "vina2024": dict(
@@ -29,6 +29,10 @@ PRESETS = {
         center=(-71.45, -33.05), zoom=10.5,
     ),
 }
+
+# Chile's 30-30-30 pre-alert factor. The published definition uses 30 km/h;
+# pass wind_unit="knots" if a service states it that way instead.
+FACTOR = power.Factor30()
 
 
 CACHE = Path(__file__).resolve().parents[2] / "data" / "cache" / "goes"
@@ -81,6 +85,18 @@ def build(start, end, bbox, utc_offset, res, **meta):
 
     print(f"{len(scans)} barridos", file=sys.stderr)
 
+    # Weather for the event centroid. One POWER call covers the whole replay.
+    wx_lat = (lat_min + lat_max) / 2
+    wx_lon = (lon_min + lon_max) / 2
+    try:
+        hourly = power.fetch_hourly(
+            wx_lat, wx_lon, start.date(), (end + dt.timedelta(days=1)).date())
+        print(f"POWER: {len(hourly)} horas en ({wx_lat:.2f}, {wx_lon:.2f})",
+              file=sys.stderr)
+    except Exception as exc:                            # noqa: BLE001
+        print(f"  ! POWER no disponible: {exc}", file=sys.stderr)
+        hourly = {}
+
     frames, cell_geom, skipped = [], {}, []
 
     for i, scan in enumerate(scans, 1):
@@ -97,12 +113,16 @@ def build(start, end, bbox, utc_offset, res, **meta):
             cells.append({k: c[k] for k in ("h", "n", "f", "c")})
             cell_geom.setdefault(c["h"], c["g"])
 
+        wx = power.at(hourly, scan.start) if hourly else {}
         frames.append({
             "t": scan.start.isoformat().replace("+00:00", "Z"),
             "local": (scan.start + dt.timedelta(hours=utc_offset)).strftime("%H:%M"),
             "cells": cells,
             "frp": round(sum(c["f"] for c in cells), 1),
             "px": got["px"],
+            "wx": wx,
+            "f30": FACTOR.evaluate(wx.get("t2m"), wx.get("rh2m"), wx.get("ws_ms"))
+                   if wx else {},
         })
         if i % 12 == 0 or i == len(scans):
             print(f"  {i}/{len(scans)}  {frames[-1]['local']} local  "
@@ -130,6 +150,13 @@ def build(start, end, bbox, utc_offset, res, **meta):
             "peak_local": peak["local"],
             "peak_frp": peak["frp"],
             "skipped_scans": len(skipped),
+            "weather_point": [round(wx_lat, 3), round(wx_lon, 3)],
+            "weather_source": "NASA POWER (MERRA-2, hourly, ~50 km grid)",
+            "factor30": {
+                "temp_c": FACTOR.temp_c, "rh_pct": FACTOR.rh_pct,
+                "wind": FACTOR.wind, "wind_unit": FACTOR.wind_unit,
+            },
+            "factor30_frames": sum(1 for f in frames if f.get("f30", {}).get("all")),
             "generated": dt.datetime.now(dt.timezone.utc)
                            .isoformat(timespec="seconds").replace("+00:00", "Z"),
         },
@@ -159,6 +186,10 @@ def main():
           file=sys.stderr)
     print(f"  primera detección {m['first_detection']} · pico {m['peak_local']} "
           f"({m['peak_frp']:,.0f} MW)", file=sys.stderr)
+    fu = m["factor30"]
+    print(f"  factor 30-30-30 ({fu['wind']:.0f} {fu['wind_unit']}): "
+          f"{m['factor30_frames']} de {len(data['frames'])} cuadros con los tres",
+          file=sys.stderr)
 
 
 if __name__ == "__main__":

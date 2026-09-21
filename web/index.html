@@ -55,6 +55,39 @@
   .kv b{font-variant-numeric:tabular-nums}
   .spark{display:block; width:100%; height:38px; margin-top:10px}
 
+  /* ── factor 30-30-30 ────────────────────── */
+  .f30{
+    position:absolute; z-index:3; left:14px; top:calc(268px + var(--safe-t));
+    background:rgba(22,27,35,.93); border:1px solid var(--line); border-radius:12px;
+    padding:11px 13px; min-width:190px; backdrop-filter:blur(8px);
+  }
+  .f30 h4{
+    margin:0 0 2px; font-size:10.5px; color:var(--ink-dim); font-weight:600;
+    text-transform:uppercase; letter-spacing:.07em;
+  }
+  .f30 .state{font-size:12px; font-weight:600; color:var(--ink-faint); margin-bottom:8px}
+  .f30.hit{border-color:#b45309; box-shadow:0 0 0 1px rgba(245,158,11,.25)}
+  .f30.hit .state{color:var(--accent)}
+  .leg{
+    display:flex; align-items:center; gap:8px; margin-top:6px;
+    font-size:12px; color:var(--ink-faint);
+  }
+  .leg .dot{
+    width:8px; height:8px; border-radius:50%; flex:none;
+    background:#334155; box-shadow:inset 0 0 0 1px #475569;
+  }
+  .leg.on{color:var(--ink)}
+  .leg.on .dot{background:var(--accent); box-shadow:0 0 6px rgba(245,158,11,.7)}
+  .leg b{margin-left:auto; font-variant-numeric:tabular-nums; font-weight:600}
+  .leg i{font-style:normal; color:var(--ink-faint); font-size:10.5px; min-width:44px;
+    text-align:right}
+  .wdir{
+    display:inline-block; width:11px; height:11px; margin-left:5px;
+    transform-origin:50% 50%; color:var(--ink-dim);
+  }
+  .f30 .src{margin-top:9px; font-size:9.5px; color:var(--ink-faint); line-height:1.45}
+  .f30strip{display:block; width:100%; height:9px; margin-top:8px}
+
   /* ── leyenda ────────────────────────────── */
   .legend{
     position:absolute; z-index:3; right:14px; bottom:calc(112px + var(--safe-b));
@@ -106,6 +139,7 @@
     .clock{font-size:24px}
     .spark{height:30px}
     .legend{display:none}
+    .f30{display:none}
     header{flex-wrap:wrap}
     .badge{margin-left:0; width:100%; justify-content:flex-start}
   }
@@ -135,6 +169,16 @@
   <div class="kv"><span>FRP total</span><b id="s-frp">0 MW</b></div>
   <div class="kv"><span>celdas H3</span><b id="s-cells">0</b></div>
   <svg class="spark" id="spark" preserveAspectRatio="none"></svg>
+</div>
+
+<div class="f30" id="f30">
+  <h4>Factor 30-30-30</h4>
+  <div class="state" id="f30-state">—</div>
+  <div class="leg" id="leg-t"><span class="dot"></span>Temperatura <i>≥30 °C</i><b>—</b></div>
+  <div class="leg" id="leg-h"><span class="dot"></span>Humedad <i>≤30 %</i><b>—</b></div>
+  <div class="leg" id="leg-w"><span class="dot"></span>Viento <i id="leg-w-thr">≥30 km/h</i><b>—</b></div>
+  <svg class="f30strip" id="f30strip" preserveAspectRatio="none"></svg>
+  <div class="src" id="f30-src">—</div>
 </div>
 
 <div class="legend">
@@ -236,6 +280,46 @@ function paint(idx) {
   $("s-cells").textContent = f.cells.length;
   $("scrub").value = i;
   drawSpark();
+  paintFactor(f);
+}
+
+const ARROW = '<svg class="wdir" viewBox="0 0 10 10" style="transform:rotate(DEGdeg)">' +
+  '<path d="M5 1 L8.2 9 L5 6.9 L1.8 9 Z" fill="currentColor"/></svg>';
+
+function paintFactor(f) {
+  const wx = f.wx || {}, g = f.f30 || {};
+  const unit = DATA.meta.factor30.wind_unit === "knots" ? "knots" : "kmh";
+  const wv = unit === "knots" ? wx.ws_knots : wx.ws_kmh;
+  const wu = unit === "knots" ? "kt" : "km/h";
+
+  const set = (id, on, txt) => {
+    const el = $(id);
+    el.classList.toggle("on", !!on);
+    el.querySelector("b").innerHTML = txt;
+  };
+  set("leg-t", g.temp, wx.t2m == null ? "—" : wx.t2m.toFixed(1) + " °C");
+  set("leg-h", g.rh,   wx.rh2m == null ? "—" : wx.rh2m.toFixed(0) + " %");
+  set("leg-w", g.wind, wv == null ? "—" :
+      wv.toFixed(1) + " " + wu +
+      (wx.wd == null ? "" : ARROW.replace("DEG", (wx.wd + 180) % 360)));
+
+  const met = g.met ?? 0;
+  $("f30").classList.toggle("hit", !!g.all);
+  $("f30-state").textContent = wx.t2m == null
+    ? "sin dato meteorológico"
+    : g.all ? "los tres criterios presentes" : `${met} de 3 criterios`;
+}
+
+function drawFactorStrip() {
+  const svg = $("f30strip"), W = 200, H = 9;
+  const bars = DATA.frames.map((f, k) => {
+    const g = f.f30 || {}, met = g.met ?? 0;
+    const w = W / DATA.frames.length;
+    const fill = g.all ? "#f59e0b" : met === 2 ? "#78581a" : met === 1 ? "#3b3527" : "#242b36";
+    return `<rect x="${(k*w).toFixed(2)}" y="0" width="${(w+.4).toFixed(2)}" height="${H}" fill="${fill}"/>`;
+  }).join("");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = bars;
 }
 
 function drawSpark() {
@@ -306,6 +390,13 @@ function setStyle(idx) {
   }
   const m = DATA.meta;
 
+  const fu = m.factor30 || {wind: 30, wind_unit: "kmh"};
+  $("leg-w-thr").textContent = "≥" + fu.wind + (fu.wind_unit === "knots" ? " kt" : " km/h");
+  $("f30-src").innerHTML =
+    `${m.weather_source || "—"}<br>Punto ${m.weather_point ? m.weather_point.join(", ") : "—"}. ` +
+    `Valor horario, sin interpolar.`;
+  drawFactorStrip();
+
   $("h-title").textContent = m.title;
   $("h-sub").textContent = m.subtitle;
   $("c-sat").textContent = m.satellite.replace("noaa-", "").toUpperCase();
@@ -316,7 +407,9 @@ function setStyle(idx) {
     `Datos geoestacionarios de fuego son <b>provisionales</b> y de 2 km: indican ` +
     `que algo ocurre cerca, no una posición exacta. ` +
     `Esto es un <b>registro de detección, no un contrafactual</b> — no implica que ` +
-    `nadie hubiera actuado distinto.`;
+    `nadie hubiera actuado distinto. ` +
+    `Meteorología de reanálisis <b>MERRA-2 en grilla de ~50 km</b>: sirve de contexto ` +
+    `regional, no reemplaza una estación local en terreno quebrado.`;
 
   map = new maplibregl.Map({
     container: "map", style: STYLES[0][1],
