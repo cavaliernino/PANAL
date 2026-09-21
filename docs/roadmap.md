@@ -223,6 +223,31 @@ cells inside it say *and precisely here, two hours ago*. The difference in
 size and age between them **is** the information, and the interface should
 let cell size communicate precision rather than disguise it.
 
+**A gap is not an absence.** VIIRS detections arrive as a scatter, not a
+blob: one pass over Viña gave 105 cells at r9 in **33 disconnected
+components**, 11% of them isolated. Rendered naively that reads as confetti,
+and worse, the space between reads as *safe*.
+
+The holes turn out to be tiny — median 201 m, p90 402 m, at most 603 m, all
+smaller than the 375 m pixel that produced them. So the fragmentation is a
+sampling artefact, not fire-free ground, and dilating by a single H3 ring
+collapses those 33 components into 4.
+
+That dilation ships as a separate **inferred extent** layer: flat, neutral,
+carrying no intensity value because none was measured there, drawn beneath
+the detections and never merged with them. One is observed, the other is a
+neighbourhood guess, and a map that blurs the two is lying.
+
+And do not assume the coarse layer covers the gaps — it does not. At the peak
+frame only **8 of 17** VIIRS parent cells at r7 coincided with a GOES
+detection. More than half of what VIIRS saw, GOES missed entirely. The layers
+are complementary, not nested.
+
+The rule that follows: **no colour may read as "safe."** Absence of a cell
+means no detection — a fire below the sensor threshold, or hidden by smoke or
+cloud, produces exactly the same empty space as no fire at all. The legend
+says so in as many words.
+
 **Derived layers are a separate case.** WUI exposure, slope and dwelling
 density come from Censo 2024 at block level and a DEM, which genuinely are
 fine, so those layers can legitimately live at r9 or r10. An *observation* is

@@ -37,6 +37,18 @@ VIIRS_MAX_AGE_MIN = 240
 # Detections more than this far apart in time belong to different passes.
 PASS_GAP_MIN = 30
 
+# VIIRS detections arrive as a scatter, not a blob: at r9 one pass over Viña
+# gave 105 cells in 33 disconnected components. The holes between them are
+# tiny — median 201 m, p90 402 m, at most 603 m — which is smaller than the
+# 375 m pixel that produced them, so the fragmentation is a sampling artefact
+# rather than fire-free ground. Dilating by a single ring collapses those 33
+# components into 4.
+#
+# That dilation is rendered as a separate, clearly labelled *inferred* layer.
+# It is never mixed into the detections: one is observed, the other is a
+# neighbourhood guess, and a map that blurs the two is lying.
+EXTENT_RINGS = 1
+
 # Chile's 30-30-30 pre-alert factor. The published definition uses 30 km/h;
 # pass wind_unit="knots" if a service states it that way instead.
 FACTOR = power.Factor30()
@@ -157,8 +169,20 @@ def build_viirs(bbox, start, end, products, utc_offset, geom, map_key):
                                 for lat, lng in h3.cell_to_boundary(row.h3)]
         for c in cells.values():
             c["f"] = round(c["f"], 1)
+        # Inferred extent: one ring around the detections, minus the
+        # detections themselves, so it renders as a halo underneath.
+        halo = set()
+        for cell in cells:
+            halo |= set(h3.grid_disk(cell, EXTENT_RINGS))
+        halo -= set(cells)
+        for cell in halo:
+            if cell not in geom:
+                geom[cell] = [[round(lng, 5), round(lat, 5)]
+                              for lat, lng in h3.cell_to_boundary(cell)]
+
         t = grp.acq.min()
         passes.append({
+            "halo": sorted(halo),
             "t": t.isoformat().replace("+00:00", "Z"),
             "local": (t + dt.timedelta(hours=utc_offset)).strftime("%H:%M"),
             "sat": ", ".join(sorted(grp.satellite.unique())),
@@ -280,6 +304,7 @@ def build(start, end, bbox, utc_offset, res, **meta):
             "skipped_scans": len(skipped),
             "viirs_res": 9,
             "viirs_max_age_min": VIIRS_MAX_AGE_MIN,
+            "viirs_extent_rings": EXTENT_RINGS,
             "viirs_first_local": vpasses[0]["local"] if vpasses else None,
             "weather_point": [round(wx_lat, 3), round(wx_lon, 3)],
             "weather_source": "NASA POWER (MERRA-2, hourly, ~50 km grid)",

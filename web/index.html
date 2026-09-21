@@ -113,6 +113,10 @@
   .legend hr{border:0; border-top:1px solid var(--line); margin:9px 0}
   .lrow{display:flex; align-items:center; gap:7px; margin-top:5px; color:var(--ink-dim)}
   .swatch{width:15px; height:13px; border-radius:2px; background:#ef4444; flex:none}
+  .legend .warn{
+    margin:0; font-size:10px; line-height:1.5; color:var(--ink-faint);
+  }
+  .legend .warn b{color:var(--ink-dim)}
 
   /* ── controles ──────────────────────────── */
   .dock{
@@ -182,6 +186,7 @@
   <div class="kv"><span>celdas H3</span><b id="s-cells">0</b></div>
   <div class="vrow">
     <label><input type="checkbox" id="v-toggle" checked> VIIRS 375 m <i>r9</i></label>
+    <label><input type="checkbox" id="h-toggle" checked> extensión inferida <i>±200 m</i></label>
     <span class="vstate" id="s-viirs">—</span>
   </div>
   <svg class="spark" id="spark" preserveAspectRatio="none"></svg>
@@ -207,6 +212,7 @@
   <div class="ramp-lbl"><span>0</span><span>100</span><span>500</span><span>1500</span><span>3200+ MW</span></div>
   <hr>
   <h4>Resolución</h4>
+  <div class="lrow"><span class="swatch" style="background:#f59e0b; opacity:.2"></span> extensión inferida</div>
   <div class="lrow"><span class="swatch" style="background:#f97316"></span> GOES 2 km · r7</div>
   <div class="lrow"><span class="swatch" style="background:#f97316; outline:1px solid #fff; outline-offset:-1px; width:9px; height:8px"></span> VIIRS 375 m · r9</div>
   <hr>
@@ -214,6 +220,10 @@
   <div class="lrow"><span class="swatch" style="opacity:.85"></span> confirmada</div>
   <div class="lrow"><span class="swatch" style="opacity:.5"></span> probable</div>
   <div class="lrow"><span class="swatch" style="opacity:.3; outline:1px dashed #ef4444; outline-offset:-1px"></span> baja</div>
+  <hr>
+  <p class="warn">Sin celda significa <b>sin detección</b>, no ausencia de
+  fuego. Un foco bajo el umbral del sensor, o tapado por humo o nube, no
+  aparece.</p>
 </div>
 
 <div class="dock">
@@ -250,7 +260,7 @@ const OPACITY = {
 const WEAK = new Set(["low_probability", "cloud_contaminated"]);
 
 const $ = id => document.getElementById(id);
-let DATA, map, i = 0, timer = null, curRes = null, showViirs = true;
+let DATA, map, i = 0, timer = null, curRes = null, showViirs = true, showHalo = true;
 
 // Which H3 level to serve at a given zoom. Coarsening as the viewport widens
 // keeps the cell count sane and never misleads — aggregating up the H3
@@ -316,8 +326,9 @@ function paint(idx) {
   $("s-frp").textContent = f.frp.toLocaleString("es-CL") + " MW";
   $("s-cells").textContent = cellsAt(f, curRes).length;
 
-  map.getSource("viirs")?.setData(showViirs ? viirsFeatures(f)
-                                            : {type:"FeatureCollection",features:[]});
+  const none = {type:"FeatureCollection", features:[]};
+  map.getSource("viirs")?.setData(showViirs ? viirsFeatures(f) : none);
+  map.getSource("vhalo")?.setData(showViirs && showHalo ? viirsHalo(f) : none);
   const pass = (DATA.viirs || [])[f.v];
   const vEl = $("s-viirs");
   if (!showViirs) { vEl.textContent = "oculta"; vEl.className = "vstate"; }
@@ -387,6 +398,22 @@ function drawSpark() {
     `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#e8edf4" stroke-width="1" opacity=".75"/>`;
 }
 
+// The inferred halo. Rendered beneath the detections, in one flat neutral
+// tone rather than the FRP ramp, so it can never be mistaken for a reading:
+// it carries no intensity because none was measured there.
+function viirsHalo(frame) {
+  const pass = (DATA.viirs || [])[frame.v];
+  if (!pass || !pass.halo) return { type: "FeatureCollection", features: [] };
+  return {
+    type: "FeatureCollection",
+    features: pass.halo.map(h => ({
+      type: "Feature", properties: {},
+      geometry: { type: "Polygon",
+        coordinates: [DATA.geometry[h].concat([DATA.geometry[h][0]])] },
+    })),
+  };
+}
+
 function viirsFeatures(frame) {
   const pass = (DATA.viirs || [])[frame.v];
   if (!pass) return { type: "FeatureCollection", features: [] };
@@ -434,6 +461,12 @@ function addLayers() {
   // VIIRS sits above GOES: five times sharper, hours older. Both visible at
   // once is the point — the difference in cell size and age is the
   // information, so neither is allowed to hide the other.
+  map.addSource("vhalo", { type: "geojson", data: viirsHalo(DATA.frames[i]) });
+  map.addLayer({
+    id: "vhalo-fill", type: "fill", source: "vhalo",
+    paint: { "fill-color": "#f59e0b", "fill-opacity": .13 },
+  });
+
   map.addSource("viirs", { type: "geojson", data: viirsFeatures(DATA.frames[i]) });
   map.addLayer({
     id: "viirs-fill", type: "fill", source: "viirs",
@@ -558,6 +591,7 @@ function setStyle(idx) {
   $("rate").onchange = () => { if (timer) play(true); };
   $("c-style").onclick = () => setStyle(styleIdx + 1);
   $("v-toggle").onchange = e => { showViirs = e.target.checked; paint(i); };
+  $("h-toggle").onchange = e => { showHalo = e.target.checked; paint(i); };
   addEventListener("keydown", e => {
     if (e.code === "Space") { e.preventDefault(); play(!timer); }
     if (e.code === "ArrowRight") { play(false); paint(i + 1); }
