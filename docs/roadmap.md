@@ -187,6 +187,49 @@ layer.
 
 ---
 
+## Resolution: the source sets it, not the zoom
+
+The instinct is that zooming in should shrink the hexagons. H3 will happily
+do that, and it would be wrong: a 2 km GOES pixel rendered as 400 m cells
+invents precision the sensor never had, which is ground rule 4.
+
+Two rules instead.
+
+**Coarsen out, never refine in.** Aggregating up the H3 hierarchy is exact —
+every child belongs to exactly one parent, so FRP and detection counts are
+conserved to the digit (verified: 586,568.6 MW and 1,357 detections identical
+across r5, r6 and r7 in the Viña replay). Refining down is forbidden in
+`pipeline.rollup()`, which raises rather than let it happen by accident.
+
+| Zoom | Level | Cell area |
+|---|---|---|
+| < 7.5 | r5 | ~253 km² |
+| 7.5 – 9.5 | r6 | ~36 km² |
+| ≥ 9.5 | r7 | ~5.2 km² |
+
+**Real detail comes from a finer sensor, not a finer grid.** Each source
+renders at the resolution it actually has, and they stack:
+
+| Source | Pixel | Honest level | Cell ⌀ / pixel |
+|---|---|---|---|
+| GOES-East ABI | 2 km | **r7** | 1.41 |
+| VIIRS | 375 m | **r9** | **1.07** |
+| Lookout cross-fix | — | point + error ellipse | — |
+| Official CONAF perimeter | — | the actual polygon | — |
+
+So zooming in does not shrink one layer — it reveals others. A wide GOES
+hexagon says *something is burning here, ten minutes ago*; the small VIIRS
+cells inside it say *and precisely here, two hours ago*. The difference in
+size and age between them **is** the information, and the interface should
+let cell size communicate precision rather than disguise it.
+
+**Derived layers are a separate case.** WUI exposure, slope and dwelling
+density come from Censo 2024 at block level and a DEM, which genuinely are
+fine, so those layers can legitimately live at r9 or r10. An *observation* is
+bounded by its sensor; a *derivation* is bounded by its worst input.
+
+---
+
 ## Colour and encoding
 
 ### Do not use black for evacuation

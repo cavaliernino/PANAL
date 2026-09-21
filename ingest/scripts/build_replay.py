@@ -34,6 +34,31 @@ PRESETS = {
 # pass wind_unit="knots" if a service states it that way instead.
 FACTOR = power.Factor30()
 
+# Served as the viewport zooms out. Coarsening the H3 hierarchy is exact.
+LEVELS = (7, 6, 5)
+
+
+def roll(cells, to_res, geom):
+    """Coarsen replay cells one level, summing exactly and keeping the best
+    confidence. Parent geometry is materialised on demand."""
+    import h3
+
+    order = power and goes.CONFIDENCE_ORDER  # shared vocabulary
+    bucket = {}
+    for c in cells:
+        parent = h3.cell_to_parent(c["h"], to_res)
+        b = bucket.setdefault(parent, {"h": parent, "n": 0, "f": 0.0, "c": None})
+        b["n"] += c["n"]
+        b["f"] += c["f"]
+        if b["c"] is None or order.index(c["c"]) > order.index(b["c"]):
+            b["c"] = c["c"]
+        if parent not in geom:
+            geom[parent] = [[round(lng, 5), round(lat, 5)]
+                            for lat, lng in h3.cell_to_boundary(parent)]
+    for b in bucket.values():
+        b["f"] = round(b["f"], 1)
+    return list(bucket.values())
+
 
 CACHE = Path(__file__).resolve().parents[2] / "data" / "cache" / "goes"
 
@@ -113,11 +138,17 @@ def build(start, end, bbox, utc_offset, res, **meta):
             cells.append({k: c[k] for k in ("h", "n", "f", "c")})
             cell_geom.setdefault(c["h"], c["g"])
 
+        by_res = {str(res): cells}
+        for lvl in LEVELS:
+            if lvl < res:
+                by_res[str(lvl)] = roll(cells, lvl, cell_geom)
+
         wx = power.at(hourly, scan.start) if hourly else {}
         frames.append({
             "t": scan.start.isoformat().replace("+00:00", "Z"),
             "local": (scan.start + dt.timedelta(hours=utc_offset)).strftime("%H:%M"),
             "cells": cells,
+            "r": by_res,
             "frp": round(sum(c["f"] for c in cells), 1),
             "px": got["px"],
             "wx": wx,
@@ -140,6 +171,8 @@ def build(start, end, bbox, utc_offset, res, **meta):
         "meta": {
             **{k: v for k, v in meta.items()},
             "res": res,
+            "levels": sorted({int(k) for f in frames for k in f["r"]}, reverse=True)
+                      if frames else [res],
             "utc_offset": utc_offset,
             "bbox": list(bbox),
             "satellite": goes.bucket_for(start),
@@ -182,7 +215,12 @@ def main():
 
     m = data["meta"]
     print(f"\n{out}  ({out.stat().st_size/1024:.0f} KB)", file=sys.stderr)
-    print(f"  {len(data['frames'])} cuadros, {len(data['geometry'])} celdas H3 r{m['res']}",
+    per_lvl = {}
+    for f in data["frames"]:
+        for r, cs in f["r"].items():
+            per_lvl.setdefault(r, set()).update(c["h"] for c in cs)
+    lvls = "  ".join(f"r{r}:{len(v)}" for r, v in sorted(per_lvl.items(), reverse=True))
+    print(f"  {len(data['frames'])} cuadros · celdas únicas por nivel  {lvls}",
           file=sys.stderr)
     print(f"  primera detección {m['first_detection']} · pico {m['peak_local']} "
           f"({m['peak_frp']:,.0f} MW)", file=sys.stderr)

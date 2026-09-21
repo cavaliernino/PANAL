@@ -80,6 +80,58 @@ def aggregate(df: pd.DataFrame) -> pd.DataFrame:
     return out.drop(columns=["best_rank"])
 
 
+# Coarser levels served as the viewport zooms out. Aggregating up the H3
+# hierarchy is exact; refining down is not, and must never be done to sensor
+# data — a 2 km pixel rendered as 400 m cells invents precision it does not
+# have. Coarsen out, never refine in.
+ROLLUP_LEVELS = (6, 5)
+
+
+def rollup(cells: pd.DataFrame, to_res: int) -> pd.DataFrame:
+    """Aggregate scored H3 cells to a coarser resolution.
+
+    Exact: every child cell belongs to exactly one parent, so summing FRP and
+    detection counts loses nothing but detail.
+    """
+    import h3
+
+    if len(cells) == 0:
+        return cells
+
+    src_res = h3.get_resolution(cells["h3"].iloc[0])
+    if to_res >= src_res:
+        raise ValueError(
+            f"rollup only coarsens: asked for r{to_res} from r{src_res}. "
+            "Refining sensor data would invent precision."
+        )
+
+    out = cells.copy()
+    out["h3"] = [h3.cell_to_parent(c, to_res) for c in out["h3"]]
+
+    order = pd.Categorical(
+        out["best_confidence"], categories=CONFIDENCE_ORDER_PD, ordered=True
+    )
+    out["_rank"] = order.codes
+
+    agg = out.groupby(["h3", "scan_start"], as_index=False).agg(
+        detections=("detections", "sum"),
+        frp_mw=("frp_mw", "sum"),
+        frp_max_mw=("frp_max_mw", "max"),
+        area_m2=("area_m2", "sum"),
+        temp_max_k=("temp_max_k", "max"),
+        _rank=("_rank", "max"),
+        any_temporally_filtered=("any_temporally_filtered", "any"),
+    )
+    agg["best_confidence"] = [
+        CONFIDENCE_ORDER_PD[i] if i >= 0 else None for i in agg["_rank"]
+    ]
+    agg["h3_res"] = to_res
+    return agg.drop(columns=["_rank"])
+
+
+CONFIDENCE_ORDER_PD = goes.CONFIDENCE_ORDER
+
+
 def run(hours: int = 0, res: int = DEFAULT_RES) -> pd.DataFrame:
     now = dt.datetime.now(dt.timezone.utc)
 

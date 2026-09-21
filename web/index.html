@@ -159,6 +159,7 @@
     <span class="chip" id="c-sat">—</span>
     <span class="chip">cadencia <b>10 min</b></span>
     <span class="chip">píxel <b>2 km</b></span>
+    <span class="chip" id="c-res">grilla: —</span>
     <span class="chip" id="c-style" style="cursor:pointer">mapa: oscuro</span>
   </div>
 </header>
@@ -230,7 +231,20 @@ const OPACITY = {
 const WEAK = new Set(["low_probability", "cloud_contaminated"]);
 
 const $ = id => document.getElementById(id);
-let DATA, map, i = 0, timer = null;
+let DATA, map, i = 0, timer = null, curRes = null;
+
+// Which H3 level to serve at a given zoom. Coarsening as the viewport widens
+// keeps the cell count sane and never misleads — aggregating up the H3
+// hierarchy is exact. The reverse, refining sensor data to finer cells, is
+// forbidden in the pipeline for the same reason it would be wrong here.
+const ZOOM_BREAKS = [[9.5, 7], [7.5, 6], [0, 5]];
+
+function resForZoom(z) {
+  const have = new Set((DATA.meta.levels || [DATA.meta.res]).map(Number));
+  for (const [minZoom, r] of ZOOM_BREAKS)
+    if (z >= minZoom && have.has(r)) return r;
+  return Math.min(...have);
+}
 
 // Calibrated against the observed per-cell FRP distribution in the Viña 2024
 // replay: median 254 MW, p90 1,259 MW, max 3,195 MW. A plain log10 ramp put
@@ -253,10 +267,14 @@ function frpColor(mw) {
   return "rgb(185,28,28)";
 }
 
-function featuresFor(frame) {
+function cellsAt(frame, res) {
+  return (frame.r && frame.r[String(res)]) || frame.cells;
+}
+
+function featuresFor(frame, res) {
   return {
     type: "FeatureCollection",
-    features: frame.cells.map(c => ({
+    features: cellsAt(frame, res ?? curRes).map(c => ({
       type: "Feature",
       properties: {
         color: frpColor(c.f),
@@ -277,7 +295,7 @@ function paint(idx) {
   $("s-clock").textContent = f.local;
   $("s-px").textContent = f.px;
   $("s-frp").textContent = f.frp.toLocaleString("es-CL") + " MW";
-  $("s-cells").textContent = f.cells.length;
+  $("s-cells").textContent = cellsAt(f, curRes).length;
   $("scrub").value = i;
   drawSpark();
   paintFactor(f);
@@ -425,11 +443,22 @@ function setStyle(idx) {
   function boot() {
     if (booted || !map.isStyleLoaded()) return;
     booted = true;
+    curRes = resForZoom(map.getZoom());
+    $("c-res").textContent = "grilla: H3 r" + curRes;
     addLayers();
     $("loading")?.remove();
     $("scrub").max = DATA.frames.length - 1;
     paint(0);
   }
+  // Resolution follows the viewport, not the other way round.
+  map.on("zoom", () => {
+    const r = resForZoom(map.getZoom());
+    if (r === curRes) return;
+    curRes = r;
+    $("c-res").textContent = "grilla: H3 r" + r;
+    if (booted) paint(i);
+  });
+
   map.on("load", boot);
   map.on("styledata", boot);
   map.on("idle", boot);
