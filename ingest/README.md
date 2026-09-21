@@ -6,7 +6,7 @@ per source, each idempotent and re-runnable, scheduled via GitHub Actions.
 | Source | Cadence | Status | Notes |
 |---|---|---|---|
 | **GOES-East ABI FDC** | **every 10 min** | ✅ **working** | the tempo layer; 2 km, provisional, high-confidence filtering |
-| NASA FIRMS active fire | several times daily | | no API key; regional CSV |
+| **NASA FIRMS VIIRS/MODIS** | several times daily | ✅ **working** | the precision layer; VIIRS 375 m → H3 r9. Keyless for the last 7 days; archive needs a free MAP_KEY |
 | OpenStreetMap roads | once, refreshed | | static egress capacity |
 | TomTom Traffic | live, during events | | free tier; OK over non-TomTom basemaps |
 | Waze for Cities | every 2 min | | needs the agency partnership |
@@ -94,16 +94,34 @@ Backfill before that date must read `noaa-goes16`, after it `noaa-goes19`.
 
 ---
 
+## Resolution
+
+Each source is indexed at the H3 level its sensor actually justifies, so a
+cell never claims more precision than the pixel behind it:
+
+| Source | Pixel | Level | Cell ⌀ / pixel |
+|---|---|---|---|
+| GOES-East ABI | 2 km | r7 | 1.41 |
+| VIIRS | 375 m | r9 | 1.07 |
+
+`pipeline.rollup()` coarsens up the hierarchy for wider viewports. It is
+exact — verified lossless across the Viña replay, 586,568.6 MW and 1,357
+detections identical at r5, r6 and r7. **Refining down raises**, because
+rendering a 2 km pixel as 400 m cells would invent precision.
+
 ## Layout
 
 ```
 panal_ingest/
   goes.py       S3 listing, ABI fixed-grid geolocation, mask → detections
+  viirs.py      FIRMS VIIRS/MODIS — precision layer, r9
+  power.py      NASA POWER weather and the 30-30-30 factor
   chile.py      territory clipping against real geometry
-  pipeline.py   fetch → extract → clip → H3 → parquet
+  pipeline.py   fetch → extract → clip → H3 → parquet, plus rollup()
   reference/    boundary geometry (provisional, see its README)
 scripts/
   backfill_event.py   replay a past fire at 10-minute cadence
+  build_replay.py     export a replay dataset for the web map
 ```
 
 `goes.geolocate()` reads the projection parameters from each file's own
