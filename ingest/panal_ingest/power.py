@@ -41,10 +41,14 @@ class Factor30:
     above 30 °C, relative humidity below 30%, wind above 30 — conditions
     considered extreme for fire spread.
 
-    The published Chilean definition uses **30 km/h**. Some services state
-    the wind limit in knots instead, which is nearly double (30 kt =
-    55.6 km/h) and trips far less often, so the unit is configurable rather
-    than assumed. Defaults follow the documented standard.
+    The Chilean standard is **30 km/h** — confirmed operationally, and
+    consistent with every published source. The unit stays configurable for
+    other jurisdictions, but note it is not a cosmetic choice: 30 kt is
+    55.6 km/h and trips far less often.
+
+    Sustained wind and gusts are also different criteria. POWER publishes no
+    gust parameter; if a service pre-alerts on gusts that is a fourth leg fed
+    by a local station, not a different unit here.
 
     It is a heuristic, not a physical model — academics have criticised it as
     insufficient for the severity Chile now sees. PANAL shows it because it is

@@ -151,12 +151,17 @@ three legs are met.
 
 Two things to be careful about:
 
-- **The unit is km/h in every published Chilean source we found.** Some
-  services state the wind limit in knots, which is nearly double
-  (30 kt = 55.6 km/h) and therefore trips far less often. On 2 February 2024
-  over Viña del Mar, the 30 km/h threshold was met from 16:00 to 18:50 local,
-  while 30 kt would never have been met — the peak was 17.1 kt. The threshold
-  and its unit are configurable (`power.Factor30`) rather than assumed.
+- **The unit is km/h.** Confirmed with the team's operational knowledge and
+  consistent with every published Chilean source. This matters because a
+  knots reading is nearly double (30 kt = 55.6 km/h): over Viña del Mar on
+  2 February 2024 the km/h threshold was met from 16:00 to 18:50 local, while
+  30 kt would never have tripped — the peak was 17.1 kt. The threshold stays
+  configurable in `power.Factor30` for other jurisdictions, but km/h is the
+  Chilean standard and the default.
+
+  Worth revisiting later: 30 km/h *sustained* and 30 km/h *in gusts* are
+  different criteria. POWER does not publish gusts; a local station would.
+  If a service pre-alerts on gusts, that is a fourth leg, not a unit change.
 - **It is a heuristic, not a model.** Chilean academics have criticised it as
   lacking scientific backing and as insufficient for the severity now seen.
   PANAL shows it because it is what the services act on. Cell2Fire + Kitral
