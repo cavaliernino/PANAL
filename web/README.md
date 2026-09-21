@@ -41,6 +41,34 @@ the page needs no H3 library at all.
 
 deck.gl comes in with the national layer, not before.
 
+## Two resolutions on one map
+
+The replay now carries both detection layers, and seeing them together is the
+point:
+
+| Layer | Pixel | H3 | Cell ⌀ | Cadence |
+|---|---|---|---|---|
+| GOES-East | 2 km | r7 | **2,244 m** | every 10 min |
+| VIIRS | 375 m | r9 | **321 m** | 3-4 passes a day |
+
+On 2 February 2024 the difference is stark. GOES saw the fire at **12:10
+local**; the first VIIRS pass was **14:47**, two hours and thirty-seven
+minutes later — and seven times sharper. A wide GOES hexagon says *something
+is burning here, ten minutes ago*; the small VIIRS cells inside it say
+*precisely here, two hours ago*.
+
+VIIRS fixes persist until the next pass supersedes them, with their age shown
+and a dimmed outline past an hour, so a stale precise fix never reads as a
+current one. Toggle the layer from the stats panel.
+
+Regenerating the VIIRS layer needs a free FIRMS MAP_KEY in `.env`:
+
+```bash
+cp .env.example .env    # then paste your key
+```
+
+Without it the replay still builds; it just has no precision layer.
+
 ## Basemaps
 
 Switchable from the header chip, all keyless:

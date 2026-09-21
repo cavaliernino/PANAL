@@ -12,12 +12,13 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from panal_ingest import goes, pipeline, power  # noqa: E402
+from panal_ingest import goes, pipeline, power, viirs  # noqa: E402
 
 PRESETS = {
     "vina2024": dict(
@@ -27,8 +28,14 @@ PRESETS = {
         title="Viña del Mar / Quilpué",
         subtitle="2 de febrero de 2024",
         center=(-71.45, -33.05), zoom=10.5,
+        viirs_products=("VIIRS_NOAA20_SP", "VIIRS_SNPP_SP"),
     ),
 }
+
+# A VIIRS fix stays on screen this long before it is too stale to show.
+VIIRS_MAX_AGE_MIN = 240
+# Detections more than this far apart in time belong to different passes.
+PASS_GAP_MIN = 30
 
 # Chile's 30-30-30 pre-alert factor. The published definition uses 30 km/h;
 # pass wind_unit="knots" if a service states it that way instead.
@@ -97,6 +104,70 @@ def cached_scan(scan, res, bbox):
     return out
 
 
+def build_viirs(bbox, start, end, products, utc_offset, geom, map_key):
+    """VIIRS passes over the window, indexed at r9.
+
+    VIIRS is the precision layer: 375 m against GOES's 2 km, but only three
+    or four passes a day instead of a look every ten minutes. So it is not a
+    per-frame layer — it is a sequence of discrete fixes, each shown with its
+    age until the next one supersedes it.
+    """
+    import h3
+    import pandas as pd
+
+    lat_min, lat_max, lon_min, lon_max = bbox
+    frames = []
+    for product in products:
+        try:
+            df = viirs.fetch_archive(
+                map_key, (lon_min, lat_min, lon_max, lat_max),
+                start.date(), days=(end.date() - start.date()).days + 1,
+                product=product)
+        except Exception as exc:                        # noqa: BLE001
+            print(f"  ! {product}: {exc}", file=sys.stderr)
+            continue
+        if len(df):
+            frames.append(df)
+    if not frames:
+        return []
+
+    df = pd.concat(frames, ignore_index=True)
+    df = viirs.to_h3(df)                                # clips to Chile, r9
+    df = df[df.acq.between(start, end)]
+    if len(df) == 0:
+        return []
+
+    # Split into passes wherever the acquisition times gap out.
+    df = df.sort_values("acq").reset_index(drop=True)
+    gap = df.acq.diff() > dt.timedelta(minutes=PASS_GAP_MIN)
+    df["pass_id"] = gap.cumsum()
+
+    order = goes.CONFIDENCE_ORDER
+    passes = []
+    for pid, grp in df.groupby("pass_id"):
+        cells = {}
+        for row in grp.itertuples():
+            c = cells.setdefault(row.h3, {"h": row.h3, "n": 0, "f": 0.0, "c": None})
+            c["n"] += 1
+            c["f"] += float(row.frp_mw)
+            if c["c"] is None or order.index(row.confidence) > order.index(c["c"]):
+                c["c"] = row.confidence
+            if row.h3 not in geom:
+                geom[row.h3] = [[round(lng, 5), round(lat, 5)]
+                                for lat, lng in h3.cell_to_boundary(row.h3)]
+        for c in cells.values():
+            c["f"] = round(c["f"], 1)
+        t = grp.acq.min()
+        passes.append({
+            "t": t.isoformat().replace("+00:00", "Z"),
+            "local": (t + dt.timedelta(hours=utc_offset)).strftime("%H:%M"),
+            "sat": ", ".join(sorted(grp.satellite.unique())),
+            "n": int(len(grp)),
+            "cells": list(cells.values()),
+        })
+    return sorted(passes, key=lambda p: p["t"])
+
+
 def build(start, end, bbox, utc_offset, res, **meta):
     lat_min, lat_max, lon_min, lon_max = bbox
 
@@ -123,6 +194,17 @@ def build(start, end, bbox, utc_offset, res, **meta):
         hourly = {}
 
     frames, cell_geom, skipped = [], {}, []
+
+    map_key = os.environ.get("FIRMS_MAP_KEY", "").strip()
+    vpasses = []
+    if map_key and meta.get("viirs_products"):
+        vpasses = build_viirs(bbox, start, end, meta["viirs_products"],
+                              utc_offset, cell_geom, map_key)
+        print(f"VIIRS: {len(vpasses)} pasadas, "
+              f"{sum(len(p['cells']) for p in vpasses)} celdas r9", file=sys.stderr)
+    elif not map_key:
+        print("VIIRS omitido: define FIRMS_MAP_KEY para la capa de precisión",
+              file=sys.stderr)
 
     for i, scan in enumerate(scans, 1):
         try:
@@ -164,6 +246,19 @@ def build(start, end, bbox, utc_offset, res, **meta):
         print(f"\n  {len(skipped)} barrido(s) omitido(s) por fallo de red",
               file=sys.stderr)
 
+    # Which VIIRS pass, if any, each frame should display.
+    for f in frames:
+        ft = dt.datetime.fromisoformat(f["t"].replace("Z", "+00:00"))
+        idx, age = None, None
+        for k, pas in enumerate(vpasses):
+            pt = dt.datetime.fromisoformat(pas["t"].replace("Z", "+00:00"))
+            if pt <= ft:
+                mins = (ft - pt).total_seconds() / 60
+                if mins <= VIIRS_MAX_AGE_MIN:
+                    idx, age = k, round(mins)
+        f["v"] = idx
+        f["vage"] = age
+
     first = next((f for f in frames if f["px"]), None)
     peak = max(frames, key=lambda f: f["frp"])
 
@@ -183,6 +278,9 @@ def build(start, end, bbox, utc_offset, res, **meta):
             "peak_local": peak["local"],
             "peak_frp": peak["frp"],
             "skipped_scans": len(skipped),
+            "viirs_res": 9,
+            "viirs_max_age_min": VIIRS_MAX_AGE_MIN,
+            "viirs_first_local": vpasses[0]["local"] if vpasses else None,
             "weather_point": [round(wx_lat, 3), round(wx_lon, 3)],
             "weather_source": "NASA POWER (MERRA-2, hourly, ~50 km grid)",
             "factor30": {
@@ -194,6 +292,7 @@ def build(start, end, bbox, utc_offset, res, **meta):
                            .isoformat(timespec="seconds").replace("+00:00", "Z"),
         },
         "geometry": cell_geom,
+        "viirs": vpasses,
         "frames": frames,
     }
 
