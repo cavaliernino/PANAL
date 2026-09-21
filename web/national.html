@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PANAL · Chile</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css">
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b23; --line:#2a323f;
+    --ink:#e8edf4; --ink-dim:#94a3b8; --ink-faint:#64748b;
+    --accent:#f59e0b; --ok:#7dd3a0;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); overflow:hidden;
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  #map{position:absolute; inset:0}
+
+  header{
+    position:absolute; z-index:3; inset:0 0 auto 0;
+    padding:calc(10px + var(--safe-t)) 14px 10px;
+    background:linear-gradient(180deg,rgba(14,17,22,.94) 60%,transparent);
+    display:flex; gap:12px; align-items:flex-start; pointer-events:none;
+  }
+  .brand{font-weight:700; letter-spacing:.14em; font-size:13px; color:var(--accent)}
+  .ttl{font-weight:600; font-size:15px; margin-top:1px}
+  .sub{color:var(--ink-dim); font-size:12px}
+  .chips{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;
+    justify-content:flex-end; pointer-events:auto}
+  .chip{background:var(--panel); border:1px solid var(--line); border-radius:999px;
+    padding:4px 10px; font-size:11px; color:var(--ink-dim); white-space:nowrap}
+  .chip b{color:var(--ink); font-weight:600}
+  .chip.act{cursor:pointer}
+  .chip.fresh b{color:var(--ok)}
+
+  .panel{
+    position:absolute; z-index:3; left:14px; top:calc(80px + var(--safe-t));
+    width:230px; background:rgba(22,27,35,.94); border:1px solid var(--line);
+    border-radius:12px; padding:13px 14px; backdrop-filter:blur(8px);
+  }
+  .big{font-size:27px; font-weight:700; line-height:1.05;
+    font-variant-numeric:tabular-nums}
+  .big small{display:block; font-size:11px; font-weight:500;
+    color:var(--ink-faint); margin-top:3px}
+  .kv{display:flex; justify-content:space-between; gap:14px; margin-top:7px;
+    font-size:12px}
+  .kv span{color:var(--ink-dim)} .kv b{font-variant-numeric:tabular-nums}
+  h4{margin:13px 0 6px; font-size:10.5px; color:var(--ink-dim); font-weight:600;
+    text-transform:uppercase; letter-spacing:.07em}
+  label.row{display:flex; align-items:center; gap:7px; margin-top:6px;
+    font-size:12px; color:var(--ink-dim); cursor:pointer}
+  label.row i{font-style:normal; color:var(--ink-faint); font-size:10px;
+    margin-left:auto}
+  input[type=checkbox]{accent-color:var(--accent); margin:0}
+  input[type=range]{width:100%; accent-color:var(--accent); margin:5px 0 0}
+  .quiet{
+    margin-top:11px; padding:9px 10px; border-radius:9px;
+    background:rgba(125,211,160,.08); border:1px solid rgba(125,211,160,.22);
+    font-size:11px; line-height:1.5; color:var(--ink-dim);
+  }
+  .quiet b{color:var(--ok)}
+  .warn{margin:11px 0 0; font-size:10px; line-height:1.5; color:var(--ink-faint)}
+  .warn b{color:var(--ink-dim)}
+  .ramp{display:flex; height:9px; border-radius:3px; overflow:hidden; margin:2px 0 3px}
+  .ramp i{flex:1}
+  .rlbl{display:flex; justify-content:space-between; font-size:9.5px;
+    color:var(--ink-faint)}
+  .loading{position:absolute; inset:0; z-index:5; display:grid; place-items:center;
+    background:var(--bg); color:var(--ink-dim); font-size:13px; padding:24px;
+    text-align:center}
+  @media (max-width:640px){
+    .panel{left:10px; right:10px; width:auto; top:calc(84px + var(--safe-t));
+      max-height:52vh; overflow:auto}
+    header{flex-wrap:wrap} .chips{margin-left:0; width:100%; justify-content:flex-start}
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<header>
+  <div>
+    <div class="brand">PANAL</div>
+    <div class="ttl">Chile · detección activa</div>
+    <div class="sub" id="h-sub">—</div>
+  </div>
+  <div class="chips">
+    <span class="chip" id="c-age">—</span>
+    <span class="chip" id="c-res">grilla —</span>
+    <span class="chip act" id="c-style">mapa: oscuro</span>
+    <span class="chip act" id="c-reload">recargar</span>
+  </div>
+</header>
+
+<div class="panel">
+  <div class="big"><span id="s-count">—</span><small id="s-count-lbl">focos detectados</small></div>
+  <div class="kv"><span>FRP total</span><b id="s-frp">—</b></div>
+  <div class="kv"><span>GOES último barrido</span><b id="s-goes">—</b></div>
+
+  <div id="quiet" class="quiet" hidden>
+    <b>Sin detecciones activas.</b> Es el estado normal fuera de temporada.
+    La cadena está viva: el último barrido GOES llegó y se procesó.
+  </div>
+
+  <h4>Capas</h4>
+  <label class="row"><input type="checkbox" id="t-goes" checked>
+    GOES <i id="n-goes">0</i></label>
+  <label class="row"><input type="checkbox" id="t-viirs" checked>
+    VIIRS 375 m <i id="n-viirs">0</i></label>
+  <label class="row"><input type="checkbox" id="t-halo" checked>
+    extensión inferida <i>±200 m</i></label>
+
+  <h4>Antigüedad máxima</h4>
+  <input type="range" id="age" min="0" max="4" step="1" value="4">
+  <div class="rlbl"><span>6 h</span><span id="age-lbl">7 d</span></div>
+
+  <h4>Potencia radiativa</h4>
+  <div class="ramp">
+    <i style="background:#fde68a"></i><i style="background:#fbbf24"></i>
+    <i style="background:#f97316"></i><i style="background:#ef4444"></i>
+    <i style="background:#b91c1c"></i>
+  </div>
+  <div class="rlbl"><span>0</span><span>500</span><span>3200+ MW</span></div>
+
+  <p class="warn">Sin celda significa <b>sin detección</b>, no ausencia de
+  fuego. Un foco bajo el umbral del sensor, o tapado por humo o nube, no
+  aparece. Los datos geoestacionarios son <b>provisionales</b>.</p>
+</div>
+
+<div class="loading" id="loading">Cargando detección nacional…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/deck.gl@9.1.14/dist.min.js"></script>
+<script src="panal.js"></script>
+<script>
+const AGE_STEPS = [[360,"6 h"],[1440,"24 h"],[2880,"2 d"],[4320,"3 d"],[10080,"7 d"]];
+const REFRESH_MS = 5 * 60 * 1000;
+
+const $ = id => document.getElementById(id);
+let DATA, map, overlay, styleIdx = 0, curRes = 5, maxAge = 10080;
+let show = { goes: true, viirs: true, halo: true };
+
+const alpha = c => Math.round((OPACITY[c] ?? .4) * 255);
+
+function goesCells() {
+  if (!show.goes || !DATA.goes) return [];
+  return DATA.goes.levels[String(curRes)] || [];
+}
+function viirsCells() {
+  if (!show.viirs) return [];
+  return (DATA.viirs.cells || []).filter(c => (c.age ?? 0) <= maxAge);
+}
+function haloCells() {
+  if (!show.viirs || !show.halo) return [];
+  // Each halo cell carries the age of the freshest detection that justifies
+  // it, so the same filter applies and an inferred cell can never outlive
+  // the observation behind it.
+  return (DATA.viirs.halo || []).filter(d => (d.age ?? 0) <= maxAge);
+}
+
+function layers() {
+  const { H3HexagonLayer } = deck;
+  return [
+    new H3HexagonLayer({
+      id: "halo", data: haloCells(),
+      getHexagon: d => d.h, extruded: false, stroked: false,
+      // Flat and neutral on purpose: no intensity was measured here, so it
+      // carries none. Inference must never borrow the look of a reading.
+      getFillColor: [245, 158, 11, 34], pickable: false,
+    }),
+    new H3HexagonLayer({
+      id: "goes", data: goesCells(),
+      getHexagon: d => d.h, extruded: false, stroked: true,
+      getFillColor: d => [...frpRGB(d.f), alpha(d.c)],
+      getLineColor: d => [...frpRGB(d.f), 230],
+      lineWidthMinPixels: 1.4, pickable: true,
+    }),
+    new H3HexagonLayer({
+      id: "viirs", data: viirsCells(),
+      getHexagon: d => d.h, extruded: false, stroked: true,
+      getFillColor: d => [...frpRGB(d.f), alpha(d.c)],
+      getLineColor: [255, 255, 255, 170],
+      lineWidthMinPixels: .7, pickable: true,
+    }),
+  ];
+}
+
+function render() {
+  overlay?.setProps({ layers: layers() });
+
+  const v = viirsCells(), g = goesCells();
+  $("n-goes").textContent = (DATA.goes?.levels?.["7"] || []).length;
+  $("n-viirs").textContent = (DATA.viirs.cells || []).length;
+
+  const total = v.length + g.length;
+  $("s-count").textContent = total;
+  $("s-count-lbl").textContent = total === 1 ? "celda con detección"
+                                             : "celdas con detección";
+  const frp = [...v, ...g].reduce((s, c) => s + c.f, 0);
+  $("s-frp").textContent = frp ? Math.round(frp).toLocaleString("es-CL") + " MW" : "—";
+  $("quiet").hidden = total > 0;
+}
+
+function setAge(idx) {
+  [maxAge] = AGE_STEPS[idx];
+  $("age-lbl").textContent = AGE_STEPS[idx][1];
+  render();
+}
+
+function setStyle(k) {
+  styleIdx = k % STYLES.length;
+  $("c-style").textContent = "mapa: " + STYLES[styleIdx][0];
+  map.setStyle(STYLES[styleIdx][1]);
+}
+
+async function load(first) {
+  const res = await fetch("data/national.json?t=" + Date.now());
+  DATA = await res.json();
+  const m = DATA.meta;
+
+  const gen = new Date(m.generated);
+  const ageMin = (Date.now() - gen) / 60000;
+  $("c-age").textContent = "datos hace " + fmtAge(ageMin);
+  $("c-age").className = "chip" + (ageMin < 30 ? " fresh" : "");
+  $("h-sub").textContent =
+    `GOES-East cada 10 min · VIIRS ${DATA.viirs.window} · actualizado ` +
+    gen.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
+  $("s-goes").textContent = DATA.goes
+    ? DATA.goes.scan_start.slice(11, 16) + " UTC" : "sin barrido";
+
+  if (first) $("loading")?.remove();
+  render();
+}
+
+(async function init() {
+  map = new maplibregl.Map({
+    container: "map", style: STYLES[0][1],
+    center: [-71.0, -38.0], zoom: 4.1,
+    attributionControl: { compact: true },
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+
+  overlay = new deck.MapboxOverlay({ interleaved: false, layers: [],
+    getTooltip: ({ object, layer }) => object && layer.id !== "halo" && {
+      html: `<div style="font:12px system-ui">
+        <b>${Math.round(object.f).toLocaleString("es-CL")} MW</b><br>
+        ${object.n} px · ${object.c}
+        ${object.age != null ? "<br>hace " + fmtAge(object.age) : ""}</div>`,
+      style: { background: "#fff", color: "#111", padding: "6px 8px",
+               borderRadius: "6px" },
+    },
+  });
+  map.addControl(overlay);
+
+  const syncRes = () => {
+    const r = resForZoom(map.getZoom(), DATA?.meta?.goes_levels || [7, 6, 5]);
+    if (r === curRes) return;
+    curRes = r;
+    $("c-res").textContent = "grilla r" + r;
+    if (DATA) render();
+  };
+  map.on("zoom", syncRes);
+
+  await load(true);
+  syncRes();
+  $("c-res").textContent = "grilla r" + curRes;
+
+  $("t-goes").onchange = e => { show.goes = e.target.checked; render(); };
+  $("t-viirs").onchange = e => { show.viirs = e.target.checked; render(); };
+  $("t-halo").onchange = e => { show.halo = e.target.checked; render(); };
+  $("age").oninput = e => setAge(+e.target.value);
+  $("c-style").onclick = () => setStyle(styleIdx + 1);
+  $("c-reload").onclick = () => load(false);
+
+  setInterval(() => load(false), REFRESH_MS);
+})();
+</script>
+</body>
+</html>

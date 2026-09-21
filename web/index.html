@@ -243,58 +243,16 @@
 <div class="loading" id="loading">Cargando el replay…</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.js"></script>
+<script src="panal.js"></script>
 <script>
-const STYLES = [
-  ["oscuro",   "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"],
-  ["claro",    "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"],
-  ["callejero","https://tiles.openfreemap.org/styles/liberty"],
-];
+// STYLES, OPACITY, WEAK, frpColor, ZOOM_BREAKS and resForZoom come from
+// panal.js, shared with the national view so the calibrated ramp cannot
+// drift between pages.
 let styleIdx = 0;
-
-// Confidence drives opacity; colour is reserved for intensity. Paired with a
-// dashed outline on the weakest tier so it does not rely on opacity alone.
-const OPACITY = {
-  good: .85, saturated: .85, high_probability: .6,
-  medium_probability: .45, cloud_contaminated: .35, low_probability: .3,
-};
-const WEAK = new Set(["low_probability", "cloud_contaminated"]);
 
 const $ = id => document.getElementById(id);
 let DATA, map, i = 0, timer = null, curRes = null, showViirs = true, showHalo = true;
 
-// Which H3 level to serve at a given zoom. Coarsening as the viewport widens
-// keeps the cell count sane and never misleads — aggregating up the H3
-// hierarchy is exact. The reverse, refining sensor data to finer cells, is
-// forbidden in the pipeline for the same reason it would be wrong here.
-const ZOOM_BREAKS = [[9.5, 7], [7.5, 6], [0, 5]];
-
-function resForZoom(z) {
-  const have = new Set((DATA.meta.levels || [DATA.meta.res]).map(Number));
-  for (const [minZoom, r] of ZOOM_BREAKS)
-    if (z >= minZoom && have.has(r)) return r;
-  return Math.min(...have);
-}
-
-// Calibrated against the observed per-cell FRP distribution in the Viña 2024
-// replay: median 254 MW, p90 1,259 MW, max 3,195 MW. A plain log10 ramp put
-// the median already in the reds, which washes the whole map hot and destroys
-// the growth story the replay exists to show. The floor spreads the low end.
-const FRP_FLOOR = 20, FRP_MAX = 3200;
-
-function frpColor(mw) {
-  const s = Math.max(0, Math.min(1,
-    Math.log10(1 + Math.max(0, mw) / FRP_FLOOR) / Math.log10(1 + FRP_MAX / FRP_FLOOR)));
-  const stops = [[0,[253,230,138]],[.3,[251,191,36]],[.55,[249,115,22]],
-                 [.78,[239,68,68]],[1,[185,28,28]]];
-  for (let k = 1; k < stops.length; k++) {
-    if (s <= stops[k][0]) {
-      const [a, ca] = stops[k-1], [b, cb] = stops[k];
-      const u = (s - a) / (b - a || 1);
-      return `rgb(${ca.map((v,j)=>Math.round(v+(cb[j]-v)*u)).join(",")})`;
-    }
-  }
-  return "rgb(185,28,28)";
-}
 
 function cellsAt(frame, res) {
   return (frame.r && frame.r[String(res)]) || frame.cells;
@@ -544,7 +502,7 @@ function setStyle(idx) {
   function boot() {
     if (booted || !map.isStyleLoaded()) return;
     booted = true;
-    curRes = resForZoom(map.getZoom());
+    curRes = resForZoom(map.getZoom(), DATA.meta.levels || [DATA.meta.res]);
     $("c-res").textContent = "grilla: H3 r" + curRes;
     addLayers();
     $("loading")?.remove();
@@ -553,7 +511,7 @@ function setStyle(idx) {
   }
   // Resolution follows the viewport, not the other way round.
   map.on("zoom", () => {
-    const r = resForZoom(map.getZoom());
+    const r = resForZoom(map.getZoom(), DATA.meta.levels || [DATA.meta.res]);
     if (r === curRes) return;
     curRes = r;
     $("c-res").textContent = "grilla: H3 r" + r;

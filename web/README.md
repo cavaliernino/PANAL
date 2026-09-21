@@ -5,8 +5,15 @@ no build step, no install.
 
 ```bash
 python3 -m http.server 8000 --directory web
-# http://localhost:8000
+# http://localhost:8000              replay de Viña 2024
+# http://localhost:8000/national.html  detección nacional en vivo
 ```
+
+| Page | What it is |
+|---|---|
+| `index.html` | The Viña del Mar 2024 replay — the demo |
+| `national.html` | Live national detection — the product |
+| `panal.js` | Shared encoding rules, so the calibrated ramp cannot drift |
 
 ## What ships first: the Viña del Mar replay
 
@@ -26,20 +33,51 @@ This is the artifact to open in the first conversation with CONAF and
 SENAPRED. It shows the tempo layer doing the one thing it is for, on an event
 everyone in the room remembers.
 
-## Why MapLibre and not deck.gl, yet
+## The national view
+
+`national.html` shows current fire detection across Chile: the latest GOES
+scan rolled up by zoom (r5 → r6 → r7), VIIRS at r9 with an age filter from
+6 hours to 7 days, and the inferred extent beneath. Refreshes every five
+minutes and always states how old its data is.
+
+Regenerate the snapshot with:
+
+```bash
+cd ingest
+../.venv/bin/python scripts/build_national.py -o ../web/data/national.json
+```
+
+Run it on a schedule for a live view.
+
+### The empty state is the normal state
+
+For eight months a year almost nothing is burning in Chile. Measured on
+2026-09-20: **zero GOES detections in the current scan**, 16 VIIRS
+detections in 24 hours, 562 cells across 7 days.
+
+A fire map that looks broken when there is no fire is a badly designed fire
+map. So "nothing detected" is a deliberate, confident state — it says so in
+words, and it says the chain is alive: the last GOES scan arrived and was
+processed. An empty map and a broken pipeline must never look the same.
+
+### Why deck.gl here, and not in the replay
+
+`H3HexagonLayer` takes H3 indices directly and builds the geometry on the
+GPU. That is why the national snapshot ships cell ids instead of polygons,
+and why it can afford resolutions the replay could not. At 50–200 hexagons
+per frame the replay did not need any of this, and a 1.6 MB dependency for
+that would have been decoration. At national scale it earns its place.
+
+## Why MapLibre alone in the replay
 
 **MapLibre GL** is the open fork of Mapbox GL — vector basemaps in WebGL, no
 API key, no quota. **deck.gl** is Uber's data-visualisation layer that sits on
 top of it, and its `H3HexagonLayer` renders H3 cells natively.
 
-deck.gl is the right tool for the national view, where Chile at r7 is
-hundreds of thousands of cells and GPU aggregation earns its keep. It is not
-the right tool for this replay, which draws 50–200 hexagons per frame — a
-native MapLibre `fill` layer does that perfectly, with one less dependency
-and one less failure mode. The cell geometry is precomputed into the JSON, so
-the page needs no H3 library at all.
-
-deck.gl comes in with the national layer, not before.
+The replay draws 50–200 hexagons per frame, which a native MapLibre `fill`
+layer does perfectly, with one less dependency and one less failure mode.
+Its cell geometry is precomputed into the JSON, so that page needs no H3
+library at all.
 
 ## Two resolutions on one map
 
