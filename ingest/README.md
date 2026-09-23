@@ -50,12 +50,13 @@ the public bucket at 22:11 — roughly **one minute after the scan closed**.
 That is better than FIRMS's ~20–30 minute republication of the same product.
 Files are ~1.8 MB and download in about 1.5 s.
 
-**Coverage.** GOES-19 sits at 75.2°W, almost on Chile's meridian. Every
-Chilean latitude band from Arica to Magallanes came back **100% usable** —
-zero pixels lost to the LZA or glint block-out zones. Verified with
-`goes.blocked_fraction()`. Caveat: that is one scan at 18:00 local, and glint
-block-out is a daytime, solar-angle effect, so coverage should be re-checked
-across the diurnal cycle before the claim is treated as permanent.
+**Coverage, across a full day.** GOES-19 sits at 75.2°W, almost on Chile's
+meridian. Sampling one scan per hour for 24 hours, every Chilean latitude
+band from Arica to Magallanes came back **100% usable at every hour** — zero
+pixels lost to the LZA or glint block-out zones, minimum and mean both
+100.0%. The earlier single-scan measurement is now confirmed across the
+diurnal cycle, which mattered because glint block-out is a solar-angle
+effect. Re-run with `scripts/check_goes_coverage.py`.
 
 **Geometry.** Chile clipping is tested against known points: Santiago, Viña
 del Mar, Punta Arenas, Rapa Nui and Chuquicamata accepted; Mendoza,
@@ -83,6 +84,14 @@ Three that will cost you a day each:
 1. SADU lat/lon parse to **100% null** without `str.replace(",", ".")`.
 2. Four of SADU's twelve causes are **subtotals** that double-count when summed.
 3. A bounding box over Chile is **90% Argentina and Bolivia**.
+4. The **INE ArcGIS Hub "Comunas de Chile" layer uses cartographic insets.**
+   It places Isla de Pascua at about (-73.9, -33.1) and Juan Fernández at
+   (-73.9, -33.4) — boxes drawn beside the mainland for map layout, not
+   geodetic positions. Clipping against it would drop every Rapa Nui
+   detection and accept open ocean off Valparaíso instead. It is also missing
+   5 of 346 comunas, including Antártica. The companion OCUC "DPA 2026"
+   layer is line geometry with no comuna code, so it cannot clip either.
+   `tests/test_chile.py` guards against adopting a boundary with this defect.
 
 One that costs credibility instead of time: satellites report **persistent
 industrial thermal anomalies**. Chuquicamata and the northern smelters read
@@ -141,6 +150,18 @@ cell never claims more precision than the pixel behind it:
 exact — verified lossless across the Viña replay, 586,568.6 MW and 1,357
 detections identical at r5, r6 and r7. **Refining down raises**, because
 rendering a 2 km pixel as 400 m cells would invent precision.
+
+## Tests
+
+```bash
+cd ingest && ../.venv/bin/python -m pytest tests -q
+```
+
+Territory clipping and the anomaly mask both decide what a human never sees,
+so both are pinned down: 23 points inside Chile including every insular
+territory, 10 near misses outside, and the mask rule against a smelter, a
+two-week megafire, recurring agricultural burning and summer-only
+persistence.
 
 ## Layout
 
