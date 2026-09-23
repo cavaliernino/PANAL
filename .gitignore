@@ -126,3 +126,8 @@ data/processed/
 # OS
 .DS_Store
 data/cache/
+
+# cron logs
+data/*.log
+data/*.log.tmp
+*.json.tmp

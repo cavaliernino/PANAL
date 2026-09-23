@@ -144,9 +144,16 @@ def main():
         "viirs": v,
     }
 
+    # Atomic write. This runs unattended every ten minutes against a page
+    # that reloads on its own, so a crash mid-write would serve truncated
+    # JSON and break the map. Write beside the target, then rename — rename
+    # is atomic on the same filesystem, so a reader sees either the old file
+    # or the new one, never half of either.
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(data, separators=(",", ":")))
+    tmp = out.with_suffix(out.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, separators=(",", ":")))
+    tmp.replace(out)
 
     ng = len(g["levels"]["7"]) if g else 0
     print(f"\n{out}  ({out.stat().st_size/1024:.0f} KB)", file=sys.stderr)

@@ -47,7 +47,21 @@ cd ingest
 ../.venv/bin/python scripts/build_national.py -o ../web/data/national.json
 ```
 
-Run it on a schedule for a live view.
+Run it on a schedule for a live view. The installed cron matches the GOES
+full-disk cadence:
+
+```
+*/10 * * * * /Users/nino/Dev/PANAL/ingest/scripts/cron_national.sh
+```
+
+The wrapper logs to `data/cron_national.log`, caps that log at 1 MB, and
+keeps failures in the log rather than mailing root. The snapshot write is
+**atomic** — written beside the target then renamed — so a crash mid-write
+leaves the previous snapshot intact instead of serving the page truncated
+JSON. Running unattended every ten minutes, that will happen eventually.
+
+On macOS, if the job silently never runs, check that `cron` has Full Disk
+Access in System Settings → Privacy & Security.
 
 ### The empty state is the normal state
 
