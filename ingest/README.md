@@ -86,7 +86,40 @@ Three that will cost you a day each:
 
 One that costs credibility instead of time: satellites report **persistent
 industrial thermal anomalies**. Chuquicamata and the northern smelters read
-as permanent fires. Mask them before anything reaches a human.
+as permanent fires. This is now handled — see below — but the mask must be
+rebuilt each season, because industrial sites open and close.
+
+## The industrial anomaly mask
+
+```bash
+export FIRMS_MAP_KEY=...
+python scripts/build_anomaly_mask.py --months 12
+```
+
+Built from a year of VIIRS archive: 110,757 detections, 54,104 inside Chile,
+31,032 r9 cells examined, **63 flagged across 12 sites** — El Teniente,
+Chuquicamata, the Ventanas and Coloso complexes among them.
+
+A cell is flagged when all three hold: **≥20 distinct days**, **≥4 calendar
+months**, **≥3 off-season days** (April–October, when nothing is burning).
+
+The middle criterion alone was not enough, and finding that out mattered.
+Months-only flagged 38 cells in the central valley, where recurring *quemas
+agrícolas* are real fire that must never be masked. The separator is days in
+the *same* cell: El Teniente shows 196, Chuquicamata 213, while agricultural
+burning recurs across a zone but moves between fields and tops out at 9 or 10
+days anywhere. Adding the day threshold dropped the mask from 170 cells to
+63 and removed every agricultural false positive while keeping every
+industrial site.
+
+**The mask flags, it never deletes.** A real fire can start at a mine, in its
+yards, or in the scrub beside it. Silently dropping detections there would
+build a blind spot exactly where industrial ignition sources are
+concentrated, so flagged cells stay in the data, render in slate outside the
+FRP ramp, carry their own toggle, and are merely kept out of headline counts.
+
+The thresholds deliberately under-mask. Industrial noise that leaks through
+stays visible and reviewable; a suppressed real fire does not.
 
 And one that is easy to miss: **GOES-East changed satellites on 2025-04-07.**
 Backfill before that date must read `noaa-goes16`, after it `noaa-goes19`.

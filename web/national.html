@@ -101,6 +101,7 @@
   <div class="big"><span id="s-count">—</span><small id="s-count-lbl">focos detectados</small></div>
   <div class="kv"><span>FRP total</span><b id="s-frp">—</b></div>
   <div class="kv"><span>GOES último barrido</span><b id="s-goes">—</b></div>
+  <div class="kv" id="row-ind" hidden><span>fuentes fijas</span><b id="s-ind">0</b></div>
 
   <div id="quiet" class="quiet" hidden>
     <b>Sin detecciones activas.</b> Es el estado normal fuera de temporada.
@@ -114,6 +115,8 @@
     VIIRS 375 m <i id="n-viirs">0</i></label>
   <label class="row"><input type="checkbox" id="t-halo" checked>
     extensión inferida <i>±200 m</i></label>
+  <label class="row"><input type="checkbox" id="t-ind" checked>
+    fuentes fijas conocidas <i id="n-ind">0</i></label>
 
   <h4>Antigüedad máxima</h4>
   <input type="range" id="age" min="0" max="4" step="1" value="4">
@@ -127,6 +130,11 @@
   </div>
   <div class="rlbl"><span>0</span><span>500</span><span>3200+ MW</span></div>
 
+  <p class="warn"><span style="display:inline-block;width:11px;height:9px;
+  background:#64748b;border-radius:2px;vertical-align:middle"></span>
+  <b>Fuentes fijas</b>: minas, fundiciones y plantas que el satélite detecta
+  todo el año. Se marcan, nunca se borran — un incendio real puede empezar
+  ahí.</p>
   <p class="warn">Sin celda significa <b>sin detección</b>, no ausencia de
   fuego. Un foco bajo el umbral del sensor, o tapado por humo o nube, no
   aparece. Los datos geoestacionarios son <b>provisionales</b>.</p>
@@ -143,7 +151,7 @@ const REFRESH_MS = 5 * 60 * 1000;
 
 const $ = id => document.getElementById(id);
 let DATA, map, overlay, styleIdx = 0, curRes = 5, maxAge = 10080;
-let show = { goes: true, viirs: true, halo: true };
+let show = { goes: true, viirs: true, halo: true, ind: true };
 
 const alpha = c => Math.round((OPACITY[c] ?? .4) * 255);
 
@@ -151,9 +159,19 @@ function goesCells() {
   if (!show.goes || !DATA.goes) return [];
   return DATA.goes.levels[String(curRes)] || [];
 }
+// Detections split by whether they sit on a known fixed industrial source.
+// Split, not filtered: the mask labels and never deletes, because a real
+// fire can start at a mine and a silent filter there would be a blind spot
+// exactly where industrial ignition sources are concentrated.
 function viirsCells() {
   if (!show.viirs) return [];
-  return (DATA.viirs.cells || []).filter(c => (c.age ?? 0) <= maxAge);
+  return (DATA.viirs.cells || [])
+    .filter(c => (c.age ?? 0) <= maxAge && !c.ind);
+}
+function industrialCells() {
+  if (!show.viirs || !show.ind) return [];
+  return (DATA.viirs.cells || [])
+    .filter(c => (c.age ?? 0) <= maxAge && c.ind);
 }
 function haloCells() {
   if (!show.viirs || !show.halo) return [];
@@ -181,6 +199,15 @@ function layers() {
       lineWidthMinPixels: 1.4, pickable: true,
     }),
     new H3HexagonLayer({
+      id: "industrial", data: industrialCells(),
+      getHexagon: d => d.h, extruded: false, stroked: true,
+      // Slate, deliberately outside the FRP ramp. These are heat, not fire,
+      // and must not read as intensity on the same scale.
+      getFillColor: [100, 116, 139, 90],
+      getLineColor: [148, 163, 184, 160],
+      lineWidthMinPixels: .7, pickable: true,
+    }),
+    new H3HexagonLayer({
       id: "viirs", data: viirsCells(),
       getHexagon: d => d.h, extruded: false, stroked: true,
       getFillColor: d => [...frpRGB(d.f), alpha(d.c)],
@@ -193,7 +220,8 @@ function layers() {
 function render() {
   overlay?.setProps({ layers: layers() });
 
-  const v = viirsCells(), g = goesCells();
+  const v = viirsCells(), g = goesCells(), ind = industrialCells();
+  $("n-ind").textContent = (DATA.viirs.cells || []).filter(c => c.ind).length;
   $("n-goes").textContent = (DATA.goes?.levels?.["7"] || []).length;
   $("n-viirs").textContent = (DATA.viirs.cells || []).length;
 
@@ -204,6 +232,8 @@ function render() {
   const frp = [...v, ...g].reduce((s, c) => s + c.f, 0);
   $("s-frp").textContent = frp ? Math.round(frp).toLocaleString("es-CL") + " MW" : "—";
   $("quiet").hidden = total > 0;
+  $("row-ind").hidden = !ind.length;
+  $("s-ind").textContent = ind.length;
 }
 
 function setAge(idx) {
@@ -248,6 +278,9 @@ async function load(first) {
   overlay = new deck.MapboxOverlay({ interleaved: false, layers: [],
     getTooltip: ({ object, layer }) => object && layer.id !== "halo" && {
       html: `<div style="font:12px system-ui">
+        ${layer.id === "industrial"
+          ? "<b>Fuente fija conocida</b><br><span style=\"color:#666\">" +
+            "anomalía térmica persistente, no incendio</span><br>" : ""}
         <b>${Math.round(object.f).toLocaleString("es-CL")} MW</b><br>
         ${object.n} px · ${object.c}
         ${object.age != null ? "<br>hace " + fmtAge(object.age) : ""}</div>`,
@@ -273,6 +306,7 @@ async function load(first) {
   $("t-goes").onchange = e => { show.goes = e.target.checked; render(); };
   $("t-viirs").onchange = e => { show.viirs = e.target.checked; render(); };
   $("t-halo").onchange = e => { show.halo = e.target.checked; render(); };
+  $("t-ind").onchange = e => { show.ind = e.target.checked; render(); };
   $("age").oninput = e => setAge(+e.target.value);
   $("c-style").onclick = () => setStyle(styleIdx + 1);
   $("c-reload").onclick = () => load(false);

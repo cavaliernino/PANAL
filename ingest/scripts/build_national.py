@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from panal_ingest import goes, pipeline, viirs  # noqa: E402
+from panal_ingest import anomaly, goes, pipeline, viirs  # noqa: E402
 
 GOES_LEVELS = (7, 6, 5)
 VIIRS_PRODUCTS = ("VIIRS_NOAA20_NRT", "VIIRS_SNPP_NRT", "VIIRS_NOAA21_NRT")
@@ -85,11 +85,17 @@ def collect_viirs(now):
     if len(df) == 0:
         return {"window": VIIRS_WINDOW, "cells": [], "halo": []}
 
+    # Flag known fixed industrial sources. Flag, never drop: a real fire can
+    # start at a mine, and a silent filter there would build a blind spot
+    # exactly where industrial ignition sources are concentrated.
+    df = anomaly.flag(df)
+
     order = goes.CONFIDENCE_ORDER
     cells = {}
     for row in df.itertuples():
         c = cells.setdefault(row.h3, {
             "h": row.h3, "n": 0, "f": 0.0, "c": None, "age": None,
+            "ind": bool(row.industrial),
         })
         c["n"] += 1
         c["f"] += float(row.frp_mw)
@@ -105,6 +111,8 @@ def collect_viirs(now):
     # an inferred cell can never outlive the observation behind it.
     halo: dict[str, int] = {}
     for cell, rec in cells.items():
+        if rec["ind"]:
+            continue            # no inferred extent around a smelter
         for n in h3.grid_disk(cell, EXTENT_RINGS):
             if n in cells:
                 continue
@@ -113,6 +121,7 @@ def collect_viirs(now):
 
     return {
         "window": VIIRS_WINDOW,
+        "industrial_cells": sum(1 for c in cells.values() if c["ind"]),
         "oldest_min": max(c["age"] for c in cells.values()),
         "newest_min": min(c["age"] for c in cells.values()),
         "cells": list(cells.values()),
@@ -139,6 +148,11 @@ def main():
             "viirs_res": viirs.RESOLUTION["viirs"],
             "viirs_products": list(VIIRS_PRODUCTS),
             "viirs_extent_rings": EXTENT_RINGS,
+            "anomaly_mask": {
+                "cells": anomaly.load()["meta"].get("cells_flagged", 0),
+                "window": anomaly.load()["meta"].get("window", ""),
+                "rule": anomaly.load()["meta"].get("rule", {}),
+            },
         },
         "goes": g,
         "viirs": v,
@@ -160,6 +174,10 @@ def main():
     print(f"  GOES  {ng:>4} celdas r7"
           + (f"  (barrido {g['scan_start'][11:16]} UTC)" if g else "  — sin barrido"),
           file=sys.stderr)
+    ind = v.get("industrial_cells", 0)
+    if ind:
+        print(f"  máscara industrial: {ind} celda(s) marcada(s) "
+              f"de {len(v['cells'])}", file=sys.stderr)
     print(f"  VIIRS {len(v['cells']):>4} celdas r9 en {VIIRS_WINDOW}"
           + (f", la más reciente hace {v['newest_min']} min" if v["cells"] else ""),
           file=sys.stderr)

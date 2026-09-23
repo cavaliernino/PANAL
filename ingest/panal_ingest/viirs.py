@@ -123,29 +123,40 @@ def fetch_archive(map_key: str, bbox, day: dt.date, days: int = 1,
                   product: str = "VIIRS_SNPP_SP"):
     """Detections for a past date. Needs a free FIRMS MAP_KEY.
 
-    `bbox` is (lon_min, lat_min, lon_max, lat_max); `days` is 1-10.
-    Use the `_SP` (standard processing) products for archive dates and the
-    `_NRT` ones for the last couple of months.
+    `bbox` is (lon_min, lat_min, lon_max, lat_max); `days` is 1-5 — FIRMS
+    rejects anything larger. Use the `_SP` (standard processing) products for
+    archive dates and the `_NRT` ones for the last couple of months.
     """
+    if not 1 <= days <= 5:
+        raise ValueError(f"FIRMS accepts a day range of 1-5, got {days}")
     west, south, east, north = bbox
     url = (f"{BASE}/api/area/csv/{map_key}/{product}/"
            f"{west},{south},{east},{north}/{days}/{day:%Y-%m-%d}")
 
     from urllib.error import HTTPError
 
-    NO_KEY = ("FIRMS rejected the request — usually a missing or invalid "
-              "MAP_KEY. Register a free one, instantly, at "
+    NO_KEY = ("FIRMS rejected the MAP_KEY. Register a free one, instantly, at "
               "https://firms.modaps.eosdis.nasa.gov/api/map_key/")
 
     try:
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
             path = goes.download(url, tmp.name)
     except HTTPError as exc:
-        # FIRMS answers a bad key with 400, not a readable body, so the
-        # generic downloader cannot tell this apart from a malformed query.
-        if exc.code in (400, 401, 403):
+        # FIRMS puts a useful sentence in the 400 body ("Invalid day range.
+        # Expects [1..5]."). Read it and pass it through: assuming every 400
+        # is a key problem turns an informative error into a misleading one,
+        # and sends whoever hits it looking in the wrong place.
+        detail = ""
+        try:
+            detail = exc.read().decode(errors="replace").strip()[:200]
+        except Exception:                               # noqa: BLE001
+            pass
+        if exc.code in (401, 403) or "map_key" in detail.lower():
             raise RuntimeError(NO_KEY) from exc
-        raise
+        raise RuntimeError(
+            f"FIRMS rejected the request (HTTP {exc.code})"
+            + (f": {detail}" if detail else "")
+        ) from exc
     try:
         text = Path(path).read_text()
     finally:
