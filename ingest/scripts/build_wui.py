@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "engine"))
 import pandas as pd  # noqa: E402
 
 from panal_engine import wui  # noqa: E402
-from panal_ingest import census, terrain  # noqa: E402
+from panal_ingest import census, fuel, terrain  # noqa: E402
 
 REGIONS = {
     # cut prefixes: 5 = Valparaíso, 13 = Metropolitana, 8 = Biobío
@@ -38,6 +38,9 @@ def main():
     p.add_argument("--region", choices=sorted(REGIONS))
     p.add_argument("--all", action="store_true")
     p.add_argument("-o", "--out", required=True)
+    p.add_argument("--fuel-year", type=int, default=2026,
+                   help="dry season to read fuel from (default 2026)")
+    p.add_argument("--no-fuel", action="store_true")
     a = p.parse_args()
 
     df = pd.read_parquet(a.census)
@@ -72,8 +75,21 @@ def main():
     df["relief_m"] = [t.get(c, {}).get("relief_m") for c in cells]
     df["slope_factor"] = [terrain.slope_factor(s) for s in df["slope_deg"]]
 
+    if a.no_fuel:
+        df["fuel_factor"] = None
+        print("combustible: omitido", file=sys.stderr)
+    else:
+        print(f"combustible Sentinel-2 ({a.fuel_year})…", file=sys.stderr)
+        f = fuel.cells_fuel(cells, year=a.fuel_year)
+        df["ndvi"] = [f.get(c, {}).get("ndvi") for c in cells]
+        df["ndmi"] = [f.get(c, {}).get("ndmi") for c in cells]
+        df["fuel_factor"] = [f.get(c, {}).get("fuel_factor") for c in cells]
+        got = df["fuel_factor"].notna().sum()
+        print(f"  con combustible: {got:,} de {len(df):,} "
+              f"({100 * got / len(df):.1f}%)", file=sys.stderr)
+
     df = census.exposure_terms(df)
-    scored = wui.score_frame(df)
+    scored = wui.score_frame(df, fuel_col=None if a.no_fuel else "fuel_factor")
 
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)

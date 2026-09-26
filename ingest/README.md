@@ -7,6 +7,8 @@ per source, each idempotent and re-runnable, scheduled via GitHub Actions.
 |---|---|---|---|
 | **GOES-East ABI FDC** | **every 10 min** | ✅ **working** | the tempo layer; 2 km, provisional, high-confidence filtering |
 | **NASA FIRMS VIIRS/MODIS** | several times daily | ✅ **working** | the precision layer; VIIRS 375 m → H3 r9. Keyless for the last 7 days; archive needs a free MAP_KEY |
+| **Sentinel-2 L2A** | per dry season | ✅ **working** | fuel state: NDVI + NDMI → H3. Keyless via Earth Search STAC |
+| CONAF catastro vegetacional | per update | | fuel **type** for Kitral. No public service — a Phase 5 ask |
 | OpenStreetMap roads | once, refreshed | | static egress capacity |
 | TomTom Traffic | live, during events | | free tier; OK over non-TomTom basemaps |
 | Waze for Cities | every 2 min | | needs the agency partnership |

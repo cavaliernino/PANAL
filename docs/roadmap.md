@@ -109,9 +109,24 @@ defensible space, fuel breaks and evacuation planning.
 > records — making the Phase 5 relationship a dependency of Phase 2, not a
 > successor to it.
 >
-> And the index is genuinely incomplete: **there is no fuel layer**, which is
-> the thing that defines an interface. Phase 2 does not ship until that
-> exists and the test comes back positive.
+> And the index was genuinely incomplete: **there was no fuel layer**, which
+> is the thing that defines an interface.
+>
+> **Resolved, 2026-09-25.** Sentinel-2 supplied fuel state and the index now
+> ranks the interface at **3.83× chance** (44 of 115 cells in its top decile,
+> median percentile p77, up from p51). Fuel alone scores 3.04×; slope alone
+> still scores 0.00× yet improves the combination, which is physically right.
+>
+> Two corrections got it there, and the second was not the obvious one. The
+> gate had to change from dwelling **magnitude** to dwelling **presence** —
+> the interface is by definition where settlement is sparse, so weighting by
+> count pushed the index toward dense urban cores. And hazard and consequence
+> had to be separated: folding "how bad if fire arrives" into "will fire
+> arrive" was destroying the signal.
+>
+> The consequence side remains unvalidated and a burn footprint cannot
+> validate it. That still needs structure-loss records from CONAF and
+> SENAPRED.
 
 ### Phase 3 — Crowdsourced first alarm
 

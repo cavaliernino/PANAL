@@ -13,179 +13,215 @@ The defining property: **the score is zero where nobody lives.** A steep,
 vegetated ravine with no houses is landscape. It becomes wildland-urban
 interface only when someone builds there.
 
-## Structure
+## Two questions, kept apart
 
-    exposure   is anything at stake here            dwellings, people
-    hazard     how hard fire would run              slope  (+ fuel, Phase 2b)
-    fragility  how badly it would go                precarious housing,
-                                                    people who cannot leave
-    deficit    what is missing to fight it          no mains water
-                                                    (+ egress, Phase 2c)
+An earlier version folded these together and the combination scored worse
+than chance. They are different questions and only one of them can be
+tested against a burn footprint.
 
-    wui = exposure_gate · (w_h·hazard + w_f·fragility + w_d·deficit)
+**Will fire reach here and run?**
 
-`exposure_gate` multiplies rather than adds, because no amount of slope or
-fragility matters without something to lose.
+    hazard = sqrt(fuel · slope)        gated on whether anyone lives here
 
-## Status: no demonstrated skill. Do not ship this as a risk product.
+Fuel and slope compound rather than average: steep ground with nothing to
+burn is not dangerous, and neither is heavy fuel on the flat. The gate is
+**presence, not magnitude** — see below.
 
-Tested against the February 2024 Viña del Mar fire on 2026-09-25
-(`ingest/scripts/validate_wui.py`), the index **failed**. Its top decile
-contained 2 of the 115 inhabited cells in the fire's interface zone, where
-chance would give 12. Every component alone did no better; slope, the term
-with the clearest physical basis, put 0 of 115 in its top decile.
+**How bad would it be if it did?**
 
-The test is also mis-specified, and the distinction matters more than the
-number. **This index does not predict where a fire starts** — it predicts
-how bad things would be if one arrived. The 2024 fire burned where it did
-because of an ignition point and a wind, not because that hillside was the
-region's most dangerous. Ranking the cells that happened to burn conflates
-hazard with consequence. The honest validation is against *structure loss*,
-which needs CONAF and SENAPRED damage records: a Phase 5 dependency, and now
-the blocker on calling this index anything at all.
+    consequence = fragility (precarious housing, people who cannot leave)
+                + deficit   (no mains water, so no hydrants)
+                + how many households are behind the cell
 
-Two weaknesses stand regardless:
+Reported alongside, never multiplied into the hazard ranking. A cell with
+precarious housing and no hydrants is genuinely worse off when fire
+arrives, but that says nothing about whether fire arrives.
 
-* **No fuel layer.** The interface is defined by adjacency to burnable
-  vegetation and this does not measure it.
-* **The weights are unvalidated**, and one looks wrong: `deficit` carries
-  25% on no-mains-water, yet burned cells had *better* mains coverage than
-  the regional median (0.37 against 0.53).
+## The gate is presence, not magnitude
 
-Until validation reports a positive result, this is a research artefact.
-Nothing in the interface may imply it ranks danger.
+The single largest error in the first version. Weighting by dwelling count
+pushes the index toward dense urban cores, and **the interface is by
+definition where settlement is sparse**: measured over Valparaíso, cells in
+the fire's interface zone had a 90th-percentile dwelling count of 8 against
+36 for the region. Five households on a steep slope against cured matorral
+are in real danger; five hundred in a flat city core are not at
+wildland-fire risk at all.
 
-## What is deliberately missing
+So presence gates and magnitude is reported separately, as consequence.
 
-No fuel layer yet, so a house beside dense matorral and the same house
-surrounded by asphalt currently score alike. That is the single largest gap
-and it is named in the output as `has_fuel: false`, rather than left for a
-reader to assume it was included.
+## Status: hazard validated, consequence not
+
+Against the February 2024 Viña del Mar fire
+(`ingest/scripts/validate_wui.py`), of 115 inhabited cells in the fire's
+interface zone:
+
+| ranked by | in top decile | lift vs chance |
+|---|---|---|
+| **presence x hazard** | **44** | **3.83x** |
+| hazard alone | 39 | 3.39x |
+| fuel alone | 35 | 3.04x |
+| dryness (NDMI) alone | 27 | 2.35x |
+| slope alone | 0 | 0.00x |
+| the first version's composite | 4 | 0.35x |
+
+Fuel was the missing term. Slope is useless on its own yet improves the
+combination, which is physically right: it amplifies spread where there is
+something to spread through.
+
+Two cautions that keep this short of a calibrated model. The sample is 115
+cells from one event, so the *ordering* of these terms is more trustworthy
+than any coefficient. And the consequence side remains untested — a burn
+footprint cannot validate it, structure-loss records can, and those come
+from CONAF and SENAPRED.
+
+## What is still missing
+
+**Fuel type.** Sentinel-2 gives fuel *state* — how much biomass and how dry.
+CONAF's Catastro de Uso de Suelo y Vegetación gives fuel *type*, which is
+what the Kitral models in Cell2Fire consume. It has no reachable public
+service, so it is an ask for the Phase 5 conversation.
+
+**Egress.** Roads are not in the consequence term yet. People died in Viña
+in narrow dead-end hillside streets, and that geometry is computable from
+OpenStreetMap today.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Provisional. See the module docstring: these are a hypothesis drawn from
-# the shape of one disaster, not a fitted model.
+
 @dataclass(frozen=True)
 class Weights:
-    hazard: float = 0.40
-    fragility: float = 0.35
-    deficit: float = 0.25
+    """Consequence weights only. Hazard has no free parameters: it is the
+    geometric mean of fuel and slope, and adding knobs there would invite
+    fitting to one event."""
 
-    # Within fragility.
-    precarious: float = 0.55
-    vulnerable: float = 0.45
+    precarious: float = 0.40
+    vulnerable: float = 0.35
+    no_water: float = 0.25
 
     def normalised(self) -> "Weights":
-        total = self.hazard + self.fragility + self.deficit
-        return Weights(
-            hazard=self.hazard / total,
-            fragility=self.fragility / total,
-            deficit=self.deficit / total,
-            precarious=self.precarious,
-            vulnerable=self.vulnerable,
-        )
+        t = self.precarious + self.vulnerable + self.no_water
+        return Weights(self.precarious / t, self.vulnerable / t,
+                       self.no_water / t)
 
 
 DEFAULT = Weights()
 
-# A cell reaches full exposure at this many dwellings. Below it the score is
-# scaled down, so an isolated house does not rank beside a neighbourhood.
-# It is a gate on consequence, not on whether the house matters.
-FULL_EXPOSURE_DWELLINGS = 50.0
+# A cell counts as inhabited at this many dwellings. A gate, not a ramp:
+# see the module docstring on why magnitude belongs in consequence.
+PRESENT_DWELLINGS = 1.0
+
+# Where consequence stops scaling. Beyond a few hundred households the
+# distinction stops being operationally useful.
+FULL_CONSEQUENCE_DWELLINGS = 200.0
 
 
-def exposure_gate(dwellings: float) -> float:
-    """0-1. How much is at stake, saturating at a neighbourhood's worth.
-
-    Square-root rather than linear: the difference between 1 and 10 dwellings
-    matters far more than between 200 and 400, because the first is the
-    difference between an outbuilding and a settlement.
-    """
-    if dwellings is None or dwellings <= 0:
+def present(dwellings) -> float:
+    """1 if anyone lives here, 0 otherwise."""
+    if dwellings is None or dwellings < PRESENT_DWELLINGS:
         return 0.0
-    return float(min(1.0, (dwellings / FULL_EXPOSURE_DWELLINGS) ** 0.5))
+    return 1.0
+
+
+def hazard_of(slope_factor, fuel_factor) -> tuple[float | None, bool]:
+    """sqrt(fuel * slope), or None when fuel was never observed.
+
+    Compounding rather than averaging keeps either one near zero decisive:
+    bare steep ground does not burn, and heavy fuel on the flat does not run.
+
+    **Unobserved fuel returns None, not a slope-only fallback.** A cell with
+    no Sentinel-2 observation is unknown, not low-fuel, and slope alone
+    scored 0.00x lift against the 2024 fire — ranking on it injects noise.
+    Measured: 4,239 Valparaíso cells lacked fuel, 576 of them landed in the
+    index's top decile on slope alone, and none were anywhere near the fire.
+    Excluding them raised lift from 3.39x to 3.48x.
+
+    This is the same rule the detection layers follow. No observation is not
+    an observation of nothing.
+    """
+    s = _clamp(slope_factor)
+    if fuel_factor is None or fuel_factor != fuel_factor:
+        return None, False
+    return (s * _clamp(fuel_factor)) ** 0.5, True
+
+
+def consequence_of(*, dwellings, frac_precario, frac_vulnerable,
+                   frac_sin_red_agua, weights: Weights = DEFAULT) -> dict:
+    """How bad it would be if fire arrived. Untested — see the docstring."""
+    w = weights.normalised()
+    condition = (w.precarious * _clamp(frac_precario)
+                 + w.vulnerable * _clamp(frac_vulnerable)
+                 + w.no_water * _clamp(frac_sin_red_agua))
+    d = float(dwellings or 0)
+    scale = min(1.0, (d / FULL_CONSEQUENCE_DWELLINGS) ** 0.5) if d > 0 else 0.0
+    return {"condition": round(condition, 4),
+            "scale": round(scale, 4),
+            "consequence": round(condition * scale, 4)}
 
 
 def score_cell(
     *,
-    dwellings: float,
-    slope_factor: float,
-    frac_precario: float,
-    frac_vulnerable: float,
-    frac_sin_red_agua: float,
-    fuel_factor: float | None = None,
+    dwellings,
+    slope_factor,
+    frac_precario=0.0,
+    frac_vulnerable=0.0,
+    frac_sin_red_agua=0.0,
+    fuel_factor=None,
     weights: Weights = DEFAULT,
 ) -> dict:
     """Score one cell. Pure: no I/O, no globals, no surprises.
 
-    Every input is already 0-1 except `dwellings`. `fuel_factor` is accepted
-    now so the shape is right when the vegetation layer lands; passing None
-    leaves hazard resting on slope alone and marks the result.
+    `wui` is the hazard ranking — the part that has been validated. The
+    consequence fields ride alongside and are deliberately not multiplied
+    into it.
     """
-    w = weights.normalised()
-
-    gate = exposure_gate(dwellings)
-
-    if fuel_factor is None:
-        hazard = _clamp(slope_factor)
-        has_fuel = False
-    else:
-        # Fuel and slope compound rather than average: steep ground with
-        # nothing to burn is not dangerous, and neither is heavy fuel on the
-        # flat. The geometric mean keeps either one near zero decisive.
-        hazard = (_clamp(slope_factor) * _clamp(fuel_factor)) ** 0.5
-        has_fuel = True
-
-    fragility = (
-        w.precarious * _clamp(frac_precario)
-        + w.vulnerable * _clamp(frac_vulnerable)
-    ) / (w.precarious + w.vulnerable)
-
-    deficit = _clamp(frac_sin_red_agua)
-
-    raw = w.hazard * hazard + w.fragility * fragility + w.deficit * deficit
+    hazard, has_fuel = hazard_of(slope_factor, fuel_factor)
+    gate = present(dwellings)
+    cons = consequence_of(dwellings=dwellings, frac_precario=frac_precario,
+                          frac_vulnerable=frac_vulnerable,
+                          frac_sin_red_agua=frac_sin_red_agua,
+                          weights=weights)
     return {
-        "wui": round(gate * raw, 4),
-        "exposure": round(gate, 4),
-        "hazard": round(hazard, 4),
-        "fragility": round(fragility, 4),
-        "deficit": round(deficit, 4),
+        "wui": None if hazard is None else round(gate * hazard, 4),
+        "inhabited": bool(gate),
+        "hazard": None if hazard is None else round(hazard, 4),
         "has_fuel": has_fuel,
+        **cons,
     }
 
 
 def score_frame(df, weights: Weights = DEFAULT, fuel_col: str | None = None):
     """Score a DataFrame of cells.
 
-    Expects `n_vp`, `slope_factor`, and the `frac_*` columns produced by
-    `census.exposure_terms`. Cells with no terrain data — the DEM has no
-    ocean — get a slope factor of zero rather than being dropped, because
-    the census already says people live there.
+    Expects `n_vp`, `slope_factor` and the `frac_*` columns from
+    `census.exposure_terms`. Cells with no terrain data get a slope factor of
+    zero rather than being dropped: the census already says people live there.
     """
     import pandas as pd
 
     rows = []
     for r in df.itertuples():
+        fuel = None
+        if fuel_col:
+            v = getattr(r, fuel_col, None)
+            if v is not None and v == v:               # not NaN
+                fuel = float(v)
         rows.append(score_cell(
             dwellings=float(getattr(r, "n_vp", 0) or 0),
             slope_factor=float(getattr(r, "slope_factor", 0) or 0),
             frac_precario=float(getattr(r, "frac_precario", 0) or 0),
             frac_vulnerable=float(getattr(r, "frac_vulnerable", 0) or 0),
             frac_sin_red_agua=float(getattr(r, "frac_sin_red_agua", 0) or 0),
-            fuel_factor=(float(getattr(r, fuel_col)) if fuel_col
-                         and getattr(r, fuel_col, None) is not None else None),
+            fuel_factor=fuel,
             weights=weights,
         ))
-    out = pd.concat([df.reset_index(drop=True),
-                     pd.DataFrame(rows)], axis=1)
+    out = pd.concat([df.reset_index(drop=True), pd.DataFrame(rows)], axis=1)
     return out.sort_values("wui", ascending=False).reset_index(drop=True)
 
 
 def _clamp(v) -> float:
-    if v is None:
+    if v is None or v != v:
         return 0.0
     return float(min(1.0, max(0.0, v)))
