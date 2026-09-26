@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "engine"))
 import pandas as pd  # noqa: E402
 
 from panal_engine import wui  # noqa: E402
-from panal_ingest import census, fuel, terrain  # noqa: E402
+from panal_ingest import census, egress, fuel, terrain  # noqa: E402
 
 REGIONS = {
     # cut prefixes: 5 = Valparaíso, 13 = Metropolitana, 8 = Biobío
@@ -41,6 +41,7 @@ def main():
     p.add_argument("--fuel-year", type=int, default=2026,
                    help="dry season to read fuel from (default 2026)")
     p.add_argument("--no-fuel", action="store_true")
+    p.add_argument("--no-egress", action="store_true")
     a = p.parse_args()
 
     df = pd.read_parquet(a.census)
@@ -88,8 +89,28 @@ def main():
         print(f"  con combustible: {got:,} de {len(df):,} "
               f"({100 * got / len(df):.1f}%)", file=sys.stderr)
 
+    if a.no_egress:
+        df["egress_deficit"] = None
+        print("egreso: omitido", file=sys.stderr)
+    else:
+        print("egreso OpenStreetMap…", file=sys.stderr)
+        stats = egress.cells_egress(res=9, keep_cells=set(cells))
+        df["link_node_ratio"] = [stats.get(c, {}).get("link_node_ratio") for c in cells]
+        df["dead_ends"] = [stats.get(c, {}).get("dead_ends") for c in cells]
+        df["road_rank"] = [stats.get(c, {}).get("road_rank") for c in cells]
+        df["egress_deficit"] = [egress.egress_deficit(stats.get(c)) for c in cells]
+        cov = egress.coverage_check(
+            cells, stats,
+            dwellings=dict(zip(df["h3"], df["n_vp"])),
+            population=dict(zip(df["h3"], df["n_per"])))
+        print(f"  cobertura: {100*cov['cell_coverage']:.1f}% de celdas, "
+              f"{100*cov.get('population_coverage',0):.1f}% de población",
+              file=sys.stderr)
+
     df = census.exposure_terms(df)
-    scored = wui.score_frame(df, fuel_col=None if a.no_fuel else "fuel_factor")
+    scored = wui.score_frame(df,
+                             fuel_col=None if a.no_fuel else "fuel_factor",
+                             egress_col=None if a.no_egress else "egress_deficit")
 
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -100,14 +121,27 @@ def main():
     print(f"\n{out}  ({out.stat().st_size / 1024 / 1024:.1f} MB)", file=sys.stderr)
     print(f"  {len(scored):,} celdas puntuadas", file=sys.stderr)
     top = scored.head(12)
-    print(f"\n{'wui':>6}{'viv':>8}{'pers':>8}{'pend°':>7}"
-          f"{'precar':>8}{'vulner':>8}{'s/agua':>8}  comuna", file=sys.stderr)
-    for r in top.itertuples():
-        print(f"{r.wui:>6.3f}{r.n_vp:>8.0f}{r.n_per:>8.0f}"
-              f"{(r.slope_deg or 0):>7.1f}{r.frac_precario:>8.2f}"
-              f"{r.frac_vulnerable:>8.2f}{r.frac_sin_red_agua:>8.2f}"
-              f"  {r.cut}", file=sys.stderr)
+    # Ranking by hazard alone tops out on single-dwelling cells: a lone
+    # house against cured matorral on a 40-degree slope genuinely is in
+    # danger, but a list of them is not an operational answer. What a
+    # planner acts on is where both are high.
+    h = scored[scored["wui"].notna()]
+    if len(h):
+        hq = h["wui"].quantile(0.9)
+        cq = h["consequence"].quantile(0.9)
+        both = h[(h["wui"] >= hq) & (h["consequence"] >= cq)]
+        print(f"\namenaza y consecuencia ambas en el decil superior: "
+              f"{len(both):,} celdas", file=sys.stderr)
+        print(f"  {both['n_vp'].sum():,.0f} viviendas · "
+              f"{both['n_per'].sum():,.0f} personas · "
+              f"egreso conocido en {int(both['has_egress'].sum())}/{len(both)}",
+              file=sys.stderr)
 
-
-if __name__ == "__main__":
-    main()
+        print(f"\n{'amen':>6}{'cons':>6}{'viv':>6}{'pers':>7}{'pend':>6}"
+              f"{'fuel':>6}{'egr':>6}  comuna", file=sys.stderr)
+        for r in both.nlargest(12, "n_per").itertuples():
+            eg = "n/d" if not r.has_egress else f"{r.egress_deficit:.2f}"
+            print(f"{r.wui:>6.2f}{r.consequence:>6.2f}{r.n_vp:>6.0f}"
+                  f"{r.n_per:>7.0f}{(r.slope_deg or 0):>6.1f}"
+                  f"{(getattr(r, 'fuel_factor', 0) or 0):>6.2f}{eg:>6}"
+                  f"  {r.cut}", file=sys.stderr)

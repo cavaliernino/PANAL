@@ -29,9 +29,10 @@ burn is not dangerous, and neither is heavy fuel on the flat. The gate is
 
 **How bad would it be if it did?**
 
-    consequence = fragility (precarious housing, people who cannot leave)
+    consequence = egress     (dead ends, one way out)
+                + fragility (precarious housing, people who cannot leave)
                 + deficit   (no mains water, so no hydrants)
-                + how many households are behind the cell
+                x how many households are behind the cell
 
 Reported alongside, never multiplied into the hazard ranking. A cell with
 precarious housing and no hydrants is genuinely worse off when fire
@@ -81,9 +82,8 @@ CONAF's Catastro de Uso de Suelo y Vegetación gives fuel *type*, which is
 what the Kitral models in Cell2Fire consume. It has no reachable public
 service, so it is an ask for the Phase 5 conversation.
 
-**Egress.** Roads are not in the consequence term yet. People died in Viña
-in narrow dead-end hillside streets, and that geometry is computable from
-OpenStreetMap today.
+**Validation of the consequence side.** It carries the largest share of the
+weights and none of the evidence. Structure-loss records would settle it.
 """
 
 from __future__ import annotations
@@ -95,16 +95,26 @@ from dataclasses import dataclass
 class Weights:
     """Consequence weights only. Hazard has no free parameters: it is the
     geometric mean of fuel and slope, and adding knobs there would invite
-    fitting to one event."""
+    fitting to one event.
 
-    precarious: float = 0.40
-    vulnerable: float = 0.35
-    no_water: float = 0.25
+    Egress carries the largest share because of how people actually die in
+    these fires. They died in the streets of Viña, not in their houses —
+    trapped in narrow dead-end passages with the fire coming uphill behind
+    them. A house that burns with everyone out is a loss; a street nobody
+    can leave is a death toll.
+
+    All four are unvalidated. A burn footprint cannot test consequence.
+    """
+
+    egress: float = 0.30
+    precarious: float = 0.25
+    vulnerable: float = 0.25
+    no_water: float = 0.20
 
     def normalised(self) -> "Weights":
-        t = self.precarious + self.vulnerable + self.no_water
-        return Weights(self.precarious / t, self.vulnerable / t,
-                       self.no_water / t)
+        t = self.egress + self.precarious + self.vulnerable + self.no_water
+        return Weights(self.egress / t, self.precarious / t,
+                       self.vulnerable / t, self.no_water / t)
 
 
 DEFAULT = Weights()
@@ -148,17 +158,36 @@ def hazard_of(slope_factor, fuel_factor) -> tuple[float | None, bool]:
 
 
 def consequence_of(*, dwellings, frac_precario, frac_vulnerable,
-                   frac_sin_red_agua, weights: Weights = DEFAULT) -> dict:
-    """How bad it would be if fire arrived. Untested — see the docstring."""
+                   frac_sin_red_agua, egress_deficit=None,
+                   weights: Weights = DEFAULT) -> dict:
+    """How bad it would be if fire arrived. Untested — see the docstring.
+
+    When egress is unknown — OSM maps no road in the cell — its weight is
+    redistributed across the remaining terms rather than counted as zero,
+    and `has_egress` says so. Counting it as zero would quietly rank an
+    unmapped *toma* as safer than a mapped cul-de-sac, which is backwards:
+    the unmapped ones are the most dangerous case there is.
+    """
     w = weights.normalised()
-    condition = (w.precarious * _clamp(frac_precario)
-                 + w.vulnerable * _clamp(frac_vulnerable)
-                 + w.no_water * _clamp(frac_sin_red_agua))
+    terms = [
+        (w.precarious, _clamp(frac_precario)),
+        (w.vulnerable, _clamp(frac_vulnerable)),
+        (w.no_water, _clamp(frac_sin_red_agua)),
+    ]
+    has_egress = egress_deficit is not None and egress_deficit == egress_deficit
+    if has_egress:
+        terms.append((w.egress, _clamp(egress_deficit)))
+
+    total_w = sum(weight for weight, _ in terms)
+    condition = (sum(weight * value for weight, value in terms) / total_w
+                 if total_w else 0.0)
+
     d = float(dwellings or 0)
     scale = min(1.0, (d / FULL_CONSEQUENCE_DWELLINGS) ** 0.5) if d > 0 else 0.0
     return {"condition": round(condition, 4),
             "scale": round(scale, 4),
-            "consequence": round(condition * scale, 4)}
+            "consequence": round(condition * scale, 4),
+            "has_egress": has_egress}
 
 
 def score_cell(
@@ -169,6 +198,7 @@ def score_cell(
     frac_vulnerable=0.0,
     frac_sin_red_agua=0.0,
     fuel_factor=None,
+    egress_deficit=None,
     weights: Weights = DEFAULT,
 ) -> dict:
     """Score one cell. Pure: no I/O, no globals, no surprises.
@@ -182,6 +212,7 @@ def score_cell(
     cons = consequence_of(dwellings=dwellings, frac_precario=frac_precario,
                           frac_vulnerable=frac_vulnerable,
                           frac_sin_red_agua=frac_sin_red_agua,
+                          egress_deficit=egress_deficit,
                           weights=weights)
     return {
         "wui": None if hazard is None else round(gate * hazard, 4),
@@ -192,7 +223,8 @@ def score_cell(
     }
 
 
-def score_frame(df, weights: Weights = DEFAULT, fuel_col: str | None = None):
+def score_frame(df, weights: Weights = DEFAULT, fuel_col: str | None = None,
+                egress_col: str | None = None):
     """Score a DataFrame of cells.
 
     Expects `n_vp`, `slope_factor` and the `frac_*` columns from
@@ -208,7 +240,13 @@ def score_frame(df, weights: Weights = DEFAULT, fuel_col: str | None = None):
             v = getattr(r, fuel_col, None)
             if v is not None and v == v:               # not NaN
                 fuel = float(v)
+        eg = None
+        if egress_col:
+            v = getattr(r, egress_col, None)
+            if v is not None and v == v:
+                eg = float(v)
         rows.append(score_cell(
+            egress_deficit=eg,
             dwellings=float(getattr(r, "n_vp", 0) or 0),
             slope_factor=float(getattr(r, "slope_factor", 0) or 0),
             frac_precario=float(getattr(r, "frac_precario", 0) or 0),

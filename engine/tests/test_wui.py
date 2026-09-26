@@ -99,8 +99,42 @@ def test_consequence_scales_with_households():
 
 
 def test_consequence_weights_normalise():
-    w = wui.Weights(precarious=2, vulnerable=2, no_water=1).normalised()
-    assert w.precarious + w.vulnerable + w.no_water == pytest.approx(1.0)
+    w = wui.Weights(egress=3, precarious=2, vulnerable=2, no_water=1).normalised()
+    assert (w.egress + w.precarious + w.vulnerable
+            + w.no_water) == pytest.approx(1.0)
+
+
+def test_egress_carries_the_largest_share():
+    """People died in the streets of Viña, not in their houses. A house that
+    burns with everyone out is a loss; a street nobody can leave is a death
+    toll."""
+    w = wui.DEFAULT.normalised()
+    assert w.egress > w.precarious
+    assert w.egress > w.vulnerable
+    assert w.egress > w.no_water
+
+
+def test_unknown_egress_redistributes_rather_than_counting_zero():
+    """Counting it zero would rank an unmapped toma as safer than a mapped
+    cul-de-sac, which is backwards."""
+    args = dict(dwellings=50, frac_precario=0.3, frac_vulnerable=0.3,
+                frac_sin_red_agua=0.5)
+    bad = wui.consequence_of(**args, egress_deficit=0.8)
+    unknown = wui.consequence_of(**args, egress_deficit=None)
+    good = wui.consequence_of(**args, egress_deficit=0.0)
+
+    assert good["condition"] < unknown["condition"] < bad["condition"]
+    assert unknown["has_egress"] is False
+    assert bad["has_egress"] is True
+
+
+def test_egress_moves_the_consequence_score():
+    trap = wui.score_cell(dwellings=50, slope_factor=0.5, fuel_factor=0.5,
+                          egress_deficit=0.9)
+    open_ = wui.score_cell(dwellings=50, slope_factor=0.5, fuel_factor=0.5,
+                           egress_deficit=0.0)
+    assert trap["consequence"] > open_["consequence"]
+    assert trap["wui"] == open_["wui"], "egress must not touch hazard"
 
 
 # ── robustness ──────────────────────────────────────────────────────────
