@@ -124,6 +124,24 @@ solo para pasar.
 
 ---
 
+## Contexto que no hay que olvidar
+
+**SENAPRED ya tiene un visor público** — [Visor Chile
+Preparado](https://www.visorchilepreparado.cl). No es competencia: su capa de
+incendio es recurrencia histórica 2020-2024, PANAL mide condición actual.
+Correlación de rangos 0,145. Detalle y encuadre para la reunión en
+[`alianzas.md`](alianzas.md).
+
+Sus 22 capas son ArcGIS público en `services5.arcgis.com/i7S5PSnIJAUcWvSE`.
+Dos sin consumir todavía y que deberíamos:
+
+- `Amenaza_por_Incendio_Forestal_2024` — recurrencia; el "historial de
+  incendios" que el roadmap listaba para Fase 2 y nunca construí
+- `Servicios_2024` capa BOMBEROS — cuarteles; tiempo de respuesta es un
+  término de consecuencia que falta
+
+---
+
 ## Lo siguiente, según qué llegue primero
 
 | si llega | se construye |

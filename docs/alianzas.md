@@ -95,6 +95,69 @@ Está construido para soportar las dos, con un campo que registra de cuál vino.
 
 ---
 
+## Antes de nada: ya tienen un visor
+
+**SENAPRED publicó el [Visor Chile Preparado](https://www.visorchilepreparado.cl)**
+— amenaza volcánica, incendio forestal y tsunami, por dirección, orientado a
+familias y comunidad organizada. Entrar a la reunión sin haberlo visto sería
+el peor arranque posible.
+
+No es competencia, y conviene poder explicar por qué en una frase: **responde
+una pregunta distinta**.
+
+Su capa de incendio es `Densidad de Incendios Forestales 2020-2024
+(Inc./Km²)` — **recurrencia histórica**, 9.400 polígonos. Dice dónde ha
+ardido antes. PANAL dice, con el combustible y el terreno de esta temporada
+seca, dónde correría un incendio si llegara. Correlación de rangos entre
+ambas: **0,145**. Miden cosas diferentes, y eso es exactamente el argumento.
+
+### Tres huecos concretos en su visor que PANAL llena
+
+1. **No tiene detección en vivo.** Es un mapa estático. Su propia hoja de ruta
+   pública dice que las versiones futuras sumarán *"alertas en tiempo real y
+   notificaciones automáticas"*. Eso es lo que PANAL ya tiene corriendo:
+   GOES cada 10 minutos, más VIIRS.
+
+2. **Incendio forestal no tiene vías de evacuación ni puntos de encuentro.**
+   Tsunami sí. Volcán sí. Incendio no. Es justo el trabajo de egreso de
+   Fase 2 — y es la capa que, si alguien la mira, es donde murió la gente.
+
+3. **Su capa de incendio es retrospectiva.** Un cerro que nunca se quemó pero
+   acumuló combustible cinco temporadas seguidas no aparece. PANAL lo ve
+   porque mide el estado actual, no el historial.
+
+### Sus capas son públicas y deberíamos estar usándolas
+
+El visor es una app ArcGIS y sus 22 capas viven en una organización pública.
+Dos importan de inmediato:
+
+- **`Amenaza_por_Incendio_Forestal_2024`** — recurrencia. Mi roadmap listaba
+  "historial de incendios" como insumo de Fase 2 y nunca lo construí. Está
+  acá, listo.
+- **`Servicios_2024` capa BOMBEROS** — ubicación de cuarteles. Tiempo de
+  respuesta es un término de consecuencia que no tenemos.
+
+Pedir permiso explícito para consumirlas, aunque sean públicas. Es barato
+para ellos y cambia la conversación de "les pedimos datos" a "estamos
+construyendo sobre lo suyo".
+
+### Lo que NO hay que decir
+
+Medí su capa contra la nuestra en el mismo test: recurrencia SENAPRED da
+2,17× el azar, PANAL 3,83×. **Eso no se menciona.**
+
+Tres razones. Su capa cubre 2020-2024, así que probablemente *incluye* el
+incendio contra el que testeé — su 2,17× es un piso, no un techo. Combinarlas
+ingenuamente da 2,78×, peor que PANAL sola, así que tampoco es que se sumen.
+Y sobre todo: llegar a decirle a un organismo público que su herramienta
+puntúa peor que la nuestra es la forma más rápida de no tener una segunda
+reunión.
+
+El marco correcto es el de arriba: **preguntas distintas, y la suya es un
+insumo que deberíamos estar usando.**
+
+---
+
 ## Otras dos, más chicas
 
 **Waze for Cities.** Es gratis y da un feed cada 2 minutos, pero está
