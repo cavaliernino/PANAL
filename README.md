@@ -47,6 +47,10 @@ Phase 2 is finished as engineering and cannot finish as science without
 data only CONAF and SENAPRED hold — see
 [`docs/alianzas.md`](docs/alianzas.md).
 
+Picking this up after a break? Start at [`docs/estado.md`](docs/estado.md):
+what runs unattended, what is blocked on whom, what expires when, and the
+decisions already settled so they do not get reopened.
+
 ### What works today
 
 **Detection, running.** GOES-East every 10 minutes over all of Chile,
