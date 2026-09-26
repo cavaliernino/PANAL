@@ -18,14 +18,21 @@ manzana.
 una está validada.
 
 La mitad de *amenaza* —¿llegará el fuego y correrá?— valida a **3,83 veces el
-azar** contra la huella satelital de ese incendio. La mitad de *consecuencia*
-—¿qué tan grave si llega?— no está validada, y **una huella de quema no puede
-validarla**: dice dónde ardió el monte, no dónde se perdieron casas. De 173
-celdas que VIIRS vio arder, solo 9 estaban habitadas.
+azar** contra la huella satelital de ese incendio: 44 de las 115 celdas
+habitadas de la zona de interfaz caen en su decil superior, donde el azar
+daría 12.
 
-Los registros de daño son el único dato que cierra eso. Sin ellos, términos
-como vivienda precaria o ausencia de red de agua quedan como hipótesis
-razonables y nada más.
+La mitad de *consecuencia* —¿qué tan grave si llega?— **no está validada, y
+lleva el peso mayor**. Egreso 0,30, precariedad 0,25, vulnerabilidad 0,25,
+sin red de agua 0,20: el 100% del peso del daño y el 0% de la evidencia.
+
+Y una huella de quema no puede cerrarla: dice dónde ardió el monte, no dónde
+se perdieron casas. De 173 celdas que VIIRS vio arder, **solo 9 estaban
+habitadas**.
+
+Los registros de daño son el único dato que cierra eso. Sin ellos, el índice
+puede decir "estas celdas tienen pendiente, combustible y pasajes ciegos",
+pero no "estas celdas están en la condición que costó vidas".
 
 **Qué destraba:** que PANAL pueda decir "estas manzanas están en la condición
 que costó vidas en 2024" en vez de "estas manzanas tienen pendiente y
@@ -121,6 +128,18 @@ pedir.
   11 son fundiciones.
 - **El replay de Viña 2024**, reproducible, a cadencia nativa de 10 minutos.
   Es lo que conviene abrir en la reunión.
+- **Mapa de exposición urbano-forestal de la Región de Valparaíso**, con las
+  cuatro capas: Censo 2024 a nivel manzana, pendiente Copernicus 30 m,
+  combustible Sentinel-2 y capacidad de salida desde OpenStreetMap.
+
+  Resultado concreto para llevar: **62 celdas donde amenaza y consecuencia
+  están ambas en el decil superior — 5.518 viviendas, 12.555 personas**,
+  concentradas en los cerros de Valparaíso. Con egreso conocido en 60 de las
+  62, así que el hueco de mapeo no afecta el resultado.
+
+  La cobertura de OpenStreetMap sobre lo habitado es **95,7% ponderada por
+  población** (95,2% entre celdas con 10 o más viviendas, 86,1% de esas en
+  pendientes sobre 25°). Lo medimos antes de confiar en el número.
 
 ---
 
@@ -131,5 +150,9 @@ tan grave sería si llegara. Confundir eso en una reunión con gente que combate
 incendios sería el error más caro posible: lo notarían de inmediato y con
 razón.
 
-Y la mitad de consecuencia todavía no está validada. Decirlo primero, antes de
-que lo pregunten.
+Y la mitad de consecuencia todavía no está validada. **Decirlo primero, antes
+de que lo pregunten** — es además el puente natural al pedido número uno.
+
+Tampoco prometer que el índice reemplaza el criterio de nadie. Rankea 44.106
+celdas para que alguien que conoce el terreno mire 62 en vez de todas. Eso es
+todo lo que hace, y es suficiente.
