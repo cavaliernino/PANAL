@@ -50,7 +50,9 @@ otherwise until it does.
 
 Phases 1 and 2 have a real external deadline: Chile's fire season opens in
 November, and missing it costs a year of validation. Full detail in
-[`docs/roadmap.md`](docs/roadmap.md).
+[`docs/roadmap.md`](docs/roadmap.md), and what to ask CONAF and SENAPRED for
+in [`docs/alianzas.md`](docs/alianzas.md) — three things that cost them
+nothing and block PANAL today.
 
 ---
 
