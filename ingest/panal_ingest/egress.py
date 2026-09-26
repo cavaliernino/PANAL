@@ -21,17 +21,28 @@ Per H3 cell, from the road graph:
   different category from one on a `secondary`.
 * **road length** by class, so density can be normalised.
 
-## The gap that has to be measured, not assumed
+## The gap was measured, and it is smaller than feared
 
-OSM is volunteered, so coverage is uneven — and it is uneven in exactly the
-wrong direction. Arterial roads are complete everywhere. The narrow
-passages of *tomas* and informal settlements, which is where people died,
-are the least likely to be mapped.
+OSM is volunteered, so the worry was that coverage would be thinnest
+exactly where danger is highest — the passages of *tomas* and informal
+hillside settlements. Measured over Valparaíso, that is mostly not what
+happens:
 
-`coverage_check()` exists to quantify that against the census: a cell with
-dwellings and no roads at all is almost certainly an OSM gap rather than a
-place nobody can drive to. Cells failing that check are reported as unknown
-egress, never as good egress — the same rule the detection layers follow.
+    weighted by population                     95.7%
+    cells with >= 10 dwellings                 95.2%
+    those on slopes above 25 degrees           86.1%
+    raw cell count                             44.2%
+
+The raw figure is the misleading one and should never be quoted alone: it
+counts a cell holding 1.3 dwellings the same as one holding 156. The
+unmapped cells are nearly empty — 24,601 of them hold 79,945 people
+between them, against 1,786,955 in the mapped ones.
+
+What stays true is that the few steep, genuinely populated cells that are
+unmapped are exactly the ones that matter. `egress_deficit` returns None
+for them rather than a score: an unmapped *toma* is the most dangerous case
+there is, and scoring it as well-connected would be the worst failure mode
+this project could have.
 """
 
 from __future__ import annotations
@@ -211,20 +222,40 @@ def egress_deficit(stats: dict | None, dwellings: float = 0.0) -> float | None:
                      + 0.25 * capacity), 4)
 
 
-def coverage_check(cells_with_dwellings, egress_stats: dict) -> dict:
+def coverage_check(cells, egress_stats: dict, dwellings=None,
+                   population=None) -> dict:
     """How much of the inhabited grid OSM actually covers.
 
-    OSM is volunteered and uneven in the worst direction: arterials are
-    complete, the passages of informal settlements are not. A cell with
-    dwellings and no mapped road is far more likely to be an OSM gap than a
-    place with no way in, so this reports the gap instead of letting it pass
-    as a low score.
+    **Weight by people, not by cells.** Measured over Valparaíso, raw cell
+    coverage is 44.2% — which sounds alarming and is nearly meaningless,
+    because it counts a cell holding 1.3 dwellings the same as one holding
+    156. Weighted by population the same data gives **95.7%**, and among
+    cells with ten or more dwellings it is **95.2%**, holding at 86.1% even
+    on slopes above 25°.
+
+    So the fear that OSM would be thinnest exactly where the danger is
+    turned out to be mostly unfounded, and it was worth measuring rather
+    than assuming in either direction. What remains true is that the few
+    steep, well-populated cells that *are* unmapped are precisely the ones
+    that matter, which is why `egress_deficit` still returns None for them
+    rather than a score.
+
+    Pass `dwellings` and `population` as `{h3: count}` to get the weighted
+    figures; without them only the cell count is reported, and that number
+    should not be quoted on its own.
     """
-    total = len(cells_with_dwellings)
-    mapped = sum(1 for c in cells_with_dwellings if c in egress_stats)
-    return {
-        "inhabited_cells": total,
-        "with_roads": mapped,
-        "without_roads": total - mapped,
-        "coverage": round(mapped / total, 4) if total else 0.0,
+    total = len(cells)
+    mapped = [c for c in cells if c in egress_stats]
+    out = {
+        "cells": total,
+        "cells_with_roads": len(mapped),
+        "cell_coverage": round(len(mapped) / total, 4) if total else 0.0,
     }
+    for name, weights in (("dwelling", dwellings), ("population", population)):
+        if not weights:
+            continue
+        tot = sum(weights.get(c, 0) or 0 for c in cells)
+        got = sum(weights.get(c, 0) or 0 for c in mapped)
+        out[f"{name}_total"] = round(tot, 1)
+        out[f"{name}_coverage"] = round(got / tot, 4) if tot else 0.0
+    return out

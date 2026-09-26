@@ -70,10 +70,23 @@ def test_footways_are_not_egress():
 def test_coverage_check_counts_the_gap():
     stats = {"a": {}, "b": {}}
     got = egress.coverage_check(["a", "b", "c", "d"], stats)
-    assert got["inhabited_cells"] == 4
-    assert got["with_roads"] == 2
-    assert got["without_roads"] == 2
-    assert got["coverage"] == 0.5
+    assert got["cells"] == 4
+    assert got["cells_with_roads"] == 2
+    assert got["cell_coverage"] == 0.5
+
+
+def test_coverage_must_be_weighted_by_people():
+    """Cell coverage alone is misleading and was, badly.
+
+    Over Valparaíso the raw figure is 44.2% and the population-weighted one
+    is 95.7%, because the unmapped cells are nearly empty: 24,601 of them
+    hold 79,945 people against 1,786,955 in the mapped ones.
+    """
+    stats = {"dense": {}}
+    dwellings = {"dense": 156.0, "empty1": 1.0, "empty2": 1.0, "empty3": 1.0}
+    got = egress.coverage_check(list(dwellings), stats, dwellings=dwellings)
+    assert got["cell_coverage"] == 0.25
+    assert got["dwelling_coverage"] > 0.97
 
 
 def test_road_rank_orders_by_evacuation_capacity():
