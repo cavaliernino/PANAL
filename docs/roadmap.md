@@ -96,6 +96,23 @@ Valparaíso in February 2024: dwellings on ravine slopes, surrounded by fuel,
 with a single narrow way out. That map is actionable months in advance, for
 defensible space, fuel breaks and evacuation planning.
 
+> **First attempt failed, 2026-09-25.** A census-and-slope index scored the
+> whole Valparaíso region, then was tested against that very fire. Its top
+> decile contained 2 of the 115 inhabited cells in the fire's interface zone
+> where chance would give 12 — worse than random. Every component alone did
+> no better.
+>
+> Two things follow. The test conflates hazard with consequence: this index
+> predicts how bad a fire *would be*, not where one *starts*, so ranking the
+> cells that happened to burn was never going to settle it. The honest
+> validation is against structure loss, which needs CONAF and SENAPRED damage
+> records — making the Phase 5 relationship a dependency of Phase 2, not a
+> successor to it.
+>
+> And the index is genuinely incomplete: **there is no fuel layer**, which is
+> the thing that defines an interface. Phase 2 does not ship until that
+> exists and the test comes back positive.
+
 ### Phase 3 — Crowdsourced first alarm
 
 Burst capture, bearing triangulation and the trust model. Full design in
