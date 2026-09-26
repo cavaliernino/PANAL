@@ -30,29 +30,60 @@ calendar sets the build order.
 
 ## Status
 
-**Phase 0 of 7 — repository groundwork. Nothing computes yet.**
-
-The 2020 prototype returned a constant. The risk index described in the
-award-winning submission was never implemented in code. Phase 1 is the first
-time PANAL will actually calculate anything, and this README will not claim
-otherwise until it does.
+**Phases 0 and 1 done. Phase 2 built and half validated.**
 
 | Phase | Scope | Deadline | Status |
 |---|---|---|---|
 | 0 | Repo hygiene, key revocation, monorepo, docs | — | ✅ done |
-| 1 | Fire foundation — H3 grid, GOES + FIRMS ingest, map v1 | **Nov 2026** | next |
-| 2 | WUI exposure — which neighbourhoods are built to burn | **Nov 2026** | |
+| 1 | Fire foundation — H3 grid, GOES + VIIRS ingest, maps | **Nov 2026** | ✅ done |
+| 2 | WUI exposure — which neighbourhoods are built to burn | **Nov 2026** | ⚠️ hazard validated, consequence not |
 | 3 | Crowdsourced first alarm — burst capture, bearing triangulation | | |
 | 4 | Fire behaviour — spread vector, C2F+K, egress, traffic | | |
 | 5 | Agency channel — CONAF/SENAPRED write official zones | | |
 | 6 | Respiratory — the original PANAL index | autumn 2027 | |
 | 7 | Android, hardening, public API | | |
 
-Phases 1 and 2 have a real external deadline: Chile's fire season opens in
-November, and missing it costs a year of validation. Full detail in
-[`docs/roadmap.md`](docs/roadmap.md), and what to ask CONAF and SENAPRED for
-in [`docs/alianzas.md`](docs/alianzas.md) — three things that cost them
-nothing and block PANAL today.
+Phase 2 is finished as engineering and cannot finish as science without
+data only CONAF and SENAPRED hold — see
+[`docs/alianzas.md`](docs/alianzas.md).
+
+### What works today
+
+**Detection, running.** GOES-East every 10 minutes over all of Chile,
+published to a public bucket about a minute after each scan closes.
+VIIRS at 375 m for precision. A cron refreshes the national snapshot on
+the satellite's own cadence.
+
+**Two maps.** [`web/index.html`](web) replays the 2 February 2024 Viña del
+Mar fire at native cadence; `web/national.html` shows live national
+detection with deck.gl.
+
+**An industrial anomaly mask.** 63 cells across 12 sites — El Teniente,
+Chuquicamata, Ventanas, Coloso. In a 24-hour window, 11 of 29 detections
+were fixed industrial sources. Without it a dispatcher would read 29 fires
+where 11 are smelters.
+
+**A wildland-urban exposure index** over 677,426 census cells, from four
+layers: Censo 2024 at block level, Copernicus 30 m slope, Sentinel-2 fuel
+and OpenStreetMap egress.
+
+### What is measured, not claimed
+
+| | |
+|---|---|
+| GOES first saw the Viña fire at | **12:10 local**, 2 h 37 min before VIIRS |
+| Hazard half of the index ranks the interface at | **3.83× chance** |
+| Over Valparaíso, hazard and consequence both top-decile | **62 cells, 12,555 people** |
+| OSM road coverage of inhabited cells, by population | **95.7%** |
+| GOES coverage of Chile, every hour of the day | **100%** |
+
+**The consequence half is not validated and carries the largest weights.**
+A burn footprint cannot test it — only 9 of the 173 cells VIIRS saw burning
+were inhabited. Structure-loss records would settle it, and that is the
+first ask in `docs/alianzas.md`.
+
+The index does **not** predict where a fire starts. It predicts how bad one
+would be if it arrived.
 
 ---
 
@@ -86,12 +117,19 @@ Full verification of every source, including the traps, is in
 ## Repository layout
 
 ```
-ingest/    Python ETL — SADU, FIRMS, NASA POWER, Censo 2024, SINCA → H3 → PostGIS
-engine/    the risk index and seasonal baselines (pure, testable library)
-api/       FastAPI — /risk, /forecast, /timeseries
-web/       PWA — MapLibre GL + deck.gl H3HexagonLayer
-android/   the 2020 app, carried forward for a Phase 6 rebuild
-docs/      the model, the sources, and the 2020 originals
+ingest/    goes · viirs · power · anomaly · census · terrain · fuel · egress
+engine/    wui — the exposure index (pure, no I/O, 16 tests)
+web/       index.html (replay) · national.html (live) · panal.js (shared)
+api/       FastAPI — not started
+android/   the 2020 app, carried forward for a Phase 7 rebuild
+docs/      roadmap · data-sources · risk-model · crowdsourcing · alianzas
+```
+
+90 tests across `ingest` and `engine`:
+
+```bash
+cd ingest && ../.venv/bin/python -m pytest tests -q
+cd engine && ../.venv/bin/python -m pytest tests -q
 ```
 
 `engine/` is deliberately a pure library with no I/O: the risk model is the
