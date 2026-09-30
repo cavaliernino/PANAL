@@ -99,9 +99,40 @@ def test_consequence_scales_with_households():
 
 
 def test_consequence_weights_normalise():
-    w = wui.Weights(egress=3, precarious=2, vulnerable=2, no_water=1).normalised()
-    assert (w.egress + w.precarious + w.vulnerable
-            + w.no_water) == pytest.approx(1.0)
+    w = wui.Weights(egress=3, precarious=2, vulnerable=2, no_water=1,
+                    response=1).normalised()
+    assert (w.egress + w.precarious + w.vulnerable + w.no_water
+            + w.response) == pytest.approx(1.0)
+
+
+def test_ignition_is_reported_never_folded_into_hazard():
+    """SENAPRED's recurrence layer measures where fires *start*; hazard
+    measures where they *run*. Combining ranks naively took lift from 3.83x
+    to 2.78x, and hazard is the only validated half."""
+    hot = wui.score_cell(dwellings=10, slope_factor=0.5, fuel_factor=0.5,
+                         ignition=5)
+    cold = wui.score_cell(dwellings=10, slope_factor=0.5, fuel_factor=0.5,
+                          ignition=0)
+    assert hot["wui"] == cold["wui"]
+    assert hot["ignition"] == 5
+
+
+def test_response_distance_enters_consequence():
+    far = wui.score_cell(dwellings=50, slope_factor=0.5, fuel_factor=0.5,
+                         response_factor=1.0)
+    near = wui.score_cell(dwellings=50, slope_factor=0.5, fuel_factor=0.5,
+                          response_factor=0.0)
+    assert far["consequence"] > near["consequence"]
+    assert far["wui"] == near["wui"], "response must not touch hazard"
+
+
+def test_missing_response_redistributes():
+    args = dict(dwellings=50, frac_precario=0.5, frac_vulnerable=0.5,
+                frac_sin_red_agua=0.5, egress_deficit=0.5)
+    bad = wui.consequence_of(**args, response_factor=1.0)
+    unknown = wui.consequence_of(**args, response_factor=None)
+    good = wui.consequence_of(**args, response_factor=0.0)
+    assert good["condition"] < unknown["condition"] < bad["condition"]
 
 
 def test_egress_carries_the_largest_share():

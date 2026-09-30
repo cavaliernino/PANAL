@@ -106,15 +106,18 @@ class Weights:
     All four are unvalidated. A burn footprint cannot test consequence.
     """
 
-    egress: float = 0.30
-    precarious: float = 0.25
-    vulnerable: float = 0.25
-    no_water: float = 0.20
+    egress: float = 0.28
+    precarious: float = 0.22
+    vulnerable: float = 0.22
+    no_water: float = 0.16
+    response: float = 0.12
 
     def normalised(self) -> "Weights":
-        t = self.egress + self.precarious + self.vulnerable + self.no_water
+        t = (self.egress + self.precarious + self.vulnerable
+             + self.no_water + self.response)
         return Weights(self.egress / t, self.precarious / t,
-                       self.vulnerable / t, self.no_water / t)
+                       self.vulnerable / t, self.no_water / t,
+                       self.response / t)
 
 
 DEFAULT = Weights()
@@ -159,7 +162,7 @@ def hazard_of(slope_factor, fuel_factor) -> tuple[float | None, bool]:
 
 def consequence_of(*, dwellings, frac_precario, frac_vulnerable,
                    frac_sin_red_agua, egress_deficit=None,
-                   weights: Weights = DEFAULT) -> dict:
+                   response_factor=None, weights: Weights = DEFAULT) -> dict:
     """How bad it would be if fire arrived. Untested — see the docstring.
 
     When egress is unknown — OSM maps no road in the cell — its weight is
@@ -177,6 +180,10 @@ def consequence_of(*, dwellings, frac_precario, frac_vulnerable,
     has_egress = egress_deficit is not None and egress_deficit == egress_deficit
     if has_egress:
         terms.append((w.egress, _clamp(egress_deficit)))
+    # Distancia al cuartel más cercano. Como el egreso, ausente se
+    # redistribuye en vez de contarse como cero.
+    if response_factor is not None and response_factor == response_factor:
+        terms.append((w.response, _clamp(response_factor)))
 
     total_w = sum(weight for weight, _ in terms)
     condition = (sum(weight * value for weight, value in terms) / total_w
@@ -199,6 +206,8 @@ def score_cell(
     frac_sin_red_agua=0.0,
     fuel_factor=None,
     egress_deficit=None,
+    response_factor=None,
+    ignition=None,
     weights: Weights = DEFAULT,
 ) -> dict:
     """Score one cell. Pure: no I/O, no globals, no surprises.
@@ -213,18 +222,25 @@ def score_cell(
                           frac_vulnerable=frac_vulnerable,
                           frac_sin_red_agua=frac_sin_red_agua,
                           egress_deficit=egress_deficit,
+                          response_factor=response_factor,
                           weights=weights)
     return {
         "wui": None if hazard is None else round(gate * hazard, 4),
         "inhabited": bool(gate),
         "hazard": None if hazard is None else round(hazard, 4),
         "has_fuel": has_fuel,
+        # Ignición va reportada, nunca multiplicada dentro de la amenaza:
+        # combinar rangos ingenuamente bajó el lift de 3,83x a 2,78x, y la
+        # amenaza es la única mitad validada. Además son preguntas distintas
+        # — dónde se inicia un fuego y dónde corre.
+        "ignition": ignition,
         **cons,
     }
 
 
 def score_frame(df, weights: Weights = DEFAULT, fuel_col: str | None = None,
-                egress_col: str | None = None):
+                egress_col: str | None = None, response_col: str | None = None,
+                ignition_col: str | None = None):
     """Score a DataFrame of cells.
 
     Expects `n_vp`, `slope_factor` and the `frac_*` columns from
@@ -245,8 +261,16 @@ def score_frame(df, weights: Weights = DEFAULT, fuel_col: str | None = None,
             v = getattr(r, egress_col, None)
             if v is not None and v == v:
                 eg = float(v)
+        def _opt(col):
+            if not col:
+                return None
+            v = getattr(r, col, None)
+            return float(v) if v is not None and v == v else None
+
         rows.append(score_cell(
             egress_deficit=eg,
+            response_factor=_opt(response_col),
+            ignition=_opt(ignition_col),
             dwellings=float(getattr(r, "n_vp", 0) or 0),
             slope_factor=float(getattr(r, "slope_factor", 0) or 0),
             frac_precario=float(getattr(r, "frac_precario", 0) or 0),
@@ -255,7 +279,12 @@ def score_frame(df, weights: Weights = DEFAULT, fuel_col: str | None = None,
             fuel_factor=fuel,
             weights=weights,
         ))
-    out = pd.concat([df.reset_index(drop=True), pd.DataFrame(rows)], axis=1)
+    scores = pd.DataFrame(rows)
+    # El marco de entrada puede traer columnas con el mismo nombre que las
+    # calculadas — `ignition` viaja en ambas direcciones. Gana la calculada.
+    base = df.reset_index(drop=True).drop(
+        columns=[c for c in scores.columns if c in df.columns])
+    out = pd.concat([base, scores], axis=1)
     return out.sort_values("wui", ascending=False).reset_index(drop=True)
 
 

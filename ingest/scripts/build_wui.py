@@ -19,9 +19,10 @@ sys.path.insert(0, str(ROOT / "ingest"))
 sys.path.insert(0, str(ROOT / "engine"))
 
 import pandas as pd  # noqa: E402
+from h3 import cell_to_latlng as h3_latlng  # noqa: E402
 
 from panal_engine import wui  # noqa: E402
-from panal_ingest import census, egress, fuel, terrain  # noqa: E402
+from panal_ingest import census, egress, fuel, senapred, terrain  # noqa: E402
 
 REGIONS = {
     # cut prefixes: 5 = Valparaíso, 13 = Metropolitana, 8 = Biobío
@@ -42,6 +43,11 @@ def main():
                    help="dry season to read fuel from (default 2026)")
     p.add_argument("--no-fuel", action="store_true")
     p.add_argument("--no-egress", action="store_true")
+    p.add_argument("--with-senapred", action="store_true",
+                   help="añade recurrencia de ignición y distancia a cuartel "
+                        "desde las capas públicas de SENAPRED. Produce la "
+                        "versión enriquecida, que no debe publicarse sin "
+                        "permiso explícito")
     a = p.parse_args()
 
     df = pd.read_parquet(a.census)
@@ -107,10 +113,31 @@ def main():
               f"{100*cov.get('population_coverage',0):.1f}% de población",
               file=sys.stderr)
 
+    if a.with_senapred:
+        print("capas SENAPRED (recurrencia de ignición, cuarteles)…",
+              file=sys.stderr)
+        lats = [h3_latlng(c)[0] for c in cells]
+        lons = [h3_latlng(c)[1] for c in cells]
+        bbox = (min(lons), min(lats), max(lons), max(lats))
+        ign = senapred.cells_recurrencia(cells, bbox)
+        est = senapred.cells_estacion_bomberos(cells, bbox)
+        df["ignition"] = [ign.get(c, 0) for c in cells]
+        df["cuartel_m"] = [est.get(c) for c in cells]
+        df["response_factor"] = [senapred.respuesta_factor(est.get(c))
+                                 for c in cells]
+        print(f"  ignición >0 en {int((df['ignition'] > 0).sum()):,} celdas · "
+              f"cuartel mediano {df['cuartel_m'].median() / 1000:.1f} km",
+              file=sys.stderr)
+    else:
+        df["ignition"] = None
+        df["response_factor"] = None
+
     df = census.exposure_terms(df)
     scored = wui.score_frame(df,
                              fuel_col=None if a.no_fuel else "fuel_factor",
-                             egress_col=None if a.no_egress else "egress_deficit")
+                             egress_col=None if a.no_egress else "egress_deficit",
+                             response_col="response_factor" if a.with_senapred else None,
+                             ignition_col="ignition" if a.with_senapred else None)
 
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -145,3 +172,7 @@ def main():
                   f"{r.n_per:>7.0f}{(r.slope_deg or 0):>6.1f}"
                   f"{(getattr(r, 'fuel_factor', 0) or 0):>6.2f}{eg:>6}"
                   f"  {r.cut}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
