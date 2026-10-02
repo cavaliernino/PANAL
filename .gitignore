@@ -131,3 +131,8 @@ data/cache/
 data/*.log
 data/*.log.tmp
 *.json.tmp
+
+# The live national snapshot. The cron rewrites it every 10 minutes, so
+# committing it only ever records noise; wherever the page is served, the
+# cron there generates it.
+web/data/national.json

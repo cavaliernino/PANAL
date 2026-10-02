@@ -5,7 +5,7 @@ Dónde estamos, qué está bloqueado y qué se olvida si nadie lo anota.
 Este documento existe para que el estado no viva en la memoria de nadie. Si
 pasan tres semanas sin tocar el repo, esto es lo primero que hay que leer.
 
-**Última actualización:** 2026-09-26
+**Última actualización:** 2026-10-02
 
 ---
 
@@ -13,7 +13,8 @@ pasan tres semanas sin tocar el repo, esto es lo primero que hay que leer.
 
 Fases 0 y 1 cerradas. Fase 2 construida entera y **validada a medias**: la
 mitad de amenaza da 3,83× el azar, la mitad de consecuencia no tiene forma de
-validarse sin datos de CONAF.
+validarse sin datos de CONAF. Sin fecha de reunión todavía, así que se avanza
+en lo que no depende de nadie: deploy, PWA y medir la brújula del teléfono.
 
 ---
 
@@ -94,6 +95,18 @@ no volver a abrir cada una:
   aparece un caso nuevo, la regla ya está decidida.
 - **La amenaza no tiene parámetros libres.** 115 celdas de un evento; con
   perillas uno se ajusta al incendio y cree que funciona.
+- **El snapshot nacional no se commitea.** Es dato vivo; se genera donde se
+  sirve.
+- **Moderación de reportes: puntaje automático, humano decide.** Detalle en
+  [`crowdsourcing.md`](crowdsourcing.md#moderation-score-then-queue).
+
+---
+
+## Abierto, esperando decisión
+
+- **Notificaciones "detección cerca de ti".** Técnicamente no dependen de
+  nadie, pero rozan la regla de que PANAL no emite alertas. Nino lo está
+  pensando; no se construye hasta que decida.
 
 ---
 
@@ -108,6 +121,12 @@ no volver a abrir cada una:
   (-109°), así que búsquedas por bbox barren el Pacífico. Mitigado donde
   importa, no en general.
 - **La consecuencia carga los pesos mayores y cero evidencia.**
+- **Las cifras de la reunión son de un build viejo.** "62 celdas, 12.555
+  personas" salió antes del cambio de pesos del 30-sep (bomberos entra con
+  0,12 y, cuando falta, su peso se redistribuye — así que también movió el
+  build público). El parquet en disco da 63 celdas y 12.591 personas, y
+  también es anterior al cambio. Regenerar y actualizar README, `alianzas.md`
+  y los pesos que cita, que siguen diciendo 0,30 / 0,25 / 0,25 / 0,20.
 
 ---
 
@@ -117,7 +136,7 @@ no volver a abrir cada una:
 2. `git log --oneline -10` — qué pasó al final
 3. Leer este archivo y [`alianzas.md`](alianzas.md)
 4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 74 tests
-5. `cd engine && ../.venv/bin/python -m pytest tests -q` — 16 tests
+5. `cd engine && ../.venv/bin/python -m pytest tests -q` — 19 tests
 
 Si algún test falla, empezá por ahí: están escritos para fijar decisiones, no
 solo para pasar.
@@ -133,12 +152,18 @@ Correlación de rangos 0,145. Detalle y encuadre para la reunión en
 [`alianzas.md`](alianzas.md).
 
 Sus 22 capas son ArcGIS público en `services5.arcgis.com/i7S5PSnIJAUcWvSE`.
-Dos sin consumir todavía y que deberíamos:
+Dos ya se consumen, detrás de `build_wui.py --with-senapred`:
 
-- `Amenaza_por_Incendio_Forestal_2024` — recurrencia; el "historial de
-  incendios" que el roadmap listaba para Fase 2 y nunca construí
-- `Servicios_2024` capa BOMBEROS — cuarteles; tiempo de respuesta es un
-  término de consecuencia que falta
+- `Amenaza_por_Incendio_Forestal_2024` — cuenta *incidentes* por km², no área
+  quemada: mide dónde **empiezan** los incendios, no dónde corren. Se reporta
+  como `ignition` y **nunca se mezcla con la amenaza** — combinarlas bajó el
+  lift de 3,83× a 2,78×, y hay un test que impide hacerlo.
+- `Servicios_2024` capa BOMBEROS — distancia al cuartel más cercano, dentro
+  de consecuencia con peso 0,12.
+
+Dos builds: sin la bandera es lo que PANAL puede publicar hoy sin pedirle
+nada a nadie; con ella es lo que se les muestra. El permiso que se pide es
+para uso público, no para el análisis.
 
 ---
 
@@ -149,4 +174,15 @@ Dos sin consumir todavía y que deberíamos:
 | Datos de daño | validar consecuencia → **cierra Fase 2** |
 | Catastro CONAF | tipo de combustible → **arranca Fase 4** |
 | Acceso a torres | consola de despacho → **arranca Fase 3** |
-| Nada todavía | desplegar en GitHub Pages; extender el índice al resto del país |
+| Nada todavía | ver abajo |
+
+Sin reunión, el orden acordado el 2-oct:
+
+1. **Deploy** en el VPS propio — el cron corre al lado de lo que se sirve, y
+   la API de Fase 3 va a necesitar servidor de todas formas.
+2. **PWA y vista web del índice WUI**, pensada para teléfono. Regenerar las
+   cifras del índice antes de mostrarlas.
+3. **App Android nativa**: el código de 2020 a `docs/legacy`, proyecto nuevo,
+   y lo primero que hace es **medir el error de brújula** contra puntos
+   conocidos. El cruce de marcaciones depende de ese número y nadie lo ha
+   medido. Teléfono de prueba Android; un iPhone disponible para la PWA.

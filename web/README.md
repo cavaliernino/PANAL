@@ -40,7 +40,8 @@ scan rolled up by zoom (r5 → r6 → r7), VIIRS at r9 with an age filter from
 6 hours to 7 days, and the inferred extent beneath. Refreshes every five
 minutes and always states how old its data is.
 
-Regenerate the snapshot with:
+The snapshot is **not committed** — it is live data, and a copy in git is
+only ever a stale one. Generate it before opening the page:
 
 ```bash
 cd ingest

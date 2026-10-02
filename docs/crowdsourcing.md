@@ -86,6 +86,43 @@ humans in the loop, not full automation. A crowd report never auto-escalates.
 
 ---
 
+## Moderation: score, then queue
+
+*Decided 2026-10-02. Not built — Phase 3.*
+
+Moderation starts with one person, Nino. That only works if the machine does
+the triage and the human only makes the decisions that matter.
+
+Every burst gets an **automatic score** from the signals above: burst
+coherence, plume motion between frames, drift against POWER wind, satellite
+agreement, independent bursts with consistent bearings, SINCA downwind,
+reporter reputation, and the classifier as one weight among many.
+
+The score **routes, it never promotes**:
+
+| Score | What happens |
+|---|---|
+| below the floor | Kept, not shown, not queued. Re-scored if new evidence arrives — a late corroborating burst can lift it. |
+| floor to threshold | T3, shown as unverified. |
+| above the threshold | **Queued for human review.** Only a person moves it to T2. |
+
+The queue is ordered by score and by **what is at stake where the fire is**,
+which is what the WUI index already measures: a burst beside a top-decile
+interface cell goes ahead of one in open scrub.
+
+Two rules that follow from there being one moderator:
+
+- **The threshold is calibrated, not chosen.** Start it low, so nearly
+  everything reaches the queue while volume is small, and log every decision.
+  Those decisions are the labelled set the threshold gets raised against.
+  Picking a number first would be the same mistake as tuning hazard to one
+  fire.
+- **An unreviewed report stays where it is.** If nobody reviews it — 3 a.m.,
+  moderator asleep, moderator evacuating — it remains T3. A timeout never
+  counts as approval.
+
+---
+
 ## Fixed observer stations — CONAF lookout towers
 
 The best version of the cross-bearing idea is not the crowd. It is a
