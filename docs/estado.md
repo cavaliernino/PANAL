@@ -20,22 +20,23 @@ en lo que no depende de nadie: deploy, PWA y medir la brújula del teléfono.
 
 ## Lo que corre solo ahora mismo
 
+**Público en https://panal.ninobozzi.cl** desde el 2-oct, servido desde
+`fuego` (VPS Linode, por Tailscale). Detalle en
+[`deploy/README.md`](../deploy/README.md).
+
 | qué | dónde | cada cuánto |
 |---|---|---|
-| Snapshot nacional de detección | cron del sistema | 10 min |
-| Log del cron | `data/cron_national.log` | se trunca a 1 MB |
+| Snapshot nacional, el que se publica | cron de `nino` en `fuego` | 10 min |
+| Snapshot nacional, copia local | cron del Mac | 10 min |
+| Certificado TLS | certbot en `fuego`, recarga nginx solo | ~60 días |
 
 ```bash
-tail -20 /Users/nino/Dev/PANAL/data/cron_national.log   # ¿sigue vivo?
-crontab -l                                              # ¿sigue instalado?
+ssh fuego tail -8 /var/www/panal.ninobozzi.cl/data/cron_national.log  # ¿sigue vivo?
+ssh fuego git -C /var/www/panal.ninobozzi.cl pull --ff-only           # publicar lo pusheado
 ```
 
-El servidor web **no** corre solo. Para las reuniones:
-
-```bash
-cd /Users/nino/Dev/PANAL
-nohup python3 -m http.server 8000 --directory web > /tmp/panal_web.log 2>&1 &
-```
+El cron del Mac ya no publica nada: solo mantiene fresca la copia local
+para desarrollar. Se puede sacar.
 
 ---
 
@@ -121,6 +122,10 @@ no volver a abrir cada una:
   (-109°), así que búsquedas por bbox barren el Pacífico. Mitigado donde
   importa, no en general.
 - **La consecuencia carga los pesos mayores y cero evidencia.**
+- **Un cúmulo VIIRS en pleno Atacama no está en la máscara industrial.**
+  Hacia -24,1, -68,77: 23 celdas, 29 detecciones repartidas en 5 días
+  (medido el 2-oct), compactas y sin combustible alrededor. Casi seguro una
+  faena; la máscara se armó con datos hasta junio. Regenerarla, y revisar si la regla deja afuera fuentes nuevas.
 - **Las cifras de la reunión son de un build viejo.** "62 celdas, 12.555
   personas" salió antes del cambio de pesos del 30-sep (bomberos entra con
   0,12 y, cuando falta, su peso se redistribuye — así que también movió el
@@ -178,8 +183,9 @@ para uso público, no para el análisis.
 
 Sin reunión, el orden acordado el 2-oct:
 
-1. **Deploy** en el VPS propio — el cron corre al lado de lo que se sirve, y
-   la API de Fase 3 va a necesitar servidor de todas formas.
+1. ~~**Deploy** en el VPS propio~~ — hecho el 2-oct. Al abrirlo en un
+   navegador apareció que la vista nacional **nunca había dibujado un
+   hexágono** (faltaba h3-js); arreglado.
 2. **PWA y vista web del índice WUI**, pensada para teléfono. Regenerar las
    cifras del índice antes de mostrarlas.
 3. **App Android nativa**: el código de 2020 a `docs/legacy`, proyecto nuevo,
