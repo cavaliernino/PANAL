@@ -63,21 +63,22 @@ def _confidence(raw: str, sensor: str) -> str:
     }.get(v, "low_probability")
 
 
-def _parse(text: str, sensor: str, source: str):
-    """FIRMS CSV to a DataFrame shaped like the GOES detections."""
+def _parse(text: str, sensor: str, source: str, bbox=None):
+    """FIRMS CSV to a DataFrame shaped like the GOES detections.
+
+    `bbox` (lon_min, lat_min, lon_max, lat_max) drops rows while parsing,
+    before any of them become Python objects.
+    """
     import pandas as pd
 
-    rows = list(csv.DictReader(io.StringIO(text)))
-    if not rows:
-        return pd.DataFrame(columns=[
-            "lat", "lon", "confidence", "frp_mw", "acq", "sensor", "source",
-        ])
-
     out = []
-    for r in rows:
+    for r in csv.DictReader(io.StringIO(text)):
         try:
             lat, lon = float(r["latitude"]), float(r["longitude"])
         except (KeyError, ValueError):
+            continue
+        if bbox is not None and not (bbox[0] <= lon <= bbox[2]
+                                     and bbox[1] <= lat <= bbox[3]):
             continue
         # acq_time is HHMM, sometimes without the leading zero.
         hhmm = str(r.get("acq_time", "0")).zfill(4)
@@ -97,6 +98,10 @@ def _parse(text: str, sensor: str, source: str):
             "sensor": sensor,
             "source": source,
         })
+    if not out:
+        return pd.DataFrame(columns=[
+            "lat", "lon", "confidence", "frp_mw", "acq", "sensor", "source",
+        ])
     return pd.DataFrame(out)
 
 
@@ -115,8 +120,15 @@ def fetch_recent(product: str = "VIIRS_NOAA20_NRT", window: str = "24h"):
     finally:
         Path(path).unlink(missing_ok=True)
 
+    # The feed is continental, and in the Amazon burning season a 7-day file
+    # runs to hundreds of thousands of rows for a few hundred in Chile. Drop
+    # the rest while parsing, so memory follows Chile's fires and not
+    # Brazil's. chile.BBOX is the same pre-filter clip() applies first, so
+    # nothing clip would have kept is lost here.
+    from . import chile
+
     sensor = "modis" if product.startswith("MODIS") else "viirs"
-    return _parse(text, sensor, product)
+    return _parse(text, sensor, product, bbox=chile.BBOX)
 
 
 def fetch_archive(map_key: str, bbox, day: dt.date, days: int = 1,
