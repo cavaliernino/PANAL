@@ -1,8 +1,13 @@
 #!/bin/bash
 # Refresh the national snapshot. Installed in cron every 10 minutes, matching
-# the GOES full-disk cadence.
+# the GOES full-disk cadence — one minute past, not on the minute:
 #
-#   */10 * * * * /Users/nino/Dev/PANAL/ingest/scripts/cron_national.sh
+#   1-59/10 * * * * /var/www/panal.ninobozzi.cl/ingest/scripts/cron_national.sh
+#
+# NOAA publishes each scan 6-10 s after :x0 (measured 2026-10-02 against the
+# bucket's LastModified). Run at :x0 and the newest scan is never there yet,
+# so every snapshot carried the previous one, ten minutes staler than it had
+# to be. A minute past leaves ~50 s of margin.
 #
 # Logs to data/cron_national.log, kept under 1 MB. Failures stay in the log
 # instead of mailing root, and the previous snapshot survives untouched

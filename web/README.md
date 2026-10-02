@@ -52,7 +52,7 @@ Run it on a schedule for a live view. The installed cron matches the GOES
 full-disk cadence:
 
 ```
-*/10 * * * * /Users/nino/Dev/PANAL/ingest/scripts/cron_national.sh
+1-59/10 * * * * /var/www/panal.ninobozzi.cl/ingest/scripts/cron_national.sh
 ```
 
 The wrapper logs to `data/cron_national.log`, caps that log at 1 MB, and

@@ -11,7 +11,9 @@ set -euo pipefail
 
 DIR=/var/www/panal.ninobozzi.cl
 REPO=https://github.com/cavaliernino/PANAL.git
-CRON="*/10 * * * * $DIR/ingest/scripts/cron_national.sh"
+# Un minuto después de :x0, no en :x0 — NOAA publica cada barrido 6-10 s
+# después. Ver el comentario de cron_national.sh.
+CRON="1-59/10 * * * * $DIR/ingest/scripts/cron_national.sh"
 
 [ -w "$DIR" ] || { echo "$DIR no existe o no es escribible: correr setup-root.sh primero" >&2; exit 1; }
 
