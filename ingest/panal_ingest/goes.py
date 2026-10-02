@@ -54,6 +54,11 @@ FIRE_CODES: dict[int, str] = {
 }
 TEMPORALLY_FILTERED = {30, 31, 32, 33, 34, 35}
 
+# Rows per read in extract_detections. FDCF stores each variable in
+# full-width chunks of 12 to 48 rows, so a multiple of 48 decompresses every
+# chunk exactly once; 480 rows of float64 is about 20 MB.
+BAND_ROWS = 480
+
 # Ranked worst to best, for thresholding.
 CONFIDENCE_ORDER = [
     "low_probability",
@@ -205,19 +210,48 @@ def geolocate(x: np.ndarray, y: np.ndarray, proj) -> tuple[np.ndarray, np.ndarra
     return lat, lon
 
 
+def _bands(n_rows: int):
+    for start in range(0, n_rows, BAND_ROWS):
+        yield start, min(start + BAND_ROWS, n_rows)
+
+
 def extract_detections(path: str):
     """Read one FDCF file and return fire detections as a DataFrame.
 
     Geolocation is computed only for the detected pixels — a few hundred out
     of 29 million — so this stays fast enough to run every 10 minutes.
+
+    Variables are read in row bands, never whole. Read whole, each one cost
+    ~700 MB once scaled to float64 and copied, which put the national build
+    at 1.5 GB peak to keep a few hundred pixels — enough to push a small
+    server that hosts other things into swap every ten minutes.
     """
     import netCDF4 as nc
     import pandas as pd
 
     ds = nc.Dataset(path)
-    mask = np.asarray(ds.variables["Mask"][:].filled(-1), dtype=np.int32)
 
-    rows, cols = np.where(np.isin(mask, list(FIRE_CODES)))
+    def var(name):
+        # Each band is read once, in order, so HDF5's chunk cache — 64 MB per
+        # variable by default, held while the file stays open — only ever
+        # keeps chunks that will not be read again. Left on, it was 320 MB
+        # of the peak by itself.
+        v = ds.variables[name]
+        v.set_var_chunk_cache(size=0)
+        return v
+
+    mask_var = var("Mask")
+    fire = list(FIRE_CODES)
+
+    rows, cols, codes = [], [], []
+    for a, b in _bands(mask_var.shape[0]):
+        block = np.asarray(np.ma.filled(mask_var[a:b, :], -1), dtype=np.int32)
+        r, c = np.nonzero(np.isin(block, fire))
+        rows.append(r + a)
+        cols.append(c)
+        codes.append(block[r, c])
+    rows, cols, codes = (np.concatenate(v) for v in (rows, cols, codes))
+
     if rows.size == 0:
         return pd.DataFrame(
             columns=[
@@ -231,13 +265,17 @@ def extract_detections(path: str):
     lat, lon = geolocate(x, y, ds.variables["goes_imager_projection"])
 
     def pull(name):
+        out = np.full(rows.size, np.nan)
         if name not in ds.variables:
-            return np.full(rows.size, np.nan)
-        return np.asarray(
-            ds.variables[name][:].astype("float64").filled(np.nan)
-        )[rows, cols]
+            return out
+        v = var(name)
+        for a, b in _bands(v.shape[0]):
+            sel = (rows >= a) & (rows < b)
+            if sel.any():
+                block = np.ma.filled(v[a:b, :].astype("float64"), np.nan)
+                out[sel] = np.asarray(block)[rows[sel] - a, cols[sel]]
+        return out
 
-    codes = mask[rows, cols]
     start = dt.datetime.fromisoformat(ds.time_coverage_start.replace("Z", "+00:00"))
     end = dt.datetime.fromisoformat(ds.time_coverage_end.replace("Z", "+00:00"))
 
