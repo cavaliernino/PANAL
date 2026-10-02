@@ -143,6 +143,11 @@
 <div class="loading" id="loading">Cargando detección nacional…</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.js"></script>
+<!-- deck.gl's standalone bundle leaves h3-js out and looks for globalThis.h3
+     (v4). Without it H3HexagonLayer fails to initialise and the map draws
+     nothing — indistinguishable from "no detections" unless you read the
+     console. -->
+<script src="https://cdn.jsdelivr.net/npm/h3-js@4.2.1/dist/h3-js.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/deck.gl@9.1.14/dist.min.js"></script>
 <script src="panal.js"></script>
 <script>
