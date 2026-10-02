@@ -41,13 +41,23 @@ ssh fuego bash panal-setup/setup-user.sh           # clon, venv, cron
 vhost nuevo en vez de dejar a nginx con una configuración rota — en ese
 servidor viven otros sitios.
 
+La copia en `~/panal-setup` sirve solo para la primera vez, cuando todavía
+no hay clon; después se borra. **De ahí en adelante los scripts se corren
+desde el clon**, que es el que se actualiza con `git pull` — correr una
+copia vieja reinstala un cron viejo sin avisar (pasó el 2-oct):
+
+```bash
+ssh fuego bash /var/www/panal.ninobozzi.cl/deploy/setup-user.sh
+```
+
 ## Actualizar
 
 ```bash
 ssh fuego git -C /var/www/panal.ninobozzi.cl pull --ff-only
 ```
 
-Nada más: no hay build ni servicio que reiniciar.
+Nada más: no hay build ni servicio que reiniciar. Si el cambio toca el
+horario del cron, correr además `setup-user.sh` desde el clon.
 
 ## Revisar que siga vivo
 
