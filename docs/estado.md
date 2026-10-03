@@ -27,7 +27,6 @@ en lo que no depende de nadie: deploy, PWA y medir la brújula del teléfono.
 | qué | dónde | cada cuánto |
 |---|---|---|
 | Snapshot nacional, el que se publica | cron de `nino` en `fuego` | 10 min |
-| Snapshot nacional, copia local | cron del Mac | 10 min |
 | Certificado TLS | certbot en `fuego`, recarga nginx solo | ~60 días |
 
 ```bash
@@ -35,8 +34,8 @@ ssh fuego tail -8 /var/www/panal.ninobozzi.cl/data/cron_national.log  # ¿sigue 
 ssh fuego git -C /var/www/panal.ninobozzi.cl pull --ff-only           # publicar lo pusheado
 ```
 
-El cron del Mac ya no publica nada: solo mantiene fresca la copia local
-para desarrollar. Se puede sacar.
+El Mac ya no corre nada (cron retirado el 2-oct). Para desarrollar en
+local, generar el snapshot a mano — ver [`web/README.md`](../web/README.md).
 
 ---
 
@@ -132,6 +131,34 @@ no volver a abrir cada una:
   detección más. Opciones, sin decidir: mostrar el NDVI de la celda en la
   ficha de cada detección, o una segunda clase "anomalía sin combustible",
   marcada y nunca borrada.
+
+---
+
+## Si retomás esto después de un mes
+
+1. `ssh fuego tail -20 /var/www/panal.ninobozzi.cl/data/cron_national.log`
+   — ¿la cadena sigue viva?
+2. `git log --oneline -10` — qué pasó al final
+3. Leer este archivo y [`alianzas.md`](alianzas.md)
+4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 79 tests
+5. `cd engine && ../.venv/bin/python -m pytest tests -q` — 21 tests
+
+Si algún test falla, empezá por ahí: están escritos para fijar decisiones, no
+solo para pasar.
+
+---
+
+## Contexto que no hay que olvidar
+
+**SENAPRED ya tiene un visor público** — [Visor Chile
+Preparado](https://www.visorchilepreparado.cl). No es competencia: su capa de
+incendio es recurrencia histórica 2020-2024, PANAL mide condición actual.
+Correlación de rangos 0,145. Detalle y encuadre para la reunión en
+[`alianzas.md`](alianzas.md).
+
+Sus 22 capas son ArcGIS público en `services5.arcgis.com/i7S5PSnIJAUcWvSE`.
+Dos ya se consumen, detrás de `build_wui.py --with-senapred`:
+
 - `Amenaza_por_Incendio_Forestal_2024` — cuenta *incidentes* por km², no área
   quemada: mide dónde **empiezan** los incendios, no dónde corren. Se reporta
   como `ignition` y **nunca se mezcla con la amenaza** — combinarlas bajó el
