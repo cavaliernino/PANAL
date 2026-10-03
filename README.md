@@ -58,9 +58,12 @@ published to a public bucket about a minute after each scan closes.
 VIIRS at 375 m for precision. A cron refreshes the national snapshot on
 the satellite's own cadence.
 
-**Two maps.** [`web/index.html`](web) replays the 2 February 2024 Viña del
-Mar fire at native cadence; `web/national.html` shows live national
-detection with deck.gl.
+**Public, and installable.** https://panal.ninobozzi.cl — three views that
+install as one app from a phone's browser: live national detection
+(`national.html`, the start page), the wildland-urban exposure map for the
+Región de Valparaíso (`wui.html`), and the 2 February 2024 Viña del Mar
+fire replayed at native cadence (`index.html`). See [`web/`](web) and
+[`deploy/`](deploy).
 
 **An industrial anomaly mask.** 63 cells across 12 sites — El Teniente,
 Chuquicamata, Ventanas, Coloso. In a 24-hour window, 11 of 29 detections
@@ -77,7 +80,7 @@ and OpenStreetMap egress.
 |---|---|
 | GOES first saw the Viña fire at | **12:10 local**, 2 h 37 min before VIIRS |
 | Hazard half of the index ranks the interface at | **3.83× chance** |
-| Over Valparaíso, hazard and consequence both top-decile | **62 cells, 12,555 people** |
+| Over Valparaíso, hazard and consequence both top-decile | **63 cells, 12,591 people** |
 | OSM road coverage of inhabited cells, by population | **95.7%** |
 | GOES coverage of Chile, every hour of the day | **100%** |
 
@@ -123,7 +126,8 @@ Full verification of every source, including the traps, is in
 ```
 ingest/    goes · viirs · power · anomaly · census · terrain · fuel · egress
 engine/    wui — the exposure index (pure, no I/O, 16 tests)
-web/       index.html (replay) · national.html (live) · panal.js (shared)
+web/       national.html (live) · wui.html (exposure) · index.html (replay) · sw.js (app)
+deploy/    nginx vhost and setup scripts for panal.ninobozzi.cl
 api/       FastAPI — not started
 android/   the 2020 app, carried forward for a Phase 7 rebuild
 docs/      roadmap · data-sources · risk-model · crowdsourcing · alianzas

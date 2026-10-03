@@ -23,8 +23,10 @@ habitadas de la zona de interfaz caen en su decil superior, donde el azar
 daría 12.
 
 La mitad de *consecuencia* —¿qué tan grave si llega?— **no está validada, y
-lleva el peso mayor**. Egreso 0,30, precariedad 0,25, vulnerabilidad 0,25,
-sin red de agua 0,20: el 100% del peso del daño y el 0% de la evidencia.
+lleva el peso mayor**. En el build público: egreso 0,32, precariedad 0,25,
+vulnerabilidad 0,25, sin red de agua 0,18 — el 100% del peso del daño y el
+0% de la evidencia. Con las capas de SENAPRED entra la distancia al cuartel
+de bomberos con 0,12 y el resto baja en proporción.
 
 Y una huella de quema no puede cerrarla: dice dónde ardió el monte, no dónde
 se perdieron casas. De 173 celdas que VIIRS vio arder, **solo 9 estaban
@@ -195,10 +197,12 @@ pedir.
   cuatro capas: Censo 2024 a nivel manzana, pendiente Copernicus 30 m,
   combustible Sentinel-2 y capacidad de salida desde OpenStreetMap.
 
-  Resultado concreto para llevar: **62 celdas donde amenaza y consecuencia
-  están ambas en el decil superior — 5.518 viviendas, 12.555 personas**,
-  concentradas en los cerros de Valparaíso. Con egreso conocido en 60 de las
-  62, así que el hueco de mapeo no afecta el resultado.
+  Resultado concreto para llevar: **63 celdas donde amenaza y consecuencia
+  están ambas en el decil superior — 5.534 viviendas, 12.591 personas**.
+  Seis de cada diez en los cerros de Valparaíso (7.715 personas), y otras
+  2.351 en Viña del Mar. Con egreso conocido en 61 de las 63, así que el
+  hueco de mapeo no afecta el resultado. Regenerado y revalidado el 2-oct;
+  se puede abrir en https://panal.ninobozzi.cl/wui.html.
 
   La cobertura de OpenStreetMap sobre lo habitado es **95,7% ponderada por
   población** (95,2% entre celdas con 10 o más viviendas, 86,1% de esas en

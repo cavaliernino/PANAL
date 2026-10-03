@@ -126,12 +126,6 @@ no volver a abrir cada una:
   Hacia -24,1, -68,77: 23 celdas, 29 detecciones repartidas en 5 días
   (medido el 2-oct), compactas y sin combustible alrededor. Casi seguro una
   faena; la máscara se armó con datos hasta junio. Regenerarla, y revisar si la regla deja afuera fuentes nuevas.
-- **Las cifras de la reunión son de un build viejo.** "62 celdas, 12.555
-  personas" salió antes del cambio de pesos del 30-sep (bomberos entra con
-  0,12 y, cuando falta, su peso se redistribuye — así que también movió el
-  build público). El parquet en disco da 63 celdas y 12.591 personas, y
-  también es anterior al cambio. Regenerar y actualizar README, `alianzas.md`
-  y los pesos que cita, que siguen diciendo 0,30 / 0,25 / 0,25 / 0,20.
 
 ---
 
@@ -186,8 +180,11 @@ Sin reunión, el orden acordado el 2-oct:
 1. ~~**Deploy** en el VPS propio~~ — hecho el 2-oct. Al abrirlo en un
    navegador apareció que la vista nacional **nunca había dibujado un
    hexágono** (faltaba h3-js); arreglado.
-2. **PWA y vista web del índice WUI**, pensada para teléfono. Regenerar las
-   cifras del índice antes de mostrarlas.
+2. ~~**PWA y vista web del índice WUI**~~ — hecho el 2-oct:
+   https://panal.ninobozzi.cl/wui.html, instalable desde el navegador.
+   Cifras regeneradas (63 celdas, 12.591 personas) y amenaza revalidada en
+   3,83×. **Falta probarla en un teléfono de verdad**: Android de Nino e
+   iPhone de Tami — instalar, abrir sin señal, "Cerca de mí".
 3. **App Android nativa**: el código de 2020 a `docs/legacy`, proyecto nuevo,
    y lo primero que hace es **medir el error de brújula** contra puntos
    conocidos. El cruce de marcaciones depende de ese número y nadie lo ha
