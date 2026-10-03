@@ -12,8 +12,10 @@ python3 -m http.server 8000 --directory web
 | Page | What it is |
 |---|---|
 | `index.html` | The Viña del Mar 2024 replay — the demo |
-| `national.html` | Live national detection — the product |
+| `national.html` | Live national detection — the product, and the app's start page |
+| `wui.html` | Wildland-urban exposure, Región de Valparaíso — the preventive map |
 | `panal.js` | Shared encoding rules, so the calibrated ramp cannot drift |
+| `sw.js`, `manifest.webmanifest`, `icons/` | The installable app (PWA) |
 
 ## What ships first: the Viña del Mar replay
 
@@ -158,3 +160,50 @@ From [`../docs/roadmap.md`](../docs/roadmap.md):
 - WUI exposure layer (Phase 2), the preventive map.
 - Official zones from the agency channel (Phase 5), visually distinct from
   anything PANAL derived.
+
+## The exposure map
+
+`wui.html` shows where people live in the condition that turns a small fire
+into a catastrophe: slope and fuel next to dwellings, from the index in
+`engine/panal_engine/wui.py`. Built for a phone first — a bottom sheet, a
+tap on any hexagon for its card, and **Cerca de mí**, which finds the
+user's cell on the device and sends nothing anywhere.
+
+What it is careful about:
+
+- **Hazard leads; consequence is labelled unvalidated** wherever it shows,
+  including the priority outline that depends on it. Hazard is validated at
+  3.83× against the Viña 2024 fire; consequence has no test yet.
+- **Its own colour scale.** Violet, outside every other scale here: not the
+  fire-intensity ramp (this is no fire), not SENAPRED's green/yellow/red
+  (this is no alert), no black (the burn scar).
+- **No fuel observation is not low hazard.** Those cells are neutral grey
+  with an edge, and say so.
+- **Cells come in several sizes.** The census grid puts sparse rural
+  entities in coarse cells (r5–r8) rather than invent where their houses
+  are. Those are drawn faint and outlined, or area would read as people.
+- **Components are described by rank in the region**, never as "high" or
+  "difficult": those words would need thresholds nobody has validated.
+
+Regenerate after rebuilding the index — public build only; the exporter
+refuses the SENAPRED one:
+
+```bash
+cd ingest
+../.venv/bin/python scripts/validate_wui.py --wui ../data/processed/wui_valparaiso.parquet \
+    --replay ../web/data/vina2024.json          # read the lift off this
+../.venv/bin/python scripts/export_wui_web.py --wui ../data/processed/wui_valparaiso.parquet \
+    --lift 3.83 -o ../web/data/wui_valparaiso.json
+```
+
+## The app
+
+The three pages install as one app from the browser — Android: menu →
+*Instalar app*; iPhone: Compartir → *Agregar a inicio*. It opens on the
+national view.
+
+`sw.js` keeps the app usable on bad signal without ever passing old data
+off as current: pages and data are network-first with the cache as
+fallback, and the pinned CDN libraries are cache-first. The national view
+then states the snapshot's age, and past 30 minutes it stops saying
+"nothing detected" and says the data is too old to know.

@@ -1,0 +1,24 @@
+{
+  "name": "PANAL — incendios en Chile",
+  "short_name": "PANAL",
+  "description": "Detección satelital de incendios en todo Chile cada 10 minutos, y dónde se vive en la condición que convierte un incendio chico en catástrofe.",
+  "lang": "es-CL",
+  "dir": "ltr",
+  "start_url": "national.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e1116",
+  "theme_color": "#0e1116",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Detección en vivo", "url": "national.html" },
+    { "name": "Exposición", "url": "wui.html" },
+    { "name": "Replay Viña 2024", "url": "index.html" }
+  ]
+}

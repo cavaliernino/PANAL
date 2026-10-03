@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PANAL · Chile</title>
+<meta name="description" content="Detección satelital de incendios en todo Chile, cada 10 minutos.">
+<meta name="theme-color" content="#0e1116">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css">
 <style>
   :root{
@@ -36,9 +41,17 @@
   .chip b{color:var(--ink); font-weight:600}
   .chip.act{cursor:pointer}
   .chip.fresh b{color:var(--ok)}
+  .chip.stale{color:#fbbf24; border-color:rgba(251,191,36,.45)}
+  header > div:first-child{pointer-events:auto}
+  .nav{display:flex; gap:4px; margin-top:6px; flex-wrap:wrap}
+  .nav a{font-size:12px; color:var(--ink-dim); text-decoration:none;
+    padding:3px 9px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel)}
+  .nav a[aria-current]{color:var(--ink); border-color:var(--accent)}
+  .grip{display:none}
 
   .panel{
-    position:absolute; z-index:3; left:14px; top:calc(80px + var(--safe-t));
+    position:absolute; z-index:3; left:14px; top:calc(110px + var(--safe-t));
     width:230px; background:rgba(22,27,35,.94); border:1px solid var(--line);
     border-radius:12px; padding:13px 14px; backdrop-filter:blur(8px);
   }
@@ -63,6 +76,8 @@
     font-size:11px; line-height:1.5; color:var(--ink-dim);
   }
   .quiet b{color:var(--ok)}
+  .quiet.stale{background:rgba(251,191,36,.07); border-color:rgba(251,191,36,.25)}
+  .quiet.stale b{color:#fbbf24}
   .warn{margin:11px 0 0; font-size:10px; line-height:1.5; color:var(--ink-faint)}
   .warn b{color:var(--ink-dim)}
   .ramp{display:flex; height:9px; border-radius:3px; overflow:hidden; margin:2px 0 3px}
@@ -73,10 +88,23 @@
     background:var(--bg); color:var(--ink-dim); font-size:13px; padding:24px;
     text-align:center}
   @media (max-width:640px){
-    .panel{left:10px; right:10px; width:auto; top:calc(84px + var(--safe-t));
-      max-height:52vh; overflow:auto}
     header{flex-wrap:wrap} .chips{margin-left:0; width:100%; justify-content:flex-start}
+    #c-res{display:none}
+    /* Bottom sheet: the count and the data's state stay visible, the map
+       keeps the screen. */
+    .panel{left:0; right:0; top:auto; bottom:0; width:auto; max-height:72vh;
+      overflow:auto; border-radius:16px 16px 0 0; border-bottom:0;
+      padding:6px 14px calc(14px + var(--safe-b));
+      transform:translateY(calc(100% - 112px - var(--safe-b)));
+      transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+    .panel.open{transform:none}
+    .grip{display:block; width:100%; background:none; border:0; padding:6px 0 8px;
+      cursor:pointer}
+    .grip::before{content:""; display:block; margin:0 auto; width:38px; height:4px;
+      border-radius:2px; background:var(--line)}
+    .maplibregl-ctrl-bottom-right{bottom:calc(112px + var(--safe-b))}
   }
+  @media (prefers-reduced-motion:reduce){ .panel{transition:none} }
 </style>
 </head>
 <body>
@@ -86,6 +114,11 @@
 <header>
   <div>
     <div class="brand">PANAL</div>
+    <nav class="nav">
+      <a href="national.html" aria-current="page">Detección</a>
+      <a href="wui.html">Exposición</a>
+      <a href="index.html">Viña 2024</a>
+    </nav>
     <div class="ttl">Chile · detección activa</div>
     <div class="sub" id="h-sub">—</div>
   </div>
@@ -97,16 +130,14 @@
   </div>
 </header>
 
-<div class="panel">
+<div class="panel" id="panel">
+  <button class="grip" id="grip" aria-label="Abrir o cerrar el panel"></button>
   <div class="big"><span id="s-count">—</span><small id="s-count-lbl">focos detectados</small></div>
   <div class="kv"><span>FRP total</span><b id="s-frp">—</b></div>
   <div class="kv"><span>GOES último barrido</span><b id="s-goes">—</b></div>
   <div class="kv" id="row-ind" hidden><span>fuentes fijas</span><b id="s-ind">0</b></div>
 
-  <div id="quiet" class="quiet" hidden>
-    <b>Sin detecciones activas.</b> Es el estado normal fuera de temporada.
-    La cadena está viva: el último barrido GOES llegó y se procesó.
-  </div>
+  <div id="quiet" class="quiet" hidden></div>
 
   <h4>Capas</h4>
   <label class="row"><input type="checkbox" id="t-goes" checked>
@@ -156,6 +187,10 @@ const REFRESH_MS = 5 * 60 * 1000;
 
 const $ = id => document.getElementById(id);
 let DATA, map, overlay, styleIdx = 0, curRes = 5, maxAge = 10080;
+// The cron runs every 10 minutes, so a snapshot older than this means the
+// chain stopped or the phone is offline and showing what it last had.
+const STALE_MIN = 30;
+let ageMin = null, offline = false;
 let show = { goes: true, viirs: true, halo: true, ind: true };
 
 const alpha = c => Math.round((OPACITY[c] ?? .4) * 255);
@@ -222,7 +257,32 @@ function layers() {
   ];
 }
 
+// Never say "nothing detected" about data that is too old to know. Offline,
+// the service worker hands back the last snapshot; this is what keeps that
+// from reading as an all-clear.
+function quiet(total) {
+  const q = $("quiet");
+  const stale = ageMin == null || ageMin > STALE_MIN;
+  q.hidden = total > 0 && !stale;
+  q.className = "quiet" + (stale ? " stale" : "");
+  if (stale) {
+    q.innerHTML = `<b>Datos de hace ${fmtAge(ageMin)}.</b> ` +
+      (offline ? "Sin conexión. " : "La cadena no se actualizó. ") +
+      "Lo que haya pasado después no está en este mapa: que no aparezcan " +
+      "celdas no significa que no haya fuego.";
+  } else if (!DATA.goes) {
+    q.innerHTML = "<b>Sin detecciones VIIRS, y sin barrido GOES</b> en esta " +
+      "corrida: el satélite geoestacionario no respondió. Sin GOES no hay " +
+      "detección de los últimos minutos.";
+  } else {
+    q.innerHTML = "<b>Sin detecciones activas.</b> Es el estado normal fuera " +
+      "de temporada. La cadena está viva: el último barrido GOES llegó y se " +
+      "procesó.";
+  }
+}
+
 function render() {
+  if (!DATA) return;
   overlay?.setProps({ layers: layers() });
 
   const v = viirsCells(), g = goesCells(), ind = industrialCells();
@@ -236,7 +296,7 @@ function render() {
                                              : "celdas con detección";
   const frp = [...v, ...g].reduce((s, c) => s + c.f, 0);
   $("s-frp").textContent = frp ? Math.round(frp).toLocaleString("es-CL") + " MW" : "—";
-  $("quiet").hidden = total > 0;
+  quiet(total);
   $("row-ind").hidden = !ind.length;
   $("s-ind").textContent = ind.length;
 }
@@ -253,22 +313,35 @@ function setStyle(k) {
   map.setStyle(STYLES[styleIdx][1]);
 }
 
-async function load(first) {
-  const res = await fetch("data/national.json?t=" + Date.now());
-  DATA = await res.json();
+async function load() {
+  try {
+    const res = await fetch("data/national.json?t=" + Date.now());
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    DATA = await res.json();
+    offline = false;
+  } catch (err) {
+    offline = true;
+    if (!DATA) {
+      $("loading").innerHTML = "<div><b>Sin conexión y sin datos guardados.</b>" +
+        "<br>Esto no dice nada sobre incendios: solo que no hay datos que " +
+        "mostrar.</div>";
+      return;
+    }
+  }
   const m = DATA.meta;
 
   const gen = new Date(m.generated);
-  const ageMin = (Date.now() - gen) / 60000;
-  $("c-age").textContent = "datos hace " + fmtAge(ageMin);
-  $("c-age").className = "chip" + (ageMin < 30 ? " fresh" : "");
+  ageMin = (Date.now() - gen) / 60000;
+  $("c-age").textContent = (offline ? "sin conexión · " : "") +
+    "datos hace " + fmtAge(ageMin);
+  $("c-age").className = "chip" + (ageMin <= STALE_MIN ? " fresh" : " stale");
   $("h-sub").textContent =
     `GOES-East cada 10 min · VIIRS ${DATA.viirs.window} · actualizado ` +
     gen.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
   $("s-goes").textContent = DATA.goes
     ? DATA.goes.scan_start.slice(11, 16) + " UTC" : "sin barrido";
 
-  if (first) $("loading")?.remove();
+  $("loading")?.remove();
   render();
 }
 
@@ -304,7 +377,7 @@ async function load(first) {
   };
   map.on("zoom", syncRes);
 
-  await load(true);
+  await load();
   syncRes();
   $("c-res").textContent = "grilla r" + curRes;
 
@@ -314,10 +387,14 @@ async function load(first) {
   $("t-ind").onchange = e => { show.ind = e.target.checked; render(); };
   $("age").oninput = e => setAge(+e.target.value);
   $("c-style").onclick = () => setStyle(styleIdx + 1);
-  $("c-reload").onclick = () => load(false);
+  $("c-reload").onclick = () => load();
+  $("grip").onclick = () => $("panel").classList.toggle("open");
 
-  setInterval(() => load(false), REFRESH_MS);
+  setInterval(load, REFRESH_MS);
 })();
+</script>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
 </script>
 </body>
 </html>
