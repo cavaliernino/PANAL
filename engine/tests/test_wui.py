@@ -187,3 +187,25 @@ def test_all_none_does_not_crash():
 def test_score_is_bounded_at_one():
     s = wui.score_cell(dwellings=10, slope_factor=1, fuel_factor=1)
     assert s["wui"] == pytest.approx(1.0)
+
+
+# ── priority ────────────────────────────────────────────────────────────
+
+def test_priority_needs_both_halves_in_the_top_decile():
+    """The published count and the map's outline both come from here."""
+    import pandas as pd
+
+    # 20 scored cells: hazard rises with i, consequence falls with it, so
+    # only a cell planted high on both can qualify.
+    rows = [{"wui": i / 20, "consequence": 1 - i / 20} for i in range(20)]
+    rows.append({"wui": 0.99, "consequence": 0.99})       # high on both
+    rows.append({"wui": None, "consequence": 1.0})        # no hazard: no rank
+    df = pd.DataFrame(rows)
+    out = wui.priority(df)
+    assert list(out.index) == [20]
+
+
+def test_priority_of_nothing_is_empty():
+    import pandas as pd
+    df = pd.DataFrame({"wui": [None, None], "consequence": [0.5, 0.9]})
+    assert len(wui.priority(df)) == 0

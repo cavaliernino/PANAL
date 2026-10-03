@@ -288,6 +288,26 @@ def score_frame(df, weights: Weights = DEFAULT, fuel_col: str | None = None,
     return out.sort_values("wui", ascending=False).reset_index(drop=True)
 
 
+def priority(scored, q: float = 0.9):
+    """Cells where hazard and consequence both reach the top decile.
+
+    Ranking by hazard alone tops out on single-dwelling cells: a lone house
+    against cured matorral on a 40-degree slope genuinely is in danger, but a
+    list of them is not an operational answer. What a planner acts on is
+    where both are high.
+
+    The figure quoted for a region and the cells its map outlines both come
+    from here, so the two cannot drift apart. Deciles are taken over every
+    cell with a hazard score, which is how the figure was first produced.
+    """
+    h = scored[scored["wui"].notna()]
+    if not len(h):
+        return h
+    hq = h["wui"].quantile(q)
+    cq = h["consequence"].quantile(q)
+    return h[(h["wui"] >= hq) & (h["consequence"] >= cq)]
+
+
 def _clamp(v) -> float:
     if v is None or v != v:
         return 0.0

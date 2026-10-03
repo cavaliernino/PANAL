@@ -147,16 +147,8 @@ def main():
 
     print(f"\n{out}  ({out.stat().st_size / 1024 / 1024:.1f} MB)", file=sys.stderr)
     print(f"  {len(scored):,} celdas puntuadas", file=sys.stderr)
-    top = scored.head(12)
-    # Ranking by hazard alone tops out on single-dwelling cells: a lone
-    # house against cured matorral on a 40-degree slope genuinely is in
-    # danger, but a list of them is not an operational answer. What a
-    # planner acts on is where both are high.
-    h = scored[scored["wui"].notna()]
-    if len(h):
-        hq = h["wui"].quantile(0.9)
-        cq = h["consequence"].quantile(0.9)
-        both = h[(h["wui"] >= hq) & (h["consequence"] >= cq)]
+    both = wui.priority(scored)
+    if len(both):
         print(f"\namenaza y consecuencia ambas en el decil superior: "
               f"{len(both):,} celdas", file=sys.stderr)
         print(f"  {both['n_vp'].sum():,.0f} viviendas · "
