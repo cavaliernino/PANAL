@@ -15,7 +15,7 @@ python3 -m http.server 8000 --directory web
 | `national.html` | Live national detection — the product, and the app's start page |
 | `wui.html` | Wildland-urban exposure, Región de Valparaíso — the preventive map |
 | `panal.js` | Shared encoding rules, so the calibrated ramp cannot drift |
-| `sw.js`, `manifest.webmanifest`, `icons/` | The installable app (PWA) |
+| `sw.js`, `manifest.json`, `icons/` | The installable app (PWA) |
 
 ## What ships first: the Viña del Mar replay
 
