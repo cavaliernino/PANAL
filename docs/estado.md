@@ -122,37 +122,16 @@ no volver a abrir cada una:
   (-109°), así que búsquedas por bbox barren el Pacífico. Mitigado donde
   importa, no en general.
 - **La consecuencia carga los pesos mayores y cero evidencia.**
-- **Un cúmulo VIIRS en pleno Atacama no está en la máscara industrial.**
-  Hacia -24,1, -68,77: 23 celdas, 29 detecciones repartidas en 5 días
-  (medido el 2-oct), compactas y sin combustible alrededor. Casi seguro una
-  faena; la máscara se armó con datos hasta junio. Regenerarla, y revisar si la regla deja afuera fuentes nuevas.
-
----
-
-## Si retomás esto después de un mes
-
-1. `tail -20 data/cron_national.log` — ¿la cadena sigue viva?
-2. `git log --oneline -10` — qué pasó al final
-3. Leer este archivo y [`alianzas.md`](alianzas.md)
-4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 74 tests
-5. `cd engine && ../.venv/bin/python -m pytest tests -q` — 19 tests
-
-Si algún test falla, empezá por ahí: están escritos para fijar decisiones, no
-solo para pasar.
-
----
-
-## Contexto que no hay que olvidar
-
-**SENAPRED ya tiene un visor público** — [Visor Chile
-Preparado](https://www.visorchilepreparado.cl). No es competencia: su capa de
-incendio es recurrencia histórica 2020-2024, PANAL mide condición actual.
-Correlación de rangos 0,145. Detalle y encuadre para la reunión en
-[`alianzas.md`](alianzas.md).
-
-Sus 22 capas son ArcGIS público en `services5.arcgis.com/i7S5PSnIJAUcWvSE`.
-Dos ya se consumen, detrás de `build_wui.py --with-senapred`:
-
+- **Un cúmulo VIIRS en Atacama que no es incendio ni faena.** Hacia
+  -24,1, -68,77, a 3.000 m. Medido el 2-oct: NDVI 0,015–0,063 en sus 23
+  celdas (suelo desnudo, combustible 0); las 80 detecciones de un año, todas
+  en la pasada de las 18–19 UTC y ninguna de noche; 12 días en feb–mar y 3
+  a fines de septiembre; ~5 MW. Firma de falso positivo térmico diurno, o
+  de un proceso que solo opera de día. La máscara industrial no lo marca y
+  hace bien: su regla es para fuentes persistentes. Hoy se ve como una
+  detección más. Opciones, sin decidir: mostrar el NDVI de la celda en la
+  ficha de cada detección, o una segunda clase "anomalía sin combustible",
+  marcada y nunca borrada.
 - `Amenaza_por_Incendio_Forestal_2024` — cuenta *incidentes* por km², no área
   quemada: mide dónde **empiezan** los incendios, no dónde corren. Se reporta
   como `ignition` y **nunca se mezcla con la amenaza** — combinarlas bajó el
