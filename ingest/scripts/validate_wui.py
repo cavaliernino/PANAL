@@ -55,6 +55,19 @@ Two weaknesses stand regardless of the test:
 Until this reports a positive result, the index is a research artefact. It
 must not be published as a risk product, and nothing in the interface should
 imply it ranks danger.
+
+## Since then
+
+* **2026-09-25, with the Sentinel-2 fuel layer: 3.83×.** 44 of the 115
+  interface cells in the top decile, median p77. Hazard alone 3.39×. The
+  hazard half clears the bar above.
+* **2026-10-02, re-run before publishing the web map:** unchanged, 3.83×,
+  against a full rebuild with the current weights. Consequence weights moved
+  on 30 September and hazard does not use them, as it should not.
+
+Consequence still has no test at all — a burn footprint cannot give it one.
+So the public map leads with hazard and labels consequence, and anything
+derived from it, as unvalidated wherever it appears.
 """
 
 from __future__ import annotations

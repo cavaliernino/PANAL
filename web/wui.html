@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PANAL · Exposición</title>
+<meta name="description" content="Dónde se vive en la condición que convierte un incendio chico en catástrofe: pendiente, combustible y viviendas, Región de Valparaíso.">
+<meta name="theme-color" content="#0e1116">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css">
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b23; --line:#2a323f;
+    --ink:#e8edf4; --ink-dim:#94a3b8; --ink-faint:#64748b;
+    --accent:#f59e0b; --ok:#7dd3a0; --unval:#fbbf24;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); overflow:hidden;
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  #map{position:absolute; inset:0}
+
+  header{
+    position:absolute; z-index:3; inset:0 0 auto 0;
+    padding:calc(10px + var(--safe-t)) 14px 14px;
+    background:linear-gradient(180deg,rgba(14,17,22,.94) 60%,transparent);
+    display:flex; gap:12px; align-items:flex-start; pointer-events:none;
+  }
+  header > *{pointer-events:auto}
+  .brand{font-weight:700; letter-spacing:.14em; font-size:13px; color:var(--accent)}
+  .nav{display:flex; gap:4px; margin-top:6px; flex-wrap:wrap}
+  .nav a{font-size:12px; color:var(--ink-dim); text-decoration:none;
+    padding:3px 9px; border-radius:999px; border:1px solid var(--line);
+    background:var(--panel)}
+  .nav a[aria-current]{color:var(--ink); border-color:var(--accent)}
+  .chips{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end}
+  .chip{background:var(--panel); border:1px solid var(--line); border-radius:999px;
+    padding:4px 10px; font-size:11px; color:var(--ink-dim); white-space:nowrap;
+    cursor:pointer; font:inherit; font-size:11px}
+
+  /* The sheet: a side panel on wide screens, a bottom sheet on phones. */
+  .sheet{
+    position:absolute; z-index:3; left:14px; top:calc(86px + var(--safe-t));
+    width:300px; max-height:calc(100% - 110px - var(--safe-t)); overflow:auto;
+    background:rgba(22,27,35,.95); border:1px solid var(--line);
+    border-radius:12px; padding:13px 14px; backdrop-filter:blur(8px);
+  }
+  .grip{display:none}
+  .ttl{font-weight:600; font-size:15px}
+  .sub{color:var(--ink-dim); font-size:12px; margin-top:2px}
+  .seg{display:flex; margin-top:11px; border:1px solid var(--line);
+    border-radius:9px; overflow:hidden}
+  .seg button{flex:1; background:none; border:0; color:var(--ink-dim);
+    padding:7px 6px; font:inherit; font-size:12px; cursor:pointer}
+  .seg button[aria-pressed=true]{background:var(--line); color:var(--ink)}
+  .seg small{display:block; font-size:9.5px; color:var(--ink-faint)}
+  .seg button[aria-pressed=true] small.unval{color:var(--unval)}
+  h4{margin:13px 0 6px; font-size:10.5px; color:var(--ink-dim); font-weight:600;
+    text-transform:uppercase; letter-spacing:.07em}
+  .ramp{display:flex; height:10px; border-radius:3px; overflow:hidden}
+  .ramp i{flex:1}
+  .rlbl{display:flex; justify-content:space-between; font-size:9.5px;
+    color:var(--ink-faint); margin-top:3px}
+  .key{display:flex; align-items:center; gap:8px; margin-top:7px; font-size:11.5px;
+    color:var(--ink-dim)}
+  .key i{flex:none; width:14px; height:12px; border-radius:2px}
+  .note{margin:10px 0 0; font-size:11px; line-height:1.5; color:var(--ink-dim)}
+  .note b{color:var(--ink)}
+  .unvalbox{margin-top:10px; padding:8px 10px; border-radius:9px; font-size:11px;
+    line-height:1.5; color:var(--ink-dim); background:rgba(251,191,36,.07);
+    border:1px solid rgba(251,191,36,.25)}
+  .unvalbox b{color:var(--unval)}
+  .stat{display:flex; gap:14px; margin-top:8px}
+  .stat div{flex:1}
+  .stat b{display:block; font-size:19px; font-variant-numeric:tabular-nums}
+  .stat span{font-size:10.5px; color:var(--ink-faint)}
+  details{margin-top:12px; border-top:1px solid var(--line); padding-top:9px}
+  summary{cursor:pointer; font-size:12px; color:var(--ink-dim)}
+  details p, details li{font-size:11.5px; line-height:1.55; color:var(--ink-dim)}
+  details ul{padding-left:17px; margin:6px 0}
+  .src{font-size:10px; color:var(--ink-faint); line-height:1.5; margin-top:10px}
+
+  /* Cell card. */
+  .card{margin-bottom:12px; padding:11px 12px; border-radius:10px;
+    background:var(--bg); border:1px solid var(--line)}
+  .card[hidden]{display:none}
+  .card .x{float:right; background:none; border:0; color:var(--ink-faint);
+    font-size:18px; line-height:1; cursor:pointer; padding:0 2px}
+  .card .where{font-size:11px; color:var(--ink-faint)}
+  .card .row{display:flex; justify-content:space-between; gap:10px; margin-top:6px;
+    font-size:12.5px}
+  .card .row span{color:var(--ink-dim)} .card .row b{font-variant-numeric:tabular-nums}
+  .card .why{font-size:11px; color:var(--ink-faint); margin-top:2px}
+  .tag{display:inline-block; font-size:10px; font-weight:600; letter-spacing:.05em;
+    text-transform:uppercase; padding:2px 7px; border-radius:999px; margin-top:7px;
+    border:1px solid var(--ink-dim); color:var(--ink)}
+  .tag.u{border-color:rgba(251,191,36,.5); color:var(--unval)}
+
+  .locate{position:absolute; z-index:3; right:12px;
+    bottom:calc(110px + var(--safe-b)); background:var(--panel);
+    border:1px solid var(--line); color:var(--ink); border-radius:999px;
+    padding:9px 14px; font:inherit; font-size:13px; cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.35)}
+  .loading{position:absolute; inset:0; z-index:5; display:grid; place-items:center;
+    background:var(--bg); color:var(--ink-dim); font-size:13px; padding:24px;
+    text-align:center}
+
+  @media (max-width:640px){
+    header{padding-bottom:22px}
+    .chips{display:none}
+    .sheet{
+      left:0; right:0; top:auto; bottom:0; width:auto;
+      max-height:72vh; border-radius:16px 16px 0 0; border-bottom:0;
+      padding:6px 14px calc(14px + var(--safe-b));
+      transform:translateY(calc(100% - 142px - var(--safe-b)));
+      transition:transform .28s cubic-bezier(.2,.8,.2,1);
+    }
+    .sheet.open{transform:none}
+    .grip{display:block; width:100%; background:none; border:0; padding:6px 0 8px;
+      cursor:pointer}
+    .grip::before{content:""; display:block; margin:0 auto; width:38px; height:4px;
+      border-radius:2px; background:var(--line)}
+    .locate{bottom:calc(152px + var(--safe-b))}
+    .maplibregl-ctrl-bottom-right{bottom:calc(142px + var(--safe-b))}
+  }
+  @media (prefers-reduced-motion:reduce){ .sheet{transition:none} }
+  @media (max-width:640px){ .sheet.open ~ .locate{display:none} }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<header>
+  <div>
+    <div class="brand">PANAL</div>
+    <nav class="nav">
+      <a href="national.html">Detección</a>
+      <a href="wui.html" aria-current="page">Exposición</a>
+      <a href="index.html">Viña 2024</a>
+    </nav>
+  </div>
+  <div class="chips">
+    <button class="chip" id="c-style">mapa: oscuro</button>
+  </div>
+</header>
+
+<aside class="sheet" id="sheet">
+  <button class="grip" id="grip" aria-label="Abrir o cerrar el panel"></button>
+
+  <div class="card" id="card" hidden></div>
+
+  <div class="ttl">Exposición urbano-forestal</div>
+  <div class="sub" id="h-sub">—</div>
+
+  <div class="seg" role="group" aria-label="Qué colorear">
+    <button id="m-hz" aria-pressed="true">Amenaza<small>validada</small></button>
+    <button id="m-cs" aria-pressed="false">Consecuencia<small class="unval">sin validar</small></button>
+  </div>
+
+  <div id="leg-hz">
+    <p class="note">¿Llegaría el fuego y correría? <b>Pendiente y combustible</b>
+    junto a viviendas. Contra el incendio de Viña 2024 acierta
+    <b id="lift">—</b> más que el azar.</p>
+  </div>
+  <div id="leg-cs" hidden>
+    <div class="unvalbox"><b>Sin validar.</b> Qué tan grave sería si llegara:
+    salida, precariedad, vulnerabilidad y agua. Los pesos no tienen evidencia
+    todavía — eso requiere los registros de daño de 2024.</div>
+  </div>
+
+  <h4>Percentil en la región</h4>
+  <div class="ramp" id="ramp"></div>
+  <div class="rlbl"><span>&lt; 50</span><span>75</span><span>90</span><span>top 10%</span></div>
+  <div class="key"><i style="background:rgba(148,163,184,.3);
+    border:1px solid #94a3b8"></i><span><b style="color:var(--ink)">Sin combustible
+    observado</b> — sin ranking. No es riesgo bajo.</span></div>
+  <div class="key"><i style="border:2px solid #fff"></i><span>Prioridad: amenaza
+    y consecuencia en el 10% superior</span></div>
+  <div class="key"><i style="background:rgba(168,85,247,.3);
+    border:1px solid rgba(168,85,247,.6)"></i><span>Hexágonos grandes y tenues:
+    zona rural, pocas viviendas dispersas.</span></div>
+
+  <div class="stat">
+    <div><b id="s-cells">—</b><span>celdas prioritarias</span></div>
+    <div><b id="s-viv">—</b><span>viviendas</span></div>
+    <div><b id="s-per">—</b><span>personas</span></div>
+  </div>
+  <p class="note" style="margin-top:6px;font-size:10.5px">La prioridad depende de
+  la consecuencia, que <b style="color:var(--unval)">no está validada</b>.</p>
+
+  <details>
+    <summary>Qué es y qué no es</summary>
+    <ul>
+      <li><b>No predice dónde empieza un incendio.</b> Dice qué tan mal
+      podría ir si uno llegara.</li>
+      <li><b>No es una alerta.</b> Las alertas oficiales son de SENAPRED.
+      Ante un incendio: <b>130</b> CONAF, <b>132</b> Bomberos.</li>
+      <li><b>No reemplaza el criterio</b> de quien conoce el terreno. Ordena
+      miles de celdas para que alguien mire decenas.</li>
+      <li>Sirve <b>antes</b> de la temporada: limpieza de combustible,
+      cortafuegos, planificar salidas.</li>
+      <li>Cada hexágono mide unos 400 m. Es un promedio de la celda, no de
+      tu casa.</li>
+    </ul>
+  </details>
+  <div class="src" id="src">—</div>
+</aside>
+
+<button class="locate" id="locate">◎ Cerca de mí</button>
+
+<div class="loading" id="loading">Cargando el índice de exposición…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.js"></script>
+<!-- deck.gl's standalone bundle needs h3-js loaded first, as globalThis.h3. -->
+<script src="https://cdn.jsdelivr.net/npm/h3-js@4.2.1/dist/h3-js.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/deck.gl@9.1.14/dist.min.js"></script>
+<script src="panal.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const nf = n => n.toLocaleString("es-CL");
+
+// Column positions in the export (see ingest/scripts/export_wui_web.py).
+const H = 0, HZ = 1, CS = 2, VIV = 3, PER = 4, PEND = 5, COMB = 6, EGR = 7,
+      COMUNA = 8, PRIO = 9;
+
+// A sequential violet ramp, on purpose outside every other scale PANAL
+// uses: not the fire-intensity ramp (this is no fire), not SENAPRED's
+// green/yellow/red (this is no alert), and no black (the burn scar).
+// Brighter means higher on the dark basemap; on light ones it inverts.
+const RAMP_DARK  = [[76,29,149], [109,40,217], [168,85,247], [232,121,249]];
+const RAMP_LIGHT = [[221,214,254], [167,139,250], [124,58,237], [76,29,149]];
+const BREAKS = [50, 75, 90];            // <50, 50–75, 75–90, top 10%
+const ALPHA = [70, 120, 175, 225];
+const UNOBSERVED = [148, 163, 184];
+
+// The census grid is adaptive: sparse rural entities sit in coarser cells
+// (r8 down to r5) instead of being refined into precision nobody measured.
+// Drawn at full strength, a 36 km² cell holding three houses would carry
+// more visual weight than a dense hillside — area would read as people. So
+// coarser cells are fainter, and outlined so faint never becomes absent.
+const RES_ALPHA = { 9: 1, 8: .5, 7: .3, 6: .3, 5: .3 };
+const resOf = h => h3.getResolution(h);
+
+let D, byCell, map, overlay, mode = "hz", styleIdx = 0, selected = null, me = null;
+
+const cls = p => p >= BREAKS[2] ? 3 : p >= BREAKS[1] ? 2 : p >= BREAKS[0] ? 1 : 0;
+const ramp = () => styleIdx === 0 ? RAMP_DARK : RAMP_LIGHT;
+const val = r => mode === "hz" ? r[HZ] : r[CS];
+
+function fill(r) {
+  const p = val(r), f = RES_ALPHA[resOf(r[H])] ?? .3;
+  if (p == null) return [...UNOBSERVED, Math.round(70 * f)];
+  const k = cls(p);
+  return [...ramp()[k], Math.round(ALPHA[k] * f)];
+}
+
+function edge(r) {
+  const p = val(r);
+  if (p == null) return [...UNOBSERVED, 160];
+  if (resOf(r[H]) < 9) return [...ramp()[cls(p)], 150];
+  return [0, 0, 0, 0];
+}
+
+function layers() {
+  const { H3HexagonLayer, ScatterplotLayer } = deck;
+  const out = [
+    new H3HexagonLayer({
+      id: "cells", data: D.rows, getHexagon: r => r[H],
+      extruded: false, stroked: true,
+      getFillColor: fill,
+      // Unobserved and coarse cells get a visible edge, so "no data" never
+      // reads as "low" and "faint" never reads as "nothing here".
+      getLineColor: edge,
+      lineWidthMinPixels: .6,
+      updateTriggers: { getFillColor: [mode, styleIdx],
+                        getLineColor: [mode, styleIdx] },
+    }),
+    new H3HexagonLayer({
+      id: "prio", data: D.rows.filter(r => r[PRIO]), getHexagon: r => r[H],
+      extruded: false, filled: false, stroked: true,
+      getLineColor: styleIdx === 0 ? [255, 255, 255, 235] : [17, 24, 39, 235],
+      lineWidthMinPixels: 2, updateTriggers: { getLineColor: [styleIdx] },
+    }),
+  ];
+  if (selected) out.push(new H3HexagonLayer({
+    id: "sel", data: [selected], getHexagon: h => h, extruded: false,
+    filled: false, stroked: true, getLineColor: [245, 158, 11, 255],
+    lineWidthMinPixels: 3,
+  }));
+  if (me) out.push(new ScatterplotLayer({
+    id: "me", data: [me], getPosition: d => d, getRadius: 7,
+    radiusUnits: "pixels", getFillColor: [56, 189, 248, 255],
+    stroked: true, getLineColor: [255, 255, 255, 255], lineWidthMinPixels: 2,
+  }));
+  return out;
+}
+
+function render() { overlay.setProps({ layers: layers() }); }
+
+function setMode(m) {
+  mode = m;
+  $("m-hz").setAttribute("aria-pressed", m === "hz");
+  $("m-cs").setAttribute("aria-pressed", m === "cs");
+  $("leg-hz").hidden = m !== "hz";
+  $("leg-cs").hidden = m !== "cs";
+  render();
+}
+
+function drawRamp() {
+  $("ramp").innerHTML = ramp().map((c, k) =>
+    `<i style="background:rgba(${c.join(",")},${ALPHA[k] / 255})"></i>`).join("");
+}
+
+function setStyle(k) {
+  styleIdx = k % STYLES.length;
+  $("c-style").textContent = "mapa: " + STYLES[styleIdx][0];
+  map.setStyle(STYLES[styleIdx][1]);
+  drawRamp();
+  render();
+}
+
+const rankText = p => p >= 90 ? `top ${Math.max(1, 100 - p)}%` : `percentil ${p}`;
+
+// Components are described by where they sit in the region, not by labels
+// like "high" or "difficult": those would need thresholds nobody has
+// validated. Sorted once at load.
+const SORTED = {};
+function share(col, v) {
+  const a = SORTED[col];
+  let lo = 0, hi = a.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; a[mid] < v ? lo = mid + 1 : hi = mid; }
+  return Math.round(100 * lo / a.length);
+}
+
+function openCard(html) {
+  const card = $("card");
+  card.innerHTML = `<button class="x" aria-label="Cerrar">×</button>` + html;
+  card.hidden = false;
+  card.querySelector(".x").onclick = closeCard;
+  $("sheet").classList.add("open");
+  $("sheet").scrollTop = 0;
+  render();
+}
+
+function showMsg(text) {
+  selected = null;
+  openCard(`<div class="where">${text}</div>`);
+}
+
+// On a phone the open sheet covers most of the screen. Bring the cell into
+// the strip still visible above it, or the card describes a hexagon nobody
+// can see.
+function reveal(h) {
+  if (window.innerWidth > 640) return;
+  const [lat, lng] = h3.cellToLatLng(h);
+  const covered = $("sheet").getBoundingClientRect().height;
+  map.easeTo({ center: [lng, lat], offset: [0, -covered / 2], duration: 350 });
+}
+
+function showCard(h, note) {
+  selected = h;
+  const r = byCell.get(h);
+  let html = "";
+  if (!r) {
+    html += `<div class="where">${note}</div>
+      <div class="why" style="margin-top:6px">El índice solo puntúa celdas
+      donde el Censo 2024 registra viviendas. <b>Que una celda no esté no
+      significa que no haya peligro.</b></div>`;
+  } else {
+    const comuna = r[COMUNA] != null ? D.meta.comunas[r[COMUNA]] : "—";
+    const km2 = h3.cellArea(r[H], "km2");
+    html += `<div class="where">${comuna}${note ? " · " + note : ""}</div>`;
+    if (resOf(r[H]) < 9) html += `<div class="why">Celda rural de
+      ${km2 >= 10 ? Math.round(km2) : km2.toFixed(1)} km²: sus valores son el
+      promedio de pocas viviendas dispersas, no de un punto.</div>`;
+    if (r[HZ] == null) {
+      html += `<div class="row"><span>Amenaza</span><b>sin ranking</b></div>
+        <div class="why">No hay observación de combustible para esta celda
+        (nubes en las escenas de verano). <b>No significa que sea segura.</b></div>`;
+    } else {
+      html += `<div class="row"><span>Amenaza</span><b>${rankText(r[HZ])}</b></div>
+        <div class="why">pendiente ${r[PEND] ?? "—"}° · más combustible que
+        el ${share("comb", r[COMB])}% de las celdas</div>`;
+    }
+    html += `<div class="row"><span>Consecuencia <small style="color:var(--unval)">
+      sin validar</small></span><b>${rankText(r[CS])}</b></div>
+      <div class="why">${nf(r[VIV])} viviendas · ${nf(r[PER])} personas ·
+      ${r[EGR] == null ? "salida sin dato en OpenStreetMap"
+        : `salida más difícil que en el ${share("egr", r[EGR])}% de las celdas`}</div>`;
+    if (r[PRIO]) html += `<span class="tag u">prioridad · consecuencia sin validar</span>`;
+  }
+  openCard(html);
+  if (h) requestAnimationFrame(() => reveal(h));
+}
+
+function closeCard() {
+  selected = null;
+  $("card").hidden = true;
+  render();
+}
+
+// The finest indexed cell containing a point. Cells come in several sizes,
+// so a point in the countryside may only be covered by a coarse one.
+function findCell(lat, lon) {
+  for (let r = D.meta.res_max; r >= 5; r--) {
+    const c = h3.latLngToCell(lat, lon, r);
+    if (byCell.has(c)) return c;
+  }
+  return null;
+}
+
+function placeMe(lat, lon) {
+  me = [lon, lat];
+  map.jumpTo({ center: me, zoom: 14.5 });
+  const found = findCell(lat, lon);
+  if (found) return showCard(found, "tu ubicación");
+  const h = h3.latLngToCell(lat, lon, D.meta.res_max);
+  const near = h3.gridDisk(h, 20).some(c => findCell(...h3.cellToLatLng(c)));
+  showCard(h, near ? "tu ubicación — celda sin viviendas censadas"
+    : `tu ubicación está fuera de lo que cubre el índice: por ahora,
+       solo la ${D.meta.region}`);
+}
+
+// Location never leaves the device: the cell is computed here, and nothing
+// about it is sent anywhere.
+function locate() {
+  if (!navigator.geolocation) return showMsg("Este navegador no da ubicación.");
+  $("locate").textContent = "◎ Buscando…";
+  navigator.geolocation.getCurrentPosition(pos => {
+    $("locate").textContent = "◎ Cerca de mí";
+    placeMe(pos.coords.latitude, pos.coords.longitude);
+  }, err => {
+    $("locate").textContent = "◎ Cerca de mí";
+    showMsg(err.code === 1 ? "Sin permiso de ubicación. Se puede tocar el mapa."
+                           : "No se pudo obtener la ubicación.");
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+
+(async function init() {
+  map = new maplibregl.Map({
+    container: "map", style: STYLES[0][1],
+    center: window.innerWidth > 640 ? [-71.45, -33.05] : [-71.55, -33.05],
+    zoom: 10.2, attributionControl: { compact: true },
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+  overlay = new deck.MapboxOverlay({ interleaved: false, layers: [] });
+  map.addControl(overlay);
+
+  try {
+    const res = await fetch("data/wui_valparaiso.json");
+    if (!res.ok) throw new Error(res.status);
+    D = await res.json();
+  } catch (e) {
+    $("loading").textContent = "No se pudo cargar el índice. Revisa la conexión.";
+    return;
+  }
+  byCell = new Map(D.rows.map(r => [r[H], r]));
+  for (const [k, c] of [["comb", COMB], ["egr", EGR]])
+    SORTED[k] = Float64Array.from(D.rows.map(r => r[c]).filter(v => v != null)).sort();
+  const m = D.meta, pr = m.priority;
+
+  $("h-sub").textContent = `${m.region} · ${nf(m.cells)} celdas habitadas`;
+  $("lift").textContent = m.validation.hazard_lift.toLocaleString("es-CL") + "×";
+  $("s-cells").textContent = nf(pr.cells);
+  $("s-viv").textContent = nf(pr.viviendas);
+  $("s-per").textContent = nf(pr.personas);
+  $("src").innerHTML = Object.values(m.sources).join("<br>") +
+    `<br>Celdas H3 r5–r${m.res_max} · ${nf(m.unobserved)} sin combustible observado` +
+    `<br>Generado ${new Date(m.generated).toLocaleDateString("es-CL")}`;
+  drawRamp();
+  render();
+  $("loading").remove();
+
+  // Any tap on the map: a cell in the index gets its card; elsewhere, say
+  // plainly that the index has nothing there rather than staying silent.
+  map.on("click", e => {
+    const h = findCell(e.lngLat.lat, e.lngLat.lng);
+    if (h) showCard(h); else if (selected) closeCard();
+  });
+
+  $("m-hz").onclick = () => setMode("hz");
+  $("m-cs").onclick = () => setMode("cs");
+  $("c-style").onclick = () => setStyle(styleIdx + 1);
+  $("locate").onclick = locate;
+  $("grip").onclick = () => $("sheet").classList.toggle("open");
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
