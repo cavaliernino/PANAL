@@ -1,6 +1,15 @@
+# Detection: the national snapshot and the replays (goes, viirs, anomaly).
+# This is all fuego installs — see deploy/setup-user.sh.
 netCDF4>=1.7
 numpy>=1.26
 pandas>=2.2
 pyarrow>=16
 h3>=4.1
 pytest>=8.0
+
+# Exposure: build_wui.py and its layers (terrain, fuel, census, egress).
+# Not needed to run the live map.
+rasterio>=1.4
+pyproj>=3.6
+shapely>=2.0
+osmium>=4.0

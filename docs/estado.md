@@ -140,7 +140,7 @@ no volver a abrir cada una:
    — ¿la cadena sigue viva?
 2. `git log --oneline -10` — qué pasó al final
 3. Leer este archivo y [`alianzas.md`](alianzas.md)
-4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 79 tests
+4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 82 tests
 5. `cd engine && ../.venv/bin/python -m pytest tests -q` — 21 tests
 
 Si algún test falla, empezá por ahí: están escritos para fijar decisiones, no

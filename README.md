@@ -125,7 +125,7 @@ Full verification of every source, including the traps, is in
 
 ```
 ingest/    goes · viirs · power · anomaly · census · terrain · fuel · egress
-engine/    wui — the exposure index (pure, no I/O, 16 tests)
+engine/    wui — the exposure index (pure, no I/O, 21 tests)
 web/       national.html (live) · wui.html (exposure) · index.html (replay) · sw.js (app)
 deploy/    nginx vhost and setup scripts for panal.ninobozzi.cl
 api/       FastAPI — not started
@@ -133,7 +133,7 @@ android/   the 2020 app, carried forward for a Phase 7 rebuild
 docs/      roadmap · data-sources · risk-model · crowdsourcing · alianzas
 ```
 
-90 tests across `ingest` and `engine`:
+103 tests across `ingest` and `engine`:
 
 ```bash
 cd ingest && ../.venv/bin/python -m pytest tests -q
