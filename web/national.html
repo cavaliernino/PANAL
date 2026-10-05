@@ -166,6 +166,10 @@
   <b>Fuentes fijas</b>: minas, fundiciones y plantas que el satélite detecta
   todo el año. Se marcan, nunca se borran — un incendio real puede empezar
   ahí.</p>
+  <p class="warn"><span style="display:inline-block;width:11px;height:9px;
+  border:2px solid #f97316;border-radius:2px;vertical-align:middle"></span>
+  <b>Hexágono hueco</b>: GOES lo vio en la última hora pero no en el último
+  barrido — humo, nube, o el foco bajó.</p>
   <p class="warn">Sin celda significa <b>sin detección</b>, no ausencia de
   fuego. Un foco bajo el umbral del sensor, o tapado por humo o nube, no
   aparece. Los datos geoestacionarios son <b>provisionales</b>.</p>
@@ -240,9 +244,13 @@ function layers() {
     new H3HexagonLayer({
       id: "goes", data: goesCells(),
       getHexagon: d => d.h, extruded: false, stroked: true,
-      getFillColor: d => [...frpRGB(d.f), alpha(d.c)],
+      // Seen this hour but not by the newest scan: hollow. Smoke or cloud
+      // over a fire for one scan is not the fire going out, and it must not
+      // look like a fresh reading either. Opacity stays for confidence.
+      getFillColor: d => d.l === 0 ? [0, 0, 0, 0] : [...frpRGB(d.f), alpha(d.c)],
       getLineColor: d => [...frpRGB(d.f), 230],
-      lineWidthMinPixels: 1.4, pickable: true,
+      getLineWidth: d => d.l === 0 ? 2.2 : 1.4,
+      lineWidthUnits: "pixels", pickable: true,
     }),
     new H3HexagonLayer({
       id: "industrial", data: industrialCells(),
@@ -348,7 +356,7 @@ async function load() {
     "datos hace " + fmtAge(ageMin);
   $("c-age").className = "chip" + (ageMin <= STALE_MIN ? " fresh" : " stale");
   $("h-sub").textContent =
-    `GOES-East cada 10 min · VIIRS ${DATA.viirs.window} · actualizado ` +
+    `GOES-East, última hora · VIIRS ${DATA.viirs.window} · actualizado ` +
     gen.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
   $("s-goes").textContent = DATA.goes
     ? new Date(DATA.goes.scan_start).toLocaleTimeString("es-CL",
@@ -374,7 +382,10 @@ async function load() {
             "anomalía térmica persistente, no incendio</span><br>" : ""}
         <b>${Math.round(object.f).toLocaleString("es-CL")} MW</b><br>
         ${object.n} px · ${CONF_ES[object.c] ?? object.c}
-        ${object.age != null ? "<br>hace " + fmtAge(ageNow(object)) : ""}</div>`,
+        ${object.age != null ? "<br>hace " + fmtAge(ageNow(object)) : ""}
+        ${layer.id === "goes" && object.k != null
+          ? `<br>en ${object.k} de ${DATA.goes.scans} barridos de la última hora` +
+            (object.l ? "" : "<br><b>no lo vio el último barrido</b>") : ""}</div>`,
       style: { background: "#fff", color: "#111", padding: "6px 8px",
                borderRadius: "6px" },
     },

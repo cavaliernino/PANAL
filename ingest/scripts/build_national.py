@@ -25,45 +25,92 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from panal_ingest import anomaly, goes, pipeline, viirs  # noqa: E402
 
 GOES_LEVELS = (7, 6, 5)
+GOES_WINDOW_MIN = 60         # the live layer is the last hour, not one scan
+# Each scan's cells, once extracted. A run then fetches only the newest
+# scan, so the hour costs what one scan did — on a server where memory and
+# time are not spare.
+GOES_CACHE = Path(__file__).resolve().parents[2] / "data" / "cache" / "goes_recent"
+GOES_CACHE_KEEP_H = 3
 VIIRS_PRODUCTS = ("VIIRS_NOAA20_NRT", "VIIRS_SNPP_NRT", "VIIRS_NOAA21_NRT")
 VIIRS_WINDOW = "7d"          # the client filters by age within this
 EXTENT_RINGS = 1             # inferred extent, same rule as the replay
 
 
-def collect_goes(now):
-    """Latest scan, rolled up the hierarchy for wider viewports."""
-    try:
-        scan = goes.latest_scan(now)
-    except Exception as exc:                            # noqa: BLE001
-        print(f"  ! GOES no disponible: {exc}", file=sys.stderr)
-        return None
+def _scan_levels(scan):
+    """One scan's cells at every served level, extracted once and cached."""
+    path = GOES_CACHE / (Path(scan.key).name.removesuffix(".nc") + ".json")
+    if path.exists():
+        return json.loads(path.read_text())
 
     df = pipeline.ingest_scan(scan)
     agg = pipeline.aggregate(df) if len(df) else df
 
-    levels = {}
-    if len(agg):
-        levels["7"] = [
-            {"h": r.h3, "n": int(r.detections), "f": round(float(r.frp_mw), 1),
-             "c": r.best_confidence}
-            for r in agg.itertuples()
-        ]
-        for lvl in GOES_LEVELS[1:]:
-            rolled = pipeline.rollup(agg, lvl)
-            levels[str(lvl)] = [
-                {"h": r.h3, "n": int(r.detections), "f": round(float(r.frp_mw), 1),
-                 "c": r.best_confidence}
-                for r in rolled.itertuples()
-            ]
-    else:
-        for lvl in GOES_LEVELS:
-            levels[str(lvl)] = []
+    def rows(frame):
+        return [{"h": r.h3, "n": int(r.detections),
+                 "f": round(float(r.frp_mw), 1), "c": r.best_confidence}
+                for r in frame.itertuples()]
 
+    levels = {str(lvl): [] for lvl in GOES_LEVELS}
+    if len(agg):
+        levels["7"] = rows(agg)
+        for lvl in GOES_LEVELS[1:]:
+            levels[str(lvl)] = rows(pipeline.rollup(agg, lvl))
+
+    GOES_CACHE.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(levels, separators=(",", ":")))
+    tmp.replace(path)
+    return levels
+
+
+def _prune_cache(now):
+    for f in GOES_CACHE.glob("*.json"):
+        age_h = (now.timestamp() - f.stat().st_mtime) / 3600
+        if age_h > GOES_CACHE_KEEP_H:
+            f.unlink(missing_ok=True)
+
+
+def collect_goes(now):
+    """The last hour of scans as one layer, rolled up for wider viewports.
+
+    Each cell comes from the newest scan that saw it, with its age, how many
+    of the hour's scans saw it, and whether the newest did. A scan that
+    fails is skipped and named; the rest of the hour still stands.
+    """
+    cutoff = now - dt.timedelta(minutes=GOES_WINDOW_MIN)
+    try:
+        listed = (goes.list_scans(now - dt.timedelta(hours=1))
+                  + goes.list_scans(now))
+    except Exception as exc:                            # noqa: BLE001
+        print(f"  ! GOES no disponible: {exc}", file=sys.stderr)
+        return None
+    scans = sorted({s.key: s for s in listed if s.end >= cutoff}.values(),
+                   key=lambda s: s.start)
+    if not scans:
+        print("  ! GOES: ningún barrido en la última hora", file=sys.stderr)
+        return None
+
+    done, failed = [], []
+    for scan in scans:
+        try:
+            done.append((scan, _scan_levels(scan)))
+        except Exception as exc:                        # noqa: BLE001
+            print(f"  ! {Path(scan.key).name}: {exc}", file=sys.stderr)
+            failed.append(scan.start.isoformat().replace("+00:00", "Z"))
+    if GOES_CACHE.exists():
+        _prune_cache(now)
+    if not done:
+        return None
+
+    latest = done[-1][0]
     return {
-        "scan_start": scan.start.isoformat().replace("+00:00", "Z"),
-        "scan_end": scan.end.isoformat().replace("+00:00", "Z"),
-        "satellite": scan.bucket.replace("noaa-", "").upper(),
-        "levels": levels,
+        "scan_start": latest.start.isoformat().replace("+00:00", "Z"),
+        "scan_end": latest.end.isoformat().replace("+00:00", "Z"),
+        "satellite": latest.bucket.replace("noaa-", "").upper(),
+        "window_min": GOES_WINDOW_MIN,
+        "scans": len(done),
+        "failed": failed,
+        "levels": pipeline.merge_recent([(s.end, lv) for s, lv in done], now),
     }
 
 
@@ -178,9 +225,11 @@ def main():
     tmp.replace(out)
 
     ng = len(g["levels"]["7"]) if g else 0
+    nl = sum(c["l"] for c in g["levels"]["7"]) if g else 0
     print(f"\n{out}  ({out.stat().st_size/1024:.0f} KB)", file=sys.stderr)
-    print(f"  GOES  {ng:>4} celdas r7"
-          + (f"  (barrido {g['scan_start'][11:16]} UTC)" if g else "  — sin barrido"),
+    print(f"  GOES  {ng:>4} celdas r7 en {GOES_WINDOW_MIN} min, {nl} en el último"
+          + (f"  ({g['scans']} barridos, el último {g['scan_start'][11:16]} UTC)"
+             if g else "  — sin barrido"),
           file=sys.stderr)
     ind = v.get("industrial_cells", 0)
     if ind:

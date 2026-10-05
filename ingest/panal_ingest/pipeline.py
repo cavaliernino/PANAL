@@ -132,6 +132,34 @@ def rollup(cells: pd.DataFrame, to_res: int) -> pd.DataFrame:
 CONFIDENCE_ORDER_PD = goes.CONFIDENCE_ORDER
 
 
+def merge_recent(scans, now: dt.datetime) -> dict:
+    """The last hour of GOES as one layer, each cell from its newest scan.
+
+    `scans` is `[(scan_end, {level: [cell, ...]}), ...]` in any order, each
+    cell a dict with at least `h`. Every merged cell carries `age` (minutes
+    since the scan that last saw it ended), `k` (how many of the scans saw
+    it) and `l` (1 if the newest scan saw it, else 0).
+
+    A single scan was the whole layer before, so a fire hidden by its own
+    smoke or a passing cloud for ten minutes vanished from the map — the
+    same empty hexagon as no fire at all. Within the hour it stays, and `l`
+    says the newest look did not confirm it.
+    """
+    ordered = sorted(scans, key=lambda s: s[0])
+    newest = ordered[-1][0] if ordered else None
+    levels: dict[str, list] = {}
+    for lvl in {k for _, cells in ordered for k in cells}:
+        merged: dict[str, dict] = {}
+        for end, cells in ordered:                  # oldest first; newest wins
+            age = int((now - end).total_seconds() // 60)
+            for c in cells.get(lvl, []):
+                seen = merged.get(c["h"], {}).get("k", 0)
+                merged[c["h"]] = {**c, "age": age, "k": seen + 1,
+                                  "l": int(end == newest)}
+        levels[lvl] = list(merged.values())
+    return levels
+
+
 def run(hours: int = 0, res: int = DEFAULT_RES) -> pd.DataFrame:
     now = dt.datetime.now(dt.timezone.utc)
 
