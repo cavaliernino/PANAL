@@ -89,6 +89,63 @@ def test_coverage_must_be_weighted_by_people():
     assert got["dwelling_coverage"] > 0.97
 
 
+def _osm(path, nodes, ways):
+    """A minimal .osm file: nodes as {id: (lat, lon)}, ways as [[ids]]."""
+    xml = ['<?xml version="1.0" encoding="UTF-8"?>', '<osm version="0.6">']
+    for i, (lat, lon) in nodes.items():
+        xml.append(f'<node id="{i}" version="1" lat="{lat:.7f}" lon="{lon:.7f}"/>')
+    for k, refs in enumerate(ways, 1):
+        xml.append(f'<way id="{k}" version="1">')
+        xml += [f'<nd ref="{r}"/>' for r in refs]
+        xml += ['<tag k="highway" v="residential"/>', "</way>"]
+    xml.append("</osm>")
+    path.write_text("\n".join(xml))
+    return path
+
+
+def test_drawing_a_curve_does_not_change_connectivity(tmp_path):
+    """The same T-junction, with the side street drawn straight or as a
+    curve of eight shape vertices, is the same network.
+
+    Counting shape vertices as nodes put 72% of Valparaíso's nodes on curves,
+    pulled the ratio toward 1.0 everywhere and made curvy hillside streets
+    look as if they had fewer dead ends than flat ones.
+    """
+    h3 = pytest.importorskip("h3")
+    pytest.importorskip("osmium")
+    lat0, lon0 = h3.cell_to_latlng(h3.latlng_to_cell(-33.045, -71.62, 9))
+    d = 0.0003                              # ~33 m: all in one r9 cell
+
+    def at(dy, dx):
+        return (lat0 + dy * d, lon0 + dx * d)
+
+    main = {1: at(0, -1), 2: at(0, 0), 3: at(0, 1)}
+    straight = _osm(tmp_path / "straight.osm",
+                    {**main, 4: at(1, 0)}, [[1, 2, 3], [2, 4]])
+    curve = {10 + k: at(0.1 * (k + 1), 0.15 * ((-1) ** k)) for k in range(8)}
+    curvy = _osm(tmp_path / "curvy.osm",
+                 {**main, **curve, 4: at(1, 0)},
+                 [[1, 2, 3], [2, *curve, 4]])
+
+    a = egress.cells_egress(res=9, pbf=straight, progress=False)
+    b = egress.cells_egress(res=9, pbf=curvy, progress=False)
+    assert len(a) == len(b) == 1, "the fixture must sit in one cell"
+    (sa,), (sb,) = a.values(), b.values()
+    for key in ("nodes", "links", "dead_ends", "link_node_ratio"):
+        assert sa[key] == sb[key], key
+    # One junction of degree 3 and three street ends.
+    assert sa["nodes"] == 4 and sa["dead_ends"] == 3
+
+
+def test_a_cell_with_no_junction_has_unknown_connectivity():
+    """A road crossing a cell with no junction inside says nothing about how
+    connected that cell is. Its weight goes to what was measured."""
+    through = dict(link_node_ratio=None, dead_ends=0, nodes=0, road_rank=3)
+    got = egress.egress_deficit(through)
+    assert got is not None
+    assert got == pytest.approx(0.25 * 0.25 / 0.55, abs=1e-4)
+
+
 def test_road_rank_orders_by_evacuation_capacity():
     assert egress.ROAD_RANK["motorway"] > egress.ROAD_RANK["primary"]
     assert egress.ROAD_RANK["primary"] > egress.ROAD_RANK["residential"]

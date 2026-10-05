@@ -16,6 +16,17 @@ Per H3 cell, from the road graph:
   connectivity measure. A gridded street network runs about 1.4 or higher; a
   cul-de-sac suburb sits near 1.0 or below. Low means few ways out.
 * **dead ends** — degree-1 nodes that are not just the edge of the extract.
+
+Nodes here are **junctions and dead ends only**. OSM draws a curve as a chain
+of shape vertices, each of degree 2, and a first version counted them as
+nodes. Measured over Valparaíso, 72% of the vertices in populated cells are
+shape points. The ratio collapsed toward 1.0 everywhere — median 1.06, and
+only 3.4% of cells reached the 1.4 of a grid, the plans of Valparaíso and
+Viña included — so it measured how finely a street was drawn, not how it
+connects. Worse, it turned dead ends upside down: curvy hillside streets
+carry many vertices, which diluted their dead ends until the share *fell*
+with slope (0.07 on the flat, 0.04 above 20°). Counted over junctions, it
+rises from 0.23 to 0.50 — the geometry people died in.
 * **best road class** — whether anything larger than a service lane touches
   the cell. A neighbourhood whose only link is a `residential` is in a
   different category from one on a `secondary`.
@@ -171,23 +182,35 @@ def cells_egress(res: int = 9, keep_cells=None, pbf: Path = PBF,
               flush=True)
     handler.apply_file(str(pbf), locations=True)
 
+    # The graph a planner would draw: junctions and dead ends are nodes, and
+    # each street between two of them is one link however many vertices OSM
+    # used to draw its curve. Degree is counted over the whole extract, so a
+    # junction on a cell's edge still knows about the street leaving it.
     nodes_per_cell: dict[str, int] = defaultdict(int)
+    degree_per_cell: dict[str, int] = defaultdict(int)
     dead_per_cell: dict[str, int] = defaultdict(int)
     for ref, cell in collector.node_cells.items():
-        if keep_cells is not None and cell not in collector.cell_links:
+        if cell not in collector.cell_links:
             continue
+        degree = collector.node_degree.get(ref, 0)
+        if degree == 2:
+            continue                    # a shape vertex, not a junction
         nodes_per_cell[cell] += 1
-        if collector.node_degree.get(ref, 0) <= 1:
+        degree_per_cell[cell] += degree
+        if degree <= 1:
             dead_per_cell[cell] += 1
 
     out = {}
-    for cell, links in collector.cell_links.items():
+    for cell in collector.cell_links:
         nodes = nodes_per_cell.get(cell, 0)
+        links = degree_per_cell.get(cell, 0) / 2
         out[cell] = {
-            "links": int(links),
+            "links": round(links, 1),
             "nodes": int(nodes),
             "dead_ends": int(dead_per_cell.get(cell, 0)),
-            "link_node_ratio": round(links / nodes, 3) if nodes else 0.0,
+            # A road crossing the cell with no junction inside it says
+            # nothing about connectivity at this scale: unknown, not poor.
+            "link_node_ratio": round(links / nodes, 3) if nodes else None,
             "road_rank": int(collector.cell_rank.get(cell, 0)),
             "road_m": round(collector.cell_length.get(cell, 0.0), 1),
         }
@@ -207,10 +230,6 @@ def egress_deficit(stats: dict | None, dwellings: float = 0.0) -> float | None:
     if not stats:
         return None
 
-    lnr = stats.get("link_node_ratio", 0.0)
-    # 1.0 or below is cul-de-sac; 1.4 is a connected grid.
-    connectivity = max(0.0, min(1.0, (1.4 - lnr) / 0.6))
-
     nodes = max(stats.get("nodes", 0), 1)
     dead = max(0.0, min(1.0, stats.get("dead_ends", 0) / nodes * 3.0))
 
@@ -218,8 +237,15 @@ def egress_deficit(stats: dict | None, dwellings: float = 0.0) -> float | None:
     # Nothing above a residential lane is a real constraint on capacity.
     capacity = max(0.0, min(1.0, (4 - rank) / 4.0))
 
-    return round(min(1.0, 0.45 * connectivity + 0.30 * dead
-                     + 0.25 * capacity), 4)
+    terms = [(0.30, dead), (0.25, capacity)]
+    lnr = stats.get("link_node_ratio")
+    if lnr is not None:
+        # 1.0 or below is cul-de-sac; 1.4 is a connected grid.
+        terms.append((0.45, max(0.0, min(1.0, (1.4 - lnr) / 0.6))))
+    # No junction in the cell: connectivity is unknown, and its weight goes
+    # to the terms that were measured rather than counting as either end.
+    total = sum(w for w, _ in terms)
+    return round(min(1.0, sum(w * v for w, v in terms) / total), 4)
 
 
 def coverage_check(cells, egress_stats: dict, dwellings=None,
