@@ -195,6 +195,12 @@ let show = { goes: true, viirs: true, halo: true, ind: true };
 
 const alpha = c => Math.round((OPACITY[c] ?? .4) * 255);
 
+// A cell's `age` is as of when the snapshot was built. Shown as-is, a
+// six-hour-old snapshot read offline says "20 min" about a detection that
+// is six hours and twenty minutes old. Everything age-related goes through
+// here, so it counts from now.
+const ageNow = c => (c.age ?? 0) + (ageMin ?? 0);
+
 function goesCells() {
   if (!show.goes || !DATA.goes) return [];
   return DATA.goes.levels[String(curRes)] || [];
@@ -206,19 +212,19 @@ function goesCells() {
 function viirsCells() {
   if (!show.viirs) return [];
   return (DATA.viirs.cells || [])
-    .filter(c => (c.age ?? 0) <= maxAge && !c.ind);
+    .filter(c => ageNow(c) <= maxAge && !c.ind);
 }
 function industrialCells() {
   if (!show.viirs || !show.ind) return [];
   return (DATA.viirs.cells || [])
-    .filter(c => (c.age ?? 0) <= maxAge && c.ind);
+    .filter(c => ageNow(c) <= maxAge && c.ind);
 }
 function haloCells() {
   if (!show.viirs || !show.halo) return [];
   // Each halo cell carries the age of the freshest detection that justifies
   // it, so the same filter applies and an inferred cell can never outlive
   // the observation behind it.
-  return (DATA.viirs.halo || []).filter(d => (d.age ?? 0) <= maxAge);
+  return (DATA.viirs.halo || []).filter(d => ageNow(d) <= maxAge);
 }
 
 function layers() {
@@ -318,7 +324,9 @@ async function load() {
     const res = await fetch("data/national.json?t=" + Date.now());
     if (!res.ok) throw new Error("HTTP " + res.status);
     DATA = await res.json();
-    offline = false;
+    // The service worker marks what it answered from its cache: the fetch
+    // succeeded, but nothing new arrived.
+    offline = res.headers.get("X-Panal-Cache") === "hit";
   } catch (err) {
     offline = true;
     if (!DATA) {
@@ -339,7 +347,8 @@ async function load() {
     `GOES-East cada 10 min · VIIRS ${DATA.viirs.window} · actualizado ` +
     gen.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
   $("s-goes").textContent = DATA.goes
-    ? DATA.goes.scan_start.slice(11, 16) + " UTC" : "sin barrido";
+    ? new Date(DATA.goes.scan_start).toLocaleTimeString("es-CL",
+        { hour: "2-digit", minute: "2-digit" }) : "sin barrido";
 
   $("loading")?.remove();
   render();
@@ -360,8 +369,8 @@ async function load() {
           ? "<b>Fuente fija conocida</b><br><span style=\"color:#666\">" +
             "anomalía térmica persistente, no incendio</span><br>" : ""}
         <b>${Math.round(object.f).toLocaleString("es-CL")} MW</b><br>
-        ${object.n} px · ${object.c}
-        ${object.age != null ? "<br>hace " + fmtAge(object.age) : ""}</div>`,
+        ${object.n} px · ${CONF_ES[object.c] ?? object.c}
+        ${object.age != null ? "<br>hace " + fmtAge(ageNow(object)) : ""}</div>`,
       style: { background: "#fff", color: "#111", padding: "6px 8px",
                borderRadius: "6px" },
     },

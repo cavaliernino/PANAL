@@ -53,6 +53,15 @@ const OPACITY = {
   medium_probability: 0.45, cloud_contaminated: 0.35, low_probability: 0.3,
 };
 
+// The same tiers, in the words the page shows. The keys are the pipeline's
+// vocabulary (GOES mask categories; VIIRS high/nominal/low maps onto the
+// probability ones) and never reach the reader as-is.
+const CONF_ES = {
+  good: "detección de buena calidad", saturated: "saturada — fuego muy intenso",
+  high_probability: "probabilidad alta", medium_probability: "probabilidad media",
+  cloud_contaminated: "con nubes", low_probability: "probabilidad baja",
+};
+
 // Tiers that also get a dashed or dimmed outline, because opacity alone
 // fails WCAG and reads differently on light and dark basemaps.
 const WEAK = new Set(["low_probability", "cloud_contaminated"]);

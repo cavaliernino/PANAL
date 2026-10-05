@@ -51,20 +51,57 @@ const keyOf = url => {
   return u.href;
 };
 
+// How long to wait for the network before answering from the cache. Bad
+// signal rarely fails fast — a request on one bar of signal can hang for a
+// minute before the browser gives up, and the page sits on "Cargando…"
+// with a perfectly good copy in hand. Past this, the copy is shown, with
+// its age; the network request keeps going and refreshes the cache if it
+// ever lands.
+const NETWORK_TIMEOUT_MS = 6000;
+
+// Anything answered from the cache says so, so the page can tell "offline"
+// apart from "the server's data is old" — they call for different words.
+async function fromCache(cache, url) {
+  const hit = await cache.match(keyOf(url), { ignoreSearch: true });
+  if (!hit) return null;
+  const headers = new Headers(hit.headers);
+  headers.set("X-Panal-Cache", "hit");
+  return new Response(hit.body, { status: hit.status, statusText: hit.statusText, headers });
+}
+
 // "no-cache" makes the browser revalidate with the server every time — a
 // 304 when nothing changed. Without it the HTTP cache may answer on its own
 // heuristics, and right after a deploy a page could arrive stale while the
 // data it reads is new.
-async function networkFirst(request) {
-  const cache = await caches.open(VERSION);
+async function networkFirst(event) {
+  const url = event.request.url;
+  const opening = caches.open(VERSION);
+  const network = fetch(url, { cache: "no-cache" });
+  // Registered before the first await, so the worker stays alive to store
+  // a response that lands after the cache has already answered. The clone
+  // is taken here, before the page can start reading the body.
+  event.waitUntil(network.then(res => {
+    if (!res.ok) return;
+    const copy = res.clone();
+    return opening.then(c => c.put(keyOf(url), copy));
+  }).catch(() => {}));
+  const cache = await opening;
+
+  let timer;
+  const slow = new Promise(resolve => { timer = setTimeout(resolve, NETWORK_TIMEOUT_MS); })
+    .then(() => fromCache(cache, url));
   try {
-    const res = await fetch(request.url, { cache: "no-cache" });
-    if (res.ok) cache.put(keyOf(request.url), res.clone());
-    return res;
+    // Whichever answers first: the network, or the cache once the network
+    // is too slow. A slow network with nothing cached still gets waited on.
+    const first = await Promise.race([network, slow]);
+    if (first) return first;
+    return await network;
   } catch (err) {
-    const hit = await cache.match(keyOf(request.url), { ignoreSearch: true });
+    const hit = await fromCache(cache, url);
     if (hit) return hit;
     throw err;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -83,7 +120,7 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
 
   if (url.origin === self.location.origin) {
-    event.respondWith(networkFirst(request));
+    event.respondWith(networkFirst(event));
   } else if (CDN.includes(request.url)) {
     event.respondWith(cacheFirst(request));
   }
