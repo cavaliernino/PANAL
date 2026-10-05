@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PANAL · Medición de brújula</title>
+<meta name="description" content="Mide cuánto se equivoca la brújula del teléfono al apuntar la cámara a un punto conocido.">
+<meta name="theme-color" content="#0e1116">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b23; --line:#2a323f;
+    --ink:#e8edf4; --ink-dim:#94a3b8; --ink-faint:#64748b;
+    --accent:#f59e0b; --ok:#7dd3a0; --bad:#f87171;
+    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:calc(12px + var(--safe-t)) 16px calc(24px + var(--safe-b))}
+  .brand{font-weight:700; letter-spacing:.14em; font-size:13px; color:var(--accent)}
+  h1{font-size:18px; margin:2px 0 4px}
+  p{margin:6px 0; color:var(--ink-dim); font-size:13px}
+  .box{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:12px; margin-top:12px}
+  .view{position:relative; border-radius:12px; overflow:hidden; background:#000;
+    aspect-ratio:3/4; max-height:52vh; margin:12px auto 0; width:100%}
+  video{width:100%; height:100%; object-fit:cover; display:block}
+  .cross{position:absolute; inset:0; pointer-events:none}
+  .cross::before,.cross::after{content:""; position:absolute; background:#f59e0b}
+  .cross::before{left:50%; top:20%; bottom:20%; width:2px; transform:translateX(-1px)}
+  .cross::after{top:50%; left:30%; right:30%; height:2px; transform:translateY(-1px)}
+  .hud{position:absolute; left:8px; right:8px; bottom:8px; display:flex;
+    justify-content:space-between; font:600 13px ui-monospace,monospace;
+    text-shadow:0 1px 2px #000}
+  .hud span{background:rgba(0,0,0,.45); padding:3px 7px; border-radius:6px}
+  .nocam{position:absolute; inset:0; display:grid; place-items:center; padding:20px;
+    text-align:center; color:var(--ink-dim); font-size:13px}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px}
+  .kv{display:flex; justify-content:space-between; gap:12px; font-size:13px; margin-top:4px}
+  .kv span{color:var(--ink-dim)} .kv b{font-variant-numeric:tabular-nums}
+  select,input[type=text]{flex:1; min-width:0; background:var(--bg); color:var(--ink);
+    border:1px solid var(--line); border-radius:8px; padding:9px; font-size:14px}
+  button{background:var(--panel); color:var(--ink); border:1px solid var(--line);
+    border-radius:9px; padding:10px 14px; font-size:14px; cursor:pointer}
+  button.go{background:var(--accent); color:#111; border-color:var(--accent); font-weight:700}
+  button:disabled{opacity:.45}
+  label.t{display:flex; gap:7px; align-items:center; font-size:13px; color:var(--ink-dim)}
+  table{width:100%; border-collapse:collapse; font-size:12px; margin-top:8px;
+    font-variant-numeric:tabular-nums}
+  th,td{padding:4px 3px; border-bottom:1px solid var(--line); text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--ink-faint); font-weight:600}
+  .warn{color:#fbbf24} .err{color:var(--bad)}
+  .big{font-size:26px; font-weight:700; font-variant-numeric:tabular-nums}
+  details{margin-top:10px} summary{cursor:pointer; color:var(--ink-dim); font-size:13px}
+  ol{padding-left:18px; color:var(--ink-dim); font-size:13px; margin:6px 0}
+</style>
+</head>
+<body>
+
+<div class="brand">PANAL</div>
+<h1>Medición de brújula</h1>
+<p>Cuánto se equivoca el teléfono al decir hacia dónde apunta la cámara. De
+ese número depende ubicar un incendio cruzando lo que reportan dos personas,
+y nadie lo ha medido. La ubicación no sale del teléfono: los datos se
+guardan acá y se exportan a mano.</p>
+
+<details>
+  <summary>Cómo medir</summary>
+  <ol>
+    <li>Toca <b>Empezar</b> y da permiso de cámara, ubicación y sensores.</li>
+    <li>Calibra la brújula: mueve el teléfono haciendo un 8 en el aire.</li>
+    <li>Elige un punto de referencia a <b>más de 1 km</b>. Más lejos es mejor:
+      el error del GPS pesa menos.</li>
+    <li>Con el teléfono vertical, centra la mira en el punto y toca
+      <b>Marcar</b>. Quédate quieto 2 segundos.</li>
+    <li>Repite desde varios lugares y hacia varios puntos. Marca también
+      cerca de autos, rejas o postes, con la casilla activada: eso es lo que
+      pasa en la calle.</li>
+    <li>Al final, <b>Compartir</b> o <b>Descargar CSV</b>.</li>
+  </ol>
+</details>
+
+<div class="view" id="view">
+  <video id="video" playsinline muted></video>
+  <div class="cross"></div>
+  <div class="nocam" id="nocam">La cámara se activa al tocar Empezar.</div>
+  <div class="hud"><span id="hud-h">—°</span><span id="hud-p">—</span></div>
+</div>
+
+<div class="row"><button class="go" id="start">Empezar</button>
+  <span id="status" style="font-size:12px;color:var(--ink-faint)"></span></div>
+
+<div class="box">
+  <div class="kv"><span>Rumbo de la cámara (norte verdadero)</span><b id="h">—</b></div>
+  <div class="kv"><span>Inclinación de la cámara</span><b id="pitch">—</b></div>
+  <div class="kv"><span>Posición</span><b id="pos">—</b></div>
+  <div class="kv"><span>Sensor</span><b id="src">—</b></div>
+</div>
+
+<div class="box">
+  <div class="row"><select id="lm"></select></div>
+  <div class="kv"><span>Distancia · rumbo real</span><b id="lm-info">—</b></div>
+  <div class="kv"><span>Error que aporta el GPS</span><b id="lm-gps">—</b></div>
+  <div class="row">
+    <label class="t"><input type="checkbox" id="metal"> cerca de metal o autos</label>
+  </div>
+  <div class="row"><button class="go" id="mark" disabled>Marcar</button>
+    <button id="here">Este lugar es un punto</button></div>
+</div>
+
+<div class="box">
+  <div class="kv"><span>Marcas</span><b id="n">0</b></div>
+  <div class="kv"><span>Sesgo (error medio)</span><b id="bias">—</b></div>
+  <div class="kv"><span>Dispersión, sin el sesgo (p50 · p90)</span><b id="spread">—</b></div>
+  <div class="kv"><span>Lo mismo, sin las marcas cerca de metal</span><b id="clean">—</b></div>
+  <table><thead><tr><th>punto</th><th>dist</th><th>real</th><th>medido</th><th>error</th></tr></thead>
+    <tbody id="rows"></tbody></table>
+  <div class="row"><button id="share">Compartir</button><button id="csv">Descargar CSV</button>
+    <button id="clear">Borrar</button></div>
+</div>
+
+<p style="margin-top:14px;font-size:11px">Declinación magnética usada: <b id="decl"></b>
+(WMM 2025, para Viña del Mar y Valparaíso, oct-2026). Android entrega el rumbo
+respecto del norte magnético; se le suma la declinación para compararlo con el
+rumbo real.</p>
+
+<script>
+// Reference points, from OpenStreetMap (node ids kept for provenance).
+// `tol` is how far the mapped point may sit from what the eye aims at:
+// a lighthouse is a point; a summit is a judgement about where the top is.
+const LANDMARKS = [
+  { id: "faro-angeles",  name: "Faro Punta Ángeles",   lat: -33.022999, lon: -71.647393, tol: 5,  osm: 1418851946 },
+  { id: "faro-condell",  name: "Faro Punta Condell",   lat: -33.025696, lon: -71.585733, tol: 5,  osm: 4944967589 },
+  { id: "faro-concon",   name: "Faro Punta Concón",    lat: -32.929109, lon: -71.551453, tol: 5,  osm: 6528510734 },
+  { id: "reloj-turri",   name: "Reloj Turri",          lat: -33.040591, lon: -71.626346, tol: 5,  osm: 3635992586 },
+  { id: "reloj-baron",   name: "Torre Reloj Barón",    lat: -33.041743, lon: -71.604945, tol: 5,  osm: 3641378523 },
+  { id: "mirador-ohig",  name: "Mirador O'Higgins",    lat: -33.075110, lon: -71.584333, tol: 10, osm: 3455956102 },
+  { id: "antena-renaca", name: "Antena TV cable, Reñaca Alto", lat: -32.996325, lon: -71.507912, tol: 10, osm: 5321056354 },
+  { id: "cerro-molle",   name: "Cerro El Molle (cumbre)", lat: -33.020660, lon: -71.471187, tol: 30, osm: 373718959 },
+  { id: "cerro-torquemada", name: "Cerro Torquemada (cumbre)", lat: -32.978428, lon: -71.478478, tol: 30, osm: 3861286856 },
+];
+const DECLINATION = 0.71;      // degrees east, BGS WMM2025 at -33.03, -71.58
+const MARK_MS = 2000;
+const KEY = "panal-brujula-v1";
+
+const $ = id => document.getElementById(id);
+const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
+const wrap = a => ((a % 360) + 360) % 360;
+const signed = a => ((a + 540) % 360) - 180;         // to [-180, 180)
+
+let fix = null, heading = null, pitch = null, source = null, custom = [], marks = [];
+try { const s = JSON.parse(localStorage.getItem(KEY) || "{}"); marks = s.marks || []; custom = s.custom || []; } catch {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ marks, custom })); } catch {} };
+
+/* The direction the back camera looks, from the device's orientation.
+ * W3C DeviceOrientation: earth frame x east, y north, z up; device frame
+ * rotated by R = Rz(alpha)·Rx(beta)·Ry(gamma). The back camera looks along
+ * the device's -z, so its direction on earth is -(third column of R). This
+ * holds in any screen orientation, and it is what a person aiming at smoke
+ * actually does — unlike `alpha`, which is the top edge of a phone lying
+ * flat. */
+function cameraDirection(alpha, beta, gamma) {
+  const a = rad(alpha), b = rad(beta), g = rad(gamma);
+  const x = -(Math.cos(a) * Math.sin(g) + Math.sin(a) * Math.sin(b) * Math.cos(g));
+  const y = -(Math.sin(a) * Math.sin(g) - Math.cos(a) * Math.sin(b) * Math.cos(g));
+  const z = -(Math.cos(b) * Math.cos(g));
+  return { heading: wrap(deg(Math.atan2(x, y))), pitch: deg(Math.asin(Math.max(-1, Math.min(1, z)))) };
+}
+
+function onOrientation(e) {
+  let alpha = e.alpha;
+  if (e.webkitCompassHeading != null) {          // iPhone: magnetic heading of the top edge
+    alpha = 360 - e.webkitCompassHeading; source = "iPhone (experimental)";
+  } else if (e.absolute || e.type === "deviceorientationabsolute") {
+    source = "Android, absoluta";
+  } else { source = "relativa — no sirve para medir"; return; }
+  if (alpha == null || e.beta == null || e.gamma == null) return;
+  const d = cameraDirection(alpha, e.beta, e.gamma);
+  heading = wrap(d.heading + DECLINATION); pitch = d.pitch;
+  samples?.push(heading);
+}
+
+// Great-circle bearing and distance. At 1-5 km the flat approximation would
+// do, but there is no reason to carry its error into the measurement.
+function bearingTo(lat1, lon1, lat2, lon2) {
+  const p1 = rad(lat1), p2 = rad(lat2), dl = rad(lon2 - lon1);
+  const y = Math.sin(dl) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  const d = 2 * 6371000 * Math.asin(Math.sqrt(Math.sin((p2 - p1) / 2) ** 2 +
+            Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2));
+  return { bearing: wrap(deg(Math.atan2(y, x))), dist: d };
+}
+
+const allLandmarks = () => [...LANDMARKS, ...custom];
+function fillLandmarks() {
+  const keep = $("lm").value;
+  const list = allLandmarks().map(l => ({ ...l, ...(fix ? bearingTo(fix.lat, fix.lon, l.lat, l.lon) : {}) }))
+    .sort((a, b) => (a.dist ?? 0) - (b.dist ?? 0));
+  $("lm").innerHTML = list.map(l => `<option value="${l.id}">${l.name}` +
+    (l.dist != null ? ` · ${(l.dist / 1000).toFixed(1)} km` : "") + "</option>").join("");
+  if (keep && list.some(l => l.id === keep)) $("lm").value = keep;
+  showTarget();
+}
+function target() { return allLandmarks().find(l => l.id === $("lm").value); }
+function showTarget() {
+  const l = target();
+  if (!l || !fix) { $("lm-info").textContent = "—"; $("lm-gps").textContent = "—"; return; }
+  const { bearing, dist } = bearingTo(fix.lat, fix.lon, l.lat, l.lon);
+  $("lm-info").textContent = `${(dist / 1000).toFixed(2)} km · ${bearing.toFixed(1)}°`;
+  // How much the position uncertainty alone moves the true bearing.
+  const g = deg(Math.atan((fix.acc + l.tol) / dist));
+  $("lm-gps").innerHTML = `±${g.toFixed(1)}°` + (dist < 1000 ? ` <span class="warn">— muy cerca</span>` : "");
+}
+
+let samples = null;
+function circMean(a) {
+  const s = a.reduce((t, v) => t + Math.sin(rad(v)), 0), c = a.reduce((t, v) => t + Math.cos(rad(v)), 0);
+  const r = Math.hypot(s, c) / a.length;
+  return { mean: wrap(deg(Math.atan2(s, c))), sd: deg(Math.sqrt(-2 * Math.log(Math.max(r, 1e-9)))) };
+}
+async function mark() {
+  const l = target();
+  if (!l || !fix || heading == null) return;
+  $("mark").disabled = true; samples = [];
+  $("mark").textContent = "Quieto…";
+  await new Promise(r => setTimeout(r, MARK_MS));
+  const got = samples; samples = null;
+  $("mark").textContent = "Marcar"; $("mark").disabled = false;
+  if (got.length < 5) return alert("El sensor no entregó lecturas. ¿Diste permiso?");
+  const m = circMean(got);
+  const { bearing, dist } = bearingTo(fix.lat, fix.lon, l.lat, l.lon);
+  marks.push({
+    t: new Date().toISOString(), point: l.name, point_id: l.id, point_lat: l.lat, point_lon: l.lon,
+    point_tol_m: l.tol, lat: +fix.lat.toFixed(6), lon: +fix.lon.toFixed(6), gps_acc_m: Math.round(fix.acc),
+    dist_m: Math.round(dist), true_deg: +bearing.toFixed(2), measured_deg: +m.mean.toFixed(2),
+    error_deg: +signed(m.mean - bearing).toFixed(2), hold_sd_deg: +m.sd.toFixed(2),
+    pitch_deg: +pitch.toFixed(1), metal: $("metal").checked, n: got.length, sensor: source,
+    declination_deg: DECLINATION, ua: navigator.userAgent,
+  });
+  save(); render();
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+
+function pct(a, q) { const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(q * s.length))]; }
+function stats(ms) {
+  if (!ms.length) return null;
+  const e = ms.map(m => m.error_deg);
+  const bias = circMean(e.map(wrap)).mean, b = signed(bias);
+  const resid = e.map(v => Math.abs(signed(v - b)));
+  return { n: ms.length, bias: b, p50: pct(resid, .5), p90: pct(resid, .9) };
+}
+function render() {
+  $("n").textContent = marks.length;
+  const all = stats(marks), clean = stats(marks.filter(m => !m.metal));
+  $("bias").textContent = all ? `${all.bias >= 0 ? "+" : ""}${all.bias.toFixed(1)}°` : "—";
+  $("spread").textContent = all ? `${all.p50.toFixed(1)}° · ${all.p90.toFixed(1)}°` : "—";
+  $("clean").textContent = clean ? `${clean.p50.toFixed(1)}° · ${clean.p90.toFixed(1)}° (n=${clean.n})` : "—";
+  $("rows").innerHTML = marks.slice().reverse().map(m => {
+    const big = Math.abs(m.error_deg) > 5;
+    return `<tr><td>${m.point}${m.metal ? " ⚠" : ""}</td><td>${(m.dist_m / 1000).toFixed(1)}</td>` +
+      `<td>${m.true_deg.toFixed(1)}</td><td>${m.measured_deg.toFixed(1)}</td>` +
+      `<td class="${big ? "err" : ""}">${m.error_deg >= 0 ? "+" : ""}${m.error_deg.toFixed(1)}</td></tr>`;
+  }).join("");
+}
+
+function csv() {
+  if (!marks.length) return "";
+  const cols = Object.keys(marks[0]);
+  const q = v => typeof v === "string" && /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  return [cols.join(","), ...marks.map(m => cols.map(c => q(m[c])).join(","))].join("\n");
+}
+function csvFile() {
+  return new File([csv()], `panal-brujula-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "")}.csv`, { type: "text/csv" });
+}
+
+async function start() {
+  $("start").disabled = true;
+  try {
+    if (typeof DeviceOrientationEvent?.requestPermission === "function")
+      await DeviceOrientationEvent.requestPermission();
+  } catch {}
+  if ("ondeviceorientationabsolute" in window) window.addEventListener("deviceorientationabsolute", onOrientation);
+  else window.addEventListener("deviceorientation", onOrientation);
+
+  navigator.geolocation?.watchPosition(p => {
+    const first = !fix;
+    fix = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
+    $("pos").textContent = `±${Math.round(fix.acc)} m`;
+    if (first) fillLandmarks(); else showTarget();
+  }, err => { $("pos").innerHTML = `<span class="err">sin ubicación (${err.message})</span>`; },
+     { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia(
+      { video: { facingMode: { ideal: "environment" } }, audio: false });
+    $("video").srcObject = stream; await $("video").play(); $("nocam").remove();
+  } catch {
+    $("nocam").textContent = "Sin cámara: se puede apuntar con el borde del teléfono, " +
+      "pero la medición pierde precisión.";
+  }
+  $("mark").disabled = false;
+  $("status").textContent = "calibra con un 8 en el aire antes de marcar";
+  (function tick() {
+    $("h").textContent = heading == null ? "—" : heading.toFixed(1) + "°";
+    $("hud-h").textContent = heading == null ? "—°" : heading.toFixed(0) + "°";
+    $("pitch").textContent = pitch == null ? "—" : pitch.toFixed(0) + "°";
+    $("hud-p").textContent = pitch == null ? "—" : (Math.abs(pitch) > 20 ? "nivela ↕" : "ok");
+    $("src").textContent = source ?? "esperando…";
+    requestAnimationFrame(tick);
+  })();
+}
+
+$("decl").textContent = `+${DECLINATION.toFixed(2)}° E`;
+$("start").onclick = start;
+$("mark").onclick = mark;
+$("lm").onchange = showTarget;
+$("here").onclick = () => {
+  if (!fix) return alert("Todavía no hay ubicación.");
+  if (fix.acc > 15) return alert(`El GPS está a ±${Math.round(fix.acc)} m. Espera a que baje de 15 m.`);
+  const name = prompt("Nombre del punto (estás parado en él):");
+  if (!name) return;
+  custom.push({ id: "c" + Date.now(), name, lat: fix.lat, lon: fix.lon, tol: Math.round(fix.acc) });
+  save(); fillLandmarks();
+};
+$("csv").onclick = () => {
+  if (!marks.length) return;
+  const a = document.createElement("a"); a.href = URL.createObjectURL(csvFile());
+  a.download = csvFile().name; a.click();
+};
+$("share").onclick = async () => {
+  if (!marks.length) return;
+  const f = csvFile();
+  if (navigator.canShare?.({ files: [f] })) {
+    try { await navigator.share({ files: [f], title: "PANAL · medición de brújula" }); } catch {}
+  } else $("csv").onclick();
+};
+$("clear").onclick = () => {
+  if (marks.length && confirm(`¿Borrar ${marks.length} marcas? Descárgalas antes si las quieres.`)) {
+    marks = []; save(); render();
+  }
+};
+fillLandmarks(); render();
+</script>
+</body>
+</html>

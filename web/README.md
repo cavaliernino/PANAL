@@ -204,6 +204,24 @@ cd ingest
     -o ../web/data/wui_valparaiso.json                     # quotes every recorded fire
 ```
 
+## Compass measurement
+
+`brujula.html` is not a product page and is not in the navigation. It
+measures how far a phone's compass is off when its camera is aimed at a
+known point — the number crowd triangulation stands on (see
+`docs/crowdsourcing.md`), which nobody had measured.
+
+- The camera's direction comes from the full device orientation, R =
+  Rz(α)·Rx(β)·Ry(γ), as −z of the device frame: what someone aiming at
+  smoke actually does. `alpha` alone is the top edge of a phone lying flat.
+- Android's absolute orientation is magnetic; WMM declination for Viña and
+  Valparaíso (+0.71° E, Oct 2026) is added before comparing.
+- Each mark averages two seconds of readings (circular mean), and records
+  GPS accuracy and the reference point's own tolerance, so a mark too close
+  to its point can be weighed for what it is.
+- Nothing leaves the phone. Marks stay in localStorage and leave as a CSV
+  the person shares.
+
 ## The app
 
 The three pages install as one app from the browser — Android: menu →

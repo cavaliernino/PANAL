@@ -217,10 +217,18 @@ Sin reunión, el orden acordado el 2-oct:
    **3,91×** con combustible de enero de 2024. **Falta probarla en un
    teléfono de verdad**: Android de Nino e iPhone de Tami — instalar, abrir
    sin señal, "Cerca de mí".
-3. **App Android nativa**: el código de 2020 a `docs/legacy`, proyecto nuevo,
-   y lo primero que hace es **medir el error de brújula** contra puntos
-   conocidos. El cruce de marcaciones depende de ese número y nadie lo ha
-   medido. Teléfono de prueba Android; un iPhone disponible para la PWA.
+3. **Medir el error de brújula** antes de cualquier app nativa: el cruce de
+   marcaciones depende de ese número y nadie lo ha medido. Desde el 5-oct
+   hay una página para eso, https://panal.ninobozzi.cl/brujula.html (fuera
+   de la navegación): apuntar la cámara a un faro o una torre conocida, a
+   más de 1 km, y marcar. Trae nueve puntos de Viña y Valparaíso tomados de
+   OSM, calcula el rumbo de la cámara con la orientación completa del
+   teléfono (no con `alpha`, que es el borde de un teléfono acostado) y le
+   suma la declinación (+0,71° E). Los datos quedan en el teléfono y se
+   exportan como CSV. **Lo que se busca:** el sesgo, la dispersión sin él
+   (p50 y p90), y cuánto empeora cerca de metal. Si la p90 pasa de ~5°, el
+   cruce de dos marcaciones a 3 km ya tiene un error de cientos de metros, y
+   la app nativa tendría que compensarlo o no vale la pena.
 
 Acordado el 5-oct, además:
 
