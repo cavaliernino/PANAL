@@ -1,24 +1,20 @@
 # PANAL
 
-**Georeferenced environmental health risk for Chile, on a hexagonal grid.**
+**Wildfire detection and exposure for Chile, on a hexagonal grid.**
 
-PANAL tells you how much risk is elevated *where you actually are*, by
-combining public health surveillance, census demographics, NASA meteorological
-data and NASA satellite fire detections on an H3 hex grid — and by reporting
-the excess over what is normal for that place at that time of year, rather than
-a raw number that turns red every winter.
+Megafires start as small fires, and the window in which one can still be
+stopped by a rapid initial attack is measured in tens of minutes. PANAL does
+not fight fires. It compresses the time between a fire starting and someone
+competent knowing exactly where it is — satellite detection over all of
+Chile every ten minutes — and, before any of that, shows which
+neighbourhoods are built in the condition that turns a small fire into a
+catastrophe.
 
-**Wildfire is the main line.** Megafires start as small fires, and the window
-in which one can still be stopped by a rapid initial attack is measured in tens
-of minutes. PANAL does not fight fires; it compresses the time between a fire
-starting and someone competent knowing exactly where it is — and, before any of
-that, shows which neighbourhoods are built in the condition that turns a small
-fire into a catastrophe.
-
-Respiratory risk remains, and follows. The two hazards are seasonally
-opposite — fire peaks November to March, respiratory illness June to August —
-and they are linked, because fire smoke drives respiratory emergencies. That
-calendar sets the build order.
+PANAL began in 2020 as a respiratory-risk index, and that line continues,
+second: the two hazards are seasonally opposite — fire peaks November to
+March, respiratory illness June to August — and linked, because smoke
+drives respiratory emergencies. The calendar sets the order; see
+[Next: respiratory risk](#next-respiratory-risk).
 
 > 🏆 PANAL won the **Galactic Impact Award** at the NASA Space Apps Challenge
 > COVID-19 in May 2020 — *"the solution with the most potential to improve life
@@ -79,8 +75,8 @@ and OpenStreetMap egress.
 | | |
 |---|---|
 | GOES first saw the Viña fire at | **12:10 local**, 2 h 37 min before VIIRS |
-| Hazard half of the index ranks the interface at | **3.83× chance** |
-| Over Valparaíso, hazard and consequence both top-decile | **63 cells, 12,591 people** |
+| Hazard half of the index ranks the interface at, with fuel from before the fire | **3.91× chance** |
+| Over Valparaíso, hazard and consequence both top-decile | **58 cells, 10,660 people** |
 | OSM road coverage of inhabited cells, by population | **95.7%** |
 | GOES coverage of Chile, every hour of the day | **100%** |
 
@@ -91,33 +87,6 @@ first ask in `docs/alianzas.md`.
 
 The index does **not** predict where a fire starts. It predicts how bad one
 would be if it arrived.
-
----
-
-## What changed in six years
-
-The 2020 project depended on the **MinCiencia COVID-19 data repository**, which
-stopped updating on 31 August 2023 when Chile's health alert ended. Its URL now
-404s. PANAL's original fuel no longer exists.
-
-The replacement is better than what the project had in 2020:
-
-| Input | 2020 | 2026 |
-|---|---|---|
-| Health | MinCiencia COVID, comuna-level *(dead)* | MINSAL SADU — **635 establishments, 100% geocoded, weekly, 2014→2026** |
-| Demographics | Global gridded raster, coarse | **Censo 2024 at block level**, 189 variables |
-| Weather | Manual NOAA downloads | **NASA POWER API**, `T2M` + `RH2M` by coordinate |
-| Fire | not covered | **GOES-East** (10 min) + **FIRMS** VIIRS/MODIS + CONAF + SINCA |
-| Grid | Hexagons drawn by hand | **H3**, stable global cell ids |
-
-And the disease changed. In 2026 Chile, COVID-19 emergency attendances run
-**2–103 per week nationally**, while upper respiratory infections run
-**55,000–87,000**. Building a COVID-only product today would render an empty
-map. PANAL now covers respiratory risk as a whole: influenza, RSV/bronchiolitis,
-pneumonia, URI and COVID.
-
-Full verification of every source, including the traps, is in
-[`docs/data-sources.md`](docs/data-sources.md).
 
 ---
 
@@ -133,7 +102,7 @@ android/   the 2020 app, carried forward for a Phase 7 rebuild
 docs/      roadmap · data-sources · risk-model · crowdsourcing · alianzas
 ```
 
-103 tests across `ingest` and `engine`:
+111 tests across `ingest` and `engine`:
 
 ```bash
 cd ingest && ../.venv/bin/python -m pytest tests -q
@@ -166,7 +135,12 @@ which is exactly why the crowd layer exists. See
 
 ---
 
-## The respiratory model in one paragraph
+## Next: respiratory risk
+
+Phase 6, before the 2027 winter. Nothing here is built yet; the data
+sources are verified and the model is specified.
+
+### The model in one paragraph
 
 Respiratory emergency attendances are attributed to their establishment's H3
 cell and spread across a catchment, normalised per 100,000 inhabitants from
@@ -182,6 +156,31 @@ Wildfire is deliberately **not** a fourth weighted term, because it is partly a
 the health component as an acute exposure term; the acute fire front is a
 separate layer on its own time constant. Details and open questions:
 [`docs/risk-model.md`](docs/risk-model.md).
+
+### What changed in six years
+
+The 2020 project depended on the **MinCiencia COVID-19 data repository**, which
+stopped updating on 31 August 2023 when Chile's health alert ended. Its URL now
+404s. PANAL's original fuel no longer exists.
+
+The replacement is better than what the project had in 2020:
+
+| Input | 2020 | 2026 |
+|---|---|---|
+| Health | MinCiencia COVID, comuna-level *(dead)* | MINSAL SADU — **635 establishments, 100% geocoded, weekly, 2014→2026** |
+| Demographics | Global gridded raster, coarse | **Censo 2024 at block level**, 189 variables |
+| Weather | Manual NOAA downloads | **NASA POWER API**, `T2M` + `RH2M` by coordinate |
+| Fire | not covered | **GOES-East** (10 min) + **FIRMS** VIIRS/MODIS + CONAF + SINCA |
+| Grid | Hexagons drawn by hand | **H3**, stable global cell ids |
+
+And the disease changed. In 2026 Chile, COVID-19 emergency attendances run
+**2–103 per week nationally**, while upper respiratory infections run
+**55,000–87,000**. Building a COVID-only product today would render an empty
+map. PANAL now covers respiratory risk as a whole: influenza, RSV/bronchiolitis,
+pneumonia, URI and COVID.
+
+Full verification of every source, including the traps, is in
+[`docs/data-sources.md`](docs/data-sources.md).
 
 ---
 

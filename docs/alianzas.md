@@ -17,10 +17,13 @@ manzana.
 **Por qué:** el índice de exposición urbano-forestal tiene dos mitades y solo
 una está validada.
 
-La mitad de *amenaza* —¿llegará el fuego y correrá?— valida a **3,83 veces el
-azar** contra la huella satelital de ese incendio: 44 de las 115 celdas
+La mitad de *amenaza* —¿llegará el fuego y correrá?— valida a **3,91 veces el
+azar** contra la huella satelital de ese incendio, medida con la vegetación
+que había antes del fuego (Sentinel-2, enero de 2024): 45 de las 115 celdas
 habitadas de la zona de interfaz caen en su decil superior, donde el azar
-daría 12.
+daría 12. La pregunta obvia de un revisor —¿usaron imágenes posteriores al
+incendio?— tiene respuesta: con la vegetación de 2026, que ya muestra la
+cicatriz, da 3,30×; con la de antes, 3,91×.
 
 La mitad de *consecuencia* —¿qué tan grave si llega?— **no está validada, y
 lleva el peso mayor**. En el build público: egreso 0,32, precariedad 0,25,
@@ -146,7 +149,7 @@ construyendo sobre lo suyo".
 ### Lo que NO hay que decir
 
 Medí su capa contra la nuestra en el mismo test: recurrencia SENAPRED da
-2,17× el azar, PANAL 3,83×. **Eso no se menciona.**
+2,17× el azar, PANAL 3,91×. **Eso no se menciona.**
 
 Tres razones. Su capa cubre 2020-2024, así que probablemente *incluye* el
 incendio contra el que testeé — su 2,17× es un piso, no un techo. Combinarlas
@@ -197,12 +200,14 @@ pedir.
   cuatro capas: Censo 2024 a nivel manzana, pendiente Copernicus 30 m,
   combustible Sentinel-2 y capacidad de salida desde OpenStreetMap.
 
-  Resultado concreto para llevar: **63 celdas donde amenaza y consecuencia
-  están ambas en el decil superior — 5.534 viviendas, 12.591 personas**.
-  Seis de cada diez en los cerros de Valparaíso (7.715 personas), y otras
-  2.351 en Viña del Mar. Con egreso conocido en 61 de las 63, así que el
-  hueco de mapeo no afecta el resultado. Regenerado y revalidado el 2-oct;
-  se puede abrir en https://panal.ninobozzi.cl/wui.html.
+  Resultado concreto para llevar: **58 celdas donde amenaza y consecuencia
+  están ambas en el decil superior — 4.620 viviendas, 10.660 personas**.
+  Siete de cada diez en los cerros de Valparaíso (7.469 personas), y otras
+  1.626 en Viña del Mar. Con egreso conocido en 55 de las 58, así que el
+  hueco de mapeo no afecta el resultado. Regenerado el 5-oct, tras corregir
+  tres errores de medición (pendiente en bordes de tesela, egreso que
+  contaba vértices, búsqueda de escenas); antes decía 63 celdas y 12.591
+  personas. Se puede abrir en https://panal.ninobozzi.cl/wui.html.
 
   La cobertura de OpenStreetMap sobre lo habitado es **95,7% ponderada por
   población** (95,2% entre celdas con 10 o más viviendas, 86,1% de esas en

@@ -117,6 +117,14 @@ defensible space, fuel breaks and evacuation planning.
 > median percentile p77, up from p51). Fuel alone scores 3.04×; slope alone
 > still scores 0.00× yet improves the combination, which is physically right.
 >
+> **Re-validated, 2026-10-05, with fuel from before the fire.** Every figure
+> above ranked the 2024 fire by fuel from 2026 — the landscape the fire left.
+> With Sentinel-2 from January 2024, and three measurement bugs fixed (slope
+> at DEM tile edges, egress counting shape vertices, a scene search that kept
+> only the 40 newest): **3.91×**, 45 of 115, median p84. The same build with
+> 2026 fuel scores 3.30×, so the post-fire landscape was costing signal, not
+> inventing it.
+>
 > Two corrections got it there, and the second was not the obvious one. The
 > gate had to change from dwelling **magnitude** to dwelling **presence** —
 > the interface is by definition where settlement is sparse, so weighting by

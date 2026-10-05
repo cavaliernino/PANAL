@@ -173,7 +173,8 @@ What it is careful about:
 
 - **Hazard leads; consequence is labelled unvalidated** wherever it shows,
   including the priority outline that depends on it. Hazard is validated at
-  3.83× against the Viña 2024 fire; consequence has no test yet.
+  3.91× against the Viña 2024 fire, with fuel from before it; consequence
+  has no test yet.
 - **Its own colour scale.** Violet, outside every other scale here: not the
   fire-intensity ramp (this is no fire), not SENAPRED's green/yellow/red
   (this is no alert), no black (the burn scar).
@@ -186,14 +187,20 @@ What it is careful about:
   "difficult": those words would need thresholds nobody has validated.
 
 Regenerate after rebuilding the index — public build only; the exporter
-refuses the SENAPRED one:
+refuses the SENAPRED one. The lift comes from a second build whose fuel
+predates the fire; `validate_wui.py` says so if it does not:
 
 ```bash
 cd ingest
-../.venv/bin/python scripts/validate_wui.py --wui ../data/processed/wui_valparaiso.parquet \
-    --replay ../web/data/vina2024.json          # read the lift off this
+../.venv/bin/python scripts/build_wui.py --region valparaiso \
+    -o ../data/processed/wui_valparaiso.parquet          # what is published
+../.venv/bin/python scripts/build_wui.py --region valparaiso --no-egress \
+    --fuel-year 2024 --fuel-window 01-01 02-01 \
+    -o ../data/processed/wui_valparaiso_pre2024.parquet  # what is validated
+../.venv/bin/python scripts/validate_wui.py --replay ../web/data/vina2024.json \
+    --wui ../data/processed/wui_valparaiso_pre2024.parquet   # read the lift off this
 ../.venv/bin/python scripts/export_wui_web.py --wui ../data/processed/wui_valparaiso.parquet \
-    --lift 3.83 -o ../web/data/wui_valparaiso.json
+    --lift 3.91 -o ../web/data/wui_valparaiso.json
 ```
 
 ## The app

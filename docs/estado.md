@@ -5,16 +5,16 @@ Dónde estamos, qué está bloqueado y qué se olvida si nadie lo anota.
 Este documento existe para que el estado no viva en la memoria de nadie. Si
 pasan tres semanas sin tocar el repo, esto es lo primero que hay que leer.
 
-**Última actualización:** 2026-10-02
+**Última actualización:** 2026-10-05
 
 ---
 
 ## En una línea
 
 Fases 0 y 1 cerradas. Fase 2 construida entera y **validada a medias**: la
-mitad de amenaza da 3,83× el azar, la mitad de consecuencia no tiene forma de
-validarse sin datos de CONAF. Sin fecha de reunión todavía, así que se avanza
-en lo que no depende de nadie: deploy, PWA y medir la brújula del teléfono.
+mitad de amenaza da 3,91× el azar con la vegetación de antes del incendio, la
+mitad de consecuencia no tiene forma de validarse sin datos de CONAF. Sin
+fecha de reunión todavía, así que se avanza en lo que no depende de nadie.
 
 ---
 
@@ -28,11 +28,16 @@ en lo que no depende de nadie: deploy, PWA y medir la brújula del teléfono.
 |---|---|---|
 | Snapshot nacional, el que se publica | cron de `nino` en `fuego` | 10 min |
 | Certificado TLS | certbot en `fuego`, recarga nginx solo | ~60 días |
+| Aviso si el cron falla o deja de correr | healthchecks.io, por correo a Nino | cada corrida hace ping |
 
 ```bash
 ssh fuego tail -8 /var/www/panal.ninobozzi.cl/data/cron_national.log  # ¿sigue vivo?
 ssh fuego git -C /var/www/panal.ninobozzi.cl pull --ff-only           # publicar lo pusheado
 ```
+
+El aviso depende de que exista `~/.config/panal/healthcheck_url` en `fuego`
+con la URL de ping; sin ese archivo el cron corre igual, pero en silencio.
+Un barrido sin GOES ni VIIRS sale con código 2 y cuenta como falla.
 
 El Mac ya no corre nada (cron retirado el 2-oct). Para desarrollar en
 local, generar el snapshot a mano — ver [`web/README.md`](../web/README.md).
@@ -97,6 +102,9 @@ no volver a abrir cada una:
   perillas uno se ajusta al incendio y cree que funciona.
 - **El snapshot nacional no se commitea.** Es dato vivo; se genera donde se
   sirve.
+- **Se valida con combustible anterior al evento.** Con imágenes posteriores
+  el índice ve el paisaje que dejó el incendio. `build_wui.py` registra la
+  escena de cada celda y `validate_wui.py` avisa si es posterior.
 - **Moderación de reportes: puntaje automático, humano decide.** Detalle en
   [`crowdsourcing.md`](crowdsourcing.md#moderation-score-then-queue).
 
@@ -114,12 +122,22 @@ no volver a abrir cada una:
 
 - **GLO-30 es modelo de superficie, no terreno.** Mitigado con suavizado 3×3,
   pero para Fase 4 hace falta FABDEM — Cell2Fire necesita pendiente real.
-- **La búsqueda de escenas Sentinel-2 ordena por nubes, no por cobertura.**
-  Deja 9,6% de celdas sin combustible en Valparaíso. Esas quedan sin ranking,
-  que es correcto, pero la selección se puede mejorar.
+- **El combustible se lee en un solo píxel por celda**, de ~160 m en el
+  centro, y entre escenas gana la más seca: el mínimo de varias lecturas
+  ruidosas, sesgado hacia abajo. La búsqueda ya se arregló el 5-oct (antes
+  tomaba las 40 escenas más nuevas y dejaba 9,6% de celdas sin combustible;
+  ahora 0,2%); el muestreo todavía no.
 - **El bbox de una región con islas es enorme.** Valparaíso llega a Rapa Nui
-  (-109°), así que búsquedas por bbox barren el Pacífico. Mitigado donde
-  importa, no en general.
+  (-109°). El combustible ya busca por cajas de 1°; `senapred.fetch` todavía
+  usa el bbox entero.
+- **La validación es un solo incendio**, 115 celdas pegadas entre sí: el
+  lift supone independencia que no tienen. Candidatos para sumar: Rocuant–San
+  Roque (dic-2019), Viña (dic-2022) y Ñuble/Biobío (14-ene-2026).
+- **GOES en la vista nacional es solo el último barrido.** Un foco tapado por
+  humo diez minutos desaparece del mapa.
+- **Al sur de 50°S GLO-30 cambia el espaciado en longitud** (1,5″ y más) y
+  `slope_degrees` supone 1″: la pendiente este-oeste saldría inflada. No
+  afecta mientras el índice cubra solo Valparaíso.
 - **La consecuencia carga los pesos mayores y cero evidencia.**
 - **Un cúmulo VIIRS en Atacama que no es incendio ni faena.** Hacia
   -24,1, -68,77, a 3.000 m. Medido el 2-oct: NDVI 0,015–0,063 en sus 23
@@ -140,7 +158,7 @@ no volver a abrir cada una:
    — ¿la cadena sigue viva?
 2. `git log --oneline -10` — qué pasó al final
 3. Leer este archivo y [`alianzas.md`](alianzas.md)
-4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 82 tests
+4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 90 tests
 5. `cd engine && ../.venv/bin/python -m pytest tests -q` — 21 tests
 
 Si algún test falla, empezá por ahí: están escritos para fijar decisiones, no
@@ -188,10 +206,23 @@ Sin reunión, el orden acordado el 2-oct:
    hexágono** (faltaba h3-js); arreglado.
 2. ~~**PWA y vista web del índice WUI**~~ — hecho el 2-oct:
    https://panal.ninobozzi.cl/wui.html, instalable desde el navegador.
-   Cifras regeneradas (63 celdas, 12.591 personas) y amenaza revalidada en
-   3,83×. **Falta probarla en un teléfono de verdad**: Android de Nino e
-   iPhone de Tami — instalar, abrir sin señal, "Cerca de mí".
+   Regenerado el 5-oct tras corregir tres errores de medición (pendiente en
+   bordes de tesela DEM, egreso que contaba vértices de forma, búsqueda de
+   escenas): **58 celdas, 10.660 personas** (antes 63 y 12.591), amenaza
+   **3,91×** con combustible de enero de 2024. **Falta probarla en un
+   teléfono de verdad**: Android de Nino e iPhone de Tami — instalar, abrir
+   sin señal, "Cerca de mí".
 3. **App Android nativa**: el código de 2020 a `docs/legacy`, proyecto nuevo,
    y lo primero que hace es **medir el error de brújula** contra puntos
    conocidos. El cruce de marcaciones depende de ese número y nadie lo ha
    medido. Teléfono de prueba Android; un iPhone disponible para la PWA.
+
+Acordado el 5-oct, además:
+
+4. **GOES con ventana de una hora** en la vista nacional, cada celda con su
+   edad, para que un barrido tapado no borre un foco.
+5. **Combustible por celda completa**, no un píxel central, y un compuesto
+   robusto entre escenas en vez de "gana la más seca".
+6. **Validar con más incendios**, cada uno con combustible anterior:
+   Rocuant–San Roque (dic-2019), Viña (dic-2022) y Ñuble/Biobío
+   (14-ene-2026).
