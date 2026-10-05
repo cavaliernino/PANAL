@@ -108,6 +108,11 @@ no volver a abrir cada una:
 - **Se valida con combustible anterior al evento.** Con imágenes posteriores
   el índice ve el paisaje que dejó el incendio. `build_wui.py` registra la
   escena de cada celda y `validate_wui.py` avisa si es posterior.
+- **El mapa de exposición está fuera de la navegación** desde el 5-oct.
+  Contra seis incendios la amenaza acierta con claridad en dos, y el
+  proyecto no publica como producto de riesgo lo que no demuestra
+  habilidad. La URL sigue viva, con un aviso arriba, para el equipo y la
+  reunión. Se reabre con registros de daño o con el Catastro.
 - **Moderación de reportes: puntaje automático, humano decide.** Detalle en
   [`crowdsourcing.md`](crowdsourcing.md#moderation-score-then-queue).
 
