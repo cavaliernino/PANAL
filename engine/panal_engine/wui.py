@@ -53,15 +53,16 @@ So presence gates and magnitude is reported separately, as consequence.
 ## Status: hazard validated, consequence not
 
 Against the February 2024 Viña del Mar fire
-(`ingest/scripts/validate_wui.py`), of 115 inhabited cells in the fire's
-interface zone:
+(`ingest/scripts/validate_wui.py`), ranked by fuel from January 2024 —
+before the fire, not the landscape it left — of 115 inhabited cells in the
+fire's interface zone:
 
 | ranked by | in top decile | lift vs chance |
 |---|---|---|
-| **presence x hazard** | **44** | **3.83x** |
+| **presence x hazard** | **45** | **3.91x** |
 | hazard alone | 39 | 3.39x |
 | fuel alone | 35 | 3.04x |
-| dryness (NDMI) alone | 27 | 2.35x |
+| dryness (NDMI) alone | 19 | 1.65x |
 | slope alone | 0 | 0.00x |
 | the first version's composite | 4 | 0.35x |
 
@@ -103,7 +104,7 @@ class Weights:
     them. A house that burns with everyone out is a loss; a street nobody
     can leave is a death toll.
 
-    All four are unvalidated. A burn footprint cannot test consequence.
+    All five are unvalidated. A burn footprint cannot test consequence.
     """
 
     egress: float = 0.28

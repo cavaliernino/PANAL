@@ -82,6 +82,13 @@ imply it ranks danger.
   record each cell's fuel scene and this script checks it against the
   event date.
 
+* **2026-10-05, rebuilt** with three measurement bugs fixed — slope at DEM
+  tile edges, egress counting shape vertices, and a scene search that kept
+  the 40 newest scenes and took them for the window. Fuel coverage went
+  from 90.4% to 99.8% of cells. Pre-fire fuel (1 Jan - 1 Feb 2024):
+  **3.91×**, 45 of 115, median p84. The same build with 2026 fuel: 3.30×.
+  The table above was measured before the search fix.
+
 Consequence still has no test at all — a burn footprint cannot give it one.
 So the public map leads with hazard and labels consequence, and anything
 derived from it, as unvalidated wherever it appears.

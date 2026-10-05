@@ -155,8 +155,10 @@ def main():
             "unobserved": int((~ranked).sum()),
             "priority": {
                 "cells": len(prio),
-                "viviendas": int(prio["n_vp"].sum()),
-                "personas": int(prio["n_per"].sum()),
+                # Rounded, not truncated: build_wui.py prints these same
+                # sums rounded, and the page and the docs must agree.
+                "viviendas": int(round(prio["n_vp"].sum())),
+                "personas": int(round(prio["n_per"].sum())),
                 "egreso_conocido": int(prio["has_egress"].sum()),
             },
             "validation": {
