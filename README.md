@@ -75,7 +75,7 @@ and OpenStreetMap egress.
 | | |
 |---|---|
 | GOES first saw the Viña fire at | **12:10 local**, 2 h 37 min before VIIRS |
-| Hazard half, against four fires, each with fuel from before it | **works in two**: 2.8× and 3.9× chance (Valparaíso 2019, 2024); 0.7× and 1.2× (Viña 2022, Ñuble–Biobío 2026) |
+| Hazard half, against six fires, each with fuel from before it | **clears chance clearly in two**: 2.8× and 3.9× (Valparaíso 2019, 2024); weak in two, 1.5× and 1.2× (Biobío 2023, 2026); none in two, 0.7× and 0.0× (Viña 2022, Quilpué 2021) |
 | Over Valparaíso, hazard and consequence both top-decile | **58 cells, 10,660 people** |
 | OSM road coverage of inhabited cells, by population | **95.7%** |
 | GOES coverage of Chile, every hour of the day | **100%** |
@@ -84,7 +84,9 @@ and OpenStreetMap egress.
 into sparse settlement — what it was built on — and misses fire through
 dense informal housing, where the houses are the fuel, and through
 plantations, whose green canopy Sentinel-2 reads as moist. Both need fuel
-*type*. Nothing was tuned on these four.
+*type*. ESA WorldCover was tried as a stand-in under a pre-registered test
+with two held-out fires and did not help
+([`docs/preregistro-combustible.md`](docs/preregistro-combustible.md)).
 
 **The consequence half is not validated and carries the largest weights.**
 A burn footprint cannot test it — only 9 of the 173 cells VIIRS saw burning
@@ -108,7 +110,7 @@ android/   the 2020 app, carried forward for a Phase 7 rebuild
 docs/      roadmap · data-sources · risk-model · crowdsourcing · alianzas
 ```
 
-116 tests across `ingest` and `engine`:
+124 tests across `ingest` and `engine`:
 
 ```bash
 cd ingest && ../.venv/bin/python -m pytest tests -q

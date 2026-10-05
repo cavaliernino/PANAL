@@ -125,12 +125,15 @@ defensible space, fuel breaks and evacuation planning.
 > 2026 fuel scores 3.30×, so the post-fire landscape was costing signal, not
 > inventing it.
 >
-> **Then tested against four fires, and it holds in two.** Rocuant 2019
-> 2.77×, Viña 2022 **0.67×**, Viña 2024 3.91×, Ñuble–Biobío 2026 **1.23×**.
-> It ranks fire running out of cured scrub into sparse settlement; it misses
-> fire through dense informal housing and through plantations. Both need
-> fuel *type* — CONAF's Catastro, or a land-cover proxy tested on fires held
-> out for the purpose.
+> **Then tested against six fires, and it clears chance clearly in two.**
+> Rocuant 2019 2.77×, Quilpué 2021 **0.00×**, Viña 2022 **0.67×**, Biobío
+> 2023 1.49×, Viña 2024 3.91×, Ñuble–Biobío 2026 **1.23×**. It ranks fire
+> running out of cured scrub into sparse settlement; it misses fire through
+> dense informal housing and through plantations. ESA WorldCover as a
+> stand-in for fuel type failed a pre-registered test on two held-out fires
+> (`preregistro-combustible.md`); CONAF's Catastro is what is left — and a
+> burn footprint is a weak test in any case. Structure-loss records are the
+> real one.
 >
 > Two corrections got it there, and the second was not the obvious one. The
 > gate had to change from dwelling **magnitude** to dwelling **presence** —

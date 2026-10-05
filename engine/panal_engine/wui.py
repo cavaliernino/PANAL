@@ -50,7 +50,7 @@ wildland-fire risk at all.
 
 So presence gates and magnitude is reported separately, as consequence.
 
-## Status: hazard validated in two fires of four, consequence not
+## Status: hazard clears chance clearly in two fires of six, consequence untested
 
 Against the February 2024 Viña del Mar fire
 (`ingest/scripts/validate_wui.py`), ranked by fuel from January 2024 —
@@ -71,11 +71,14 @@ combination, which is physically right: it amplifies spread where there is
 something to spread through.
 
 **It does not generalise past the landscape it was built on.** Against
-four fires, each with fuel from before it: Rocuant 2019 2.77x, Viña 2022
-0.67x, Viña 2024 3.91x, Ñuble-Biobío 2026 1.23x. It ranks fire running out
+six fires, each with fuel from before it: Rocuant 2019 2.77x, Quilpué 2021
+0.00x, Viña 2022 0.67x, Biobío-Ñuble 2023 1.49x, Viña 2024 3.91x,
+Ñuble-Biobío 2026 1.23x. It ranks fire running out
 of cured scrub into sparse settlement, and misses fire through dense
 informal housing (the houses are the fuel) and through plantations (NDMI
-reads a green canopy as moist). Both need fuel type. Detail in
+reads a green canopy as moist). Both need fuel type; ESA WorldCover was
+tried as a stand-in under a pre-registered test and did not help
+(`docs/preregistro-combustible.md`). Detail in
 `ingest/scripts/validate_wui.py`.
 
 Two cautions that keep this short of a calibrated model. The sample is 115

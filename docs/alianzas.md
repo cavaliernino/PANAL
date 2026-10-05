@@ -18,22 +18,28 @@ manzana.
 funciona en parte y la otra no tiene ninguna prueba.
 
 La mitad de *amenaza* —¿llegará el fuego y correrá?— está probada contra
-cuatro incendios, cada uno con la vegetación de las cinco semanas previas:
+seis incendios, cada uno con la vegetación de las cinco semanas previas:
 
 | incendio | celdas de interfaz | acierto contra el azar |
 |---|---|---|
 | Valparaíso, Rocuant–San Roque, dic-2019 | 47 | 2,8× |
+| Quilpué, Lago Peñuelas, ene-2021 | 44 | **0,0×** |
 | Viña del Mar, Nueva Esperanza, dic-2022 | 105 | **0,7×** |
+| Biobío–Ñuble, Santa Ana, feb-2023 | 6.890 | 1,5× |
 | Viña del Mar–Quilpué, feb-2024 | 115 | 3,9× |
 | Ñuble–Biobío, ene-2026 | 1.664 | **1,2×** |
 
-**Funciona en dos de cuatro**, y conviene decirlo así, de entrada. Ordena
+**Acierta con claridad en dos de seis**, y conviene decirlo así, de
+entrada. Ordena
 bien el fuego que baja de matorral seco hacia viviendas dispersas —el de
 2024 y el de 2019—. Falla donde el fuego corre por población densa (en
 Viña 2022 la interfaz tiene 241 viviendas por celda: las casas son el
 combustible) y por plantaciones (en Biobío el satélite lee el dosel verde
 de pino y eucalipto como húmedo). Las dos fallas apuntan a lo mismo: falta
-el **tipo de combustible**, que es el pedido 2.
+el **tipo de combustible**, que es el pedido 2. Y la prueba misma es débil:
+en Quilpué 2021 el fuego corrió por la reserva y la "interfaz" fue el borde
+plano de la ciudad, donde se quemaron unas siete casas; estar cerca de una
+huella no es sufrir daño. Por eso el pedido 1 es el primero.
 
 La pregunta obvia de un revisor —¿usaron imágenes posteriores al incendio?—
 tiene respuesta: no. Con la vegetación de 2026, que ya muestra la cicatriz,
@@ -57,9 +63,10 @@ pero no "estas celdas están en la condición que costó vidas".
 que costó vidas en 2024" en vez de "estas manzanas tienen pendiente y
 combustible".
 
-Si existen, los registros de Valparaíso 2019, Viña 2022 y Ñuble–Biobío 2026
-valen lo mismo: las huellas satelitales de esos tres ya están armadas, así
-que cada registro de daño es una validación más, no un proyecto nuevo.
+Si existen, los registros de Valparaíso 2019, Quilpué 2021, Viña 2022,
+Biobío 2023 y Ñuble–Biobío 2026 valen lo mismo: las huellas satelitales de
+esos cinco ya están armadas, así que cada registro de daño es una
+validación más, no un proyecto nuevo.
 
 ---
 
@@ -77,9 +84,11 @@ Y ya no es solo un argumento: está medido. Contra el complejo Ñuble–Biobío
 de enero de 2026 el índice apenas supera el azar (1,2×), porque lee las
 plantaciones como vegetación húmeda; contra Viña 2022, que corrió por
 población densa, no lo supera (0,7×). Sin tipo de combustible no hay forma
-de distinguir matorral seco, plantación y techo. Mientras llega, se va a
-probar la cobertura pública de ESA (WorldCover, 10 m) como sustituto — con
-incendios reservados para no ajustarla a los mismos cuatro.
+de distinguir matorral seco, plantación y techo. Ya se probó la cobertura
+pública de ESA (WorldCover, 10 m) como sustituto, con las reglas fijadas
+antes y dos incendios reservados: no mejoró nada
+([`preregistro-combustible.md`](preregistro-combustible.md)). El Catastro
+es lo que queda.
 
 Probé `sit.conaf.cl`, `ide.minagri.gob.cl` y `geoportal.cl` buscando WFS,
 ArcGIS REST y GeoServer. Ninguno responde: el SIT exige navegar su propia

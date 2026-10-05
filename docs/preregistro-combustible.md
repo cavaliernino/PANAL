@@ -81,3 +81,42 @@ Una regla reemplaza a R0 solo si, **en los reservados**:
 Si ninguna cumple, R0 se queda y el resultado se publica igual: sería
 evidencia de que WorldCover no basta y de que el Catastro de CONAF hace falta
 de verdad.
+
+---
+
+## Resultado — 2026-10-05
+
+Las reglas se commitearon (`7f22406`) antes de evaluar los reservados, y los
+reservados se evaluaron una sola vez.
+
+**Desarrollo** (no decide):
+
+| incendio | R0 | R1 | R2 |
+|---|---|---|---|
+| Rocuant 2019 | 2,77 | 1,49 | 1,49 |
+| Viña 2022 | 0,67 | 0,57 | 0,67 |
+| Viña 2024 | 3,91 | 3,74 | 3,74 |
+| Ñuble–Biobío 2026 | 1,23 | 1,69 | 1,69 |
+| media geométrica | 1,73 | 1,52 | 1,58 |
+
+**Reservados** (deciden):
+
+| incendio | celdas de interfaz | R0 | R1 | R2 |
+|---|---|---|---|---|
+| Quilpué 2021 | 44 | 0,00 | 0,00 | 0,00 |
+| Biobío–Ñuble 2023 | 6.890 | 1,49 | 1,26 | 1,26 |
+
+**Decisión: R0 se queda.** Ni R1 ni R2 superan a R0 en los reservados. R1
+hace lo que se esperaba en plantaciones solo en uno de los dos incendios de
+Biobío, y en el otro empeora; además diluye el combustible en celdas urbanas
+mixtas. WorldCover no basta como sustituto del tipo de combustible.
+
+**Y lo que esto dice del índice, más allá de las reglas:** contra seis
+incendios, la amenaza supera 1,5× en dos (Valparaíso 2019 y 2024), queda
+débil en dos (Biobío 2023 y 2026) y sin habilidad en dos (Viña 2022 y
+Quilpué 2021). El cero de Quilpué es instructivo: el fuego corrió por la
+reserva Lago Peñuelas, y la interfaz fue el borde plano y suburbano de
+Quilpué (5° contra 10° de la región), donde el índice dice que un incendio
+no correría, y donde se quemaron unas siete casas. Estar cerca de una huella
+no es sufrir daño. La prueba que de verdad sirve sigue siendo la que
+requiere los registros de daño de CONAF y SENAPRED.

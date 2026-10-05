@@ -125,6 +125,14 @@ imply it ranks danger.
   — which is CONAF's Catastro, or a public land-cover proxy. Not tuned on
   four events.
 
+* **2026-10-05, two held-out fires** (`docs/preregistro-combustible.md`):
+  Quilpué 2021, 0 of 44 interface cells in the top decile (0.00×), and
+  Biobío-Ñuble 2023, 1,028 of 6,890 (1.49×). The WorldCover fuel-type
+  rules did not beat the current one and were not adopted. Across six
+  fires the hazard clears 1.5× in two. Quilpué shows the test's own limit:
+  its interface was Quilpué's flat suburban edge, ranked low, where about
+  seven houses burned. Proximity to a footprint is not damage.
+
 Consequence still has no test at all — a burn footprint cannot give it one.
 So the public map leads with hazard and labels consequence, and anything
 derived from it, as unvalidated wherever it appears.

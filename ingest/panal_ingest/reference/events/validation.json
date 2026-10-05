@@ -12,6 +12,19 @@
   "rings": 3,
   "validated": "2026-10-05"
  },
+ "quilpue2021": {
+  "event": "Quilpué, Lago Peñuelas y Las Palmas",
+  "start": "2021-01-15T12:00Z",
+  "region": "valparaiso",
+  "interface_cells": 44,
+  "in_top_decile": 0,
+  "expected": 4.4,
+  "lift": 0.0,
+  "median_pct": 47,
+  "fuel_scenes": "20201211..20210113",
+  "rings": 3,
+  "validated": "2026-10-05"
+ },
  "vina2022": {
   "event": "Viña del Mar, Nueva Esperanza y Forestal",
   "start": "2022-12-22T15:00Z",
@@ -22,6 +35,19 @@
   "lift": 0.67,
   "median_pct": 62,
   "fuel_scenes": "20221117..20221221",
+  "rings": 3,
+  "validated": "2026-10-05"
+ },
+ "biobio2023": {
+  "event": "Biobío y Ñuble: Santa Ana, Santa Juana, Nacimiento",
+  "start": "2023-02-02T12:00Z",
+  "region": "biobio",
+  "interface_cells": 6890,
+  "in_top_decile": 1028,
+  "expected": 689.0,
+  "lift": 1.49,
+  "median_pct": 64,
+  "fuel_scenes": "20221226..20230131",
   "rings": 3,
   "validated": "2026-10-05"
  },

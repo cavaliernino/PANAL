@@ -12,11 +12,12 @@ pasan tres semanas sin tocar el repo, esto es lo primero que hay que leer.
 ## En una línea
 
 Fases 0 y 1 cerradas. Fase 2 construida entera y **validada a medias, y
-menos de lo que se creía**: la mitad de amenaza da 3,91× contra Viña 2024,
-pero contra cuatro incendios funciona en dos (Valparaíso 2019 y 2024) y no
-en Viña 2022 (población densa) ni en Biobío 2026 (plantaciones). Lo que le
-falta es tipo de combustible. La consecuencia sigue sin forma de validarse
-sin datos de CONAF.
+menos de lo que se creía**: contra seis incendios, la amenaza supera 1,5×
+en dos (Valparaíso 2019 y 2024), queda débil en dos (Biobío 2023 y 2026) y
+sin habilidad en dos (Viña 2022, Quilpué 2021). Le falta tipo de
+combustible: WorldCover no sirvió como sustituto (pre-registro, 5-oct), así
+que queda el Catastro de CONAF. La consecuencia sigue sin forma de
+validarse sin datos de CONAF.
 
 ---
 
@@ -132,14 +133,16 @@ no volver a abrir cada una:
 - **El bbox de una región con islas es enorme.** Valparaíso llega a Rapa Nui
   (-109°). El combustible ya busca por cajas de 1°; `senapred.fetch` todavía
   usa el bbox entero.
-- **La amenaza no generaliza.** Validada el 5-oct contra cuatro incendios
-  con combustible anterior: Rocuant 2019 2,77×, Viña 2022 **0,67×**, Viña
-  2024 3,91×, Ñuble–Biobío 2026 **1,23×**. Falla donde el fuego corre por
+- **La amenaza no generaliza.** Validada el 5-oct contra seis incendios
+  con combustible anterior: Rocuant 2019 2,77×, Quilpué 2021 **0,00×**,
+  Viña 2022 **0,67×**, Biobío 2023 1,49×, Viña 2024 3,91×, Ñuble–Biobío
+  2026 **1,23×**. Falla donde el fuego corre por
   población densa (en Viña 2022 la interfaz tiene 241 viviendas por celda:
   las casas son el combustible) y por plantaciones (el término de sequedad
   NDMI lee el dosel verde como húmedo). Ninguna fórmula gana en los cuatro;
-  lo que falta es **tipo de combustible**. No se ajustó nada con cuatro
-  eventos. Detalle en `ingest/scripts/validate_wui.py`.
+  lo que falta es **tipo de combustible**. ESA WorldCover se probó como
+  sustituto con un pre-registro y dos incendios reservados, y no mejoró
+  nada: [`preregistro-combustible.md`](preregistro-combustible.md).
 - **Al sur de 50°S GLO-30 cambia el espaciado en longitud** (1,5″ y más) y
   `slope_degrees` supone 1″: la pendiente este-oeste saldría inflada. No
   afecta mientras el índice cubra solo Valparaíso.
@@ -163,7 +166,7 @@ no volver a abrir cada una:
    — ¿la cadena sigue viva?
 2. `git log --oneline -10` — qué pasó al final
 3. Leer este archivo y [`alianzas.md`](alianzas.md)
-4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 95 tests
+4. `cd ingest && ../.venv/bin/python -m pytest tests -q` — 103 tests
 5. `cd engine && ../.venv/bin/python -m pytest tests -q` — 21 tests
 
 Si algún test falla, empezá por ahí: están escritos para fijar decisiones, no
@@ -236,8 +239,10 @@ Acordado el 5-oct, además:
    su edad y en cuántos barridos apareció; si el último no la vio, se dibuja
    hueca. Los barridos se guardan en `data/cache/goes_recent/`, así que cada
    corrida baja solo el nuevo (166 MB de pico, como antes).
-5. **Combustible por celda completa**, no un píxel central, y un compuesto
-   robusto entre escenas en vez de "gana la más seca".
+5. **Tipo de combustible**: ESA WorldCover probado y descartado el 5-oct
+   con pre-registro. Queda el Catastro de CONAF. El muestreo (un píxel
+   central, gana la más seca) sigue pendiente, pero con seis incendios en
+   la mano ya no es lo que más pesa.
 6. ~~**Validar con más incendios**~~ — hecho el 5-oct, y cambió el
    diagnóstico: funciona en 2 de 4. Las huellas quedan en
    `ingest/panal_ingest/reference/events/` y se re-validan con
