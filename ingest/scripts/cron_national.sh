@@ -12,6 +12,13 @@
 # Logs to data/cron_national.log, kept under 1 MB. Failures stay in the log
 # instead of mailing root, and the previous snapshot survives untouched
 # because the write is atomic.
+#
+# Dead-man's switch: if ~/.config/panal/healthcheck_url holds a
+# healthchecks.io ping URL, every run reports its exit code there, and
+# healthchecks.io mails when a run fails or when runs stop arriving. A
+# chain that dies silently is the failure the page cannot show, because
+# nobody is looking at the page. The URL stays on the server, out of git:
+# anyone holding it can mark the check healthy.
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -28,5 +35,12 @@ fi
   cd "$ROOT/ingest" || exit 1
   "$ROOT/.venv/bin/python" scripts/build_national.py \
       -o "$ROOT/web/data/national.json" 2>&1
-  echo "exit=$?"
+  status=$?
+  echo "exit=$status"
+
+  HC="${PANAL_HEALTHCHECK_FILE:-$HOME/.config/panal/healthcheck_url}"
+  if [ -s "$HC" ]; then
+    curl -fsS -m 10 --retry 3 -o /dev/null "$(head -n1 "$HC")/$status" \
+      || echo "healthcheck: no se pudo avisar"
+  fi
 } >> "$LOG" 2>&1

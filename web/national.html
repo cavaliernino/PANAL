@@ -269,13 +269,17 @@ function layers() {
 function quiet(total) {
   const q = $("quiet");
   const stale = ageMin == null || ageMin > STALE_MIN;
-  q.hidden = total > 0 && !stale;
+  q.hidden = total > 0 && !stale && DATA.viirs.ok !== false;
   q.className = "quiet" + (stale ? " stale" : "");
   if (stale) {
     q.innerHTML = `<b>Datos de hace ${fmtAge(ageMin)}.</b> ` +
       (offline ? "Sin conexión. " : "La cadena no se actualizó. ") +
       "Lo que haya pasado después no está en este mapa: que no aparezcan " +
       "celdas no significa que no haya fuego.";
+  } else if (DATA.viirs.ok === false) {
+    q.innerHTML = "<b>VIIRS no respondió</b> en esta corrida" +
+      (DATA.goes ? "" : ", y tampoco GOES") + ". Sin esa fuente, que no " +
+      "aparezcan celdas no significa que no haya fuego.";
   } else if (!DATA.goes) {
     q.innerHTML = "<b>Sin detecciones VIIRS, y sin barrido GOES</b> en esta " +
       "corrida: el satélite geoestacionario no respondió. Sin GOES no hay " +

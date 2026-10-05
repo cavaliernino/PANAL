@@ -72,18 +72,24 @@ def collect_viirs(now):
     import h3
     import pandas as pd
 
-    frames = []
+    frames, failed = [], []
     for product in VIIRS_PRODUCTS:
         try:
             frames.append(viirs.fetch_recent(product, VIIRS_WINDOW))
         except Exception as exc:                        # noqa: BLE001
             print(f"  ! {product}: {exc}", file=sys.stderr)
+            failed.append(product)
+    # FIRMS not answering must not look like FIRMS seeing nothing. An empty
+    # list is what a quiet week produces too, and the page would call it
+    # "sin detecciones activas".
     if not frames:
-        return {"window": VIIRS_WINDOW, "cells": [], "halo": []}
+        return {"window": VIIRS_WINDOW, "ok": False, "failed": failed,
+                "cells": [], "halo": []}
 
     df = viirs.to_h3(pd.concat(frames, ignore_index=True))
     if len(df) == 0:
-        return {"window": VIIRS_WINDOW, "cells": [], "halo": []}
+        return {"window": VIIRS_WINDOW, "ok": True, "failed": failed,
+                "cells": [], "halo": []}
 
     # Flag known fixed industrial sources. Flag, never drop: a real fire can
     # start at a mine, and a silent filter there would build a blind spot
@@ -121,6 +127,8 @@ def collect_viirs(now):
 
     return {
         "window": VIIRS_WINDOW,
+        "ok": True,
+        "failed": failed,
         "industrial_cells": sum(1 for c in cells.values() if c["ind"]),
         "oldest_min": max(c["age"] for c in cells.values()),
         "newest_min": min(c["age"] for c in cells.values()),
@@ -181,6 +189,12 @@ def main():
     print(f"  VIIRS {len(v['cells']):>4} celdas r9 en {VIIRS_WINDOW}"
           + (f", la más reciente hace {v['newest_min']} min" if v["cells"] else ""),
           file=sys.stderr)
+    if not g and not v["ok"]:
+        # Nothing observed at all. Exit non-zero so the dead-man's switch
+        # in cron_national.sh reports it: the page shows the failure, but
+        # nobody is looking at the page.
+        print("  ! ni GOES ni VIIRS respondieron", file=sys.stderr)
+        sys.exit(2)
     if not ng and not v["cells"]:
         print("  sin detecciones en territorio chileno — estado normal "
               "fuera de temporada", file=sys.stderr)
