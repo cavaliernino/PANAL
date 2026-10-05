@@ -41,6 +41,11 @@ def main():
     p.add_argument("-o", "--out", required=True)
     p.add_argument("--fuel-year", type=int, default=2026,
                    help="dry season to read fuel from (default 2026)")
+    p.add_argument("--fuel-window", nargs=2, metavar=("MM-DD", "MM-DD"),
+                   default=list(fuel.DEFAULT_WINDOW),
+                   help="días de esa temporada (default feb–mar). Para "
+                        "validar contra un incendio, una ventana que termine "
+                        "antes del incendio: ver validate_wui.py")
     p.add_argument("--no-fuel", action="store_true")
     p.add_argument("--no-egress", action="store_true")
     p.add_argument("--with-senapred", action="store_true",
@@ -86,11 +91,16 @@ def main():
         df["fuel_factor"] = None
         print("combustible: omitido", file=sys.stderr)
     else:
-        print(f"combustible Sentinel-2 ({a.fuel_year})…", file=sys.stderr)
-        f = fuel.cells_fuel(cells, year=a.fuel_year)
+        print(f"combustible Sentinel-2 ({a.fuel_year}, "
+              f"{a.fuel_window[0]}..{a.fuel_window[1]})…", file=sys.stderr)
+        f = fuel.cells_fuel(cells, year=a.fuel_year,
+                            window=tuple(a.fuel_window))
         df["ndvi"] = [f.get(c, {}).get("ndvi") for c in cells]
         df["ndmi"] = [f.get(c, {}).get("ndmi") for c in cells]
         df["fuel_factor"] = [f.get(c, {}).get("fuel_factor") for c in cells]
+        # Which scene each value came from, so a validation can check that
+        # the fuel it ranks by predates the fire it is tested against.
+        df["fuel_scene"] = [f.get(c, {}).get("scene") for c in cells]
         got = df["fuel_factor"].notna().sum()
         print(f"  con combustible: {got:,} de {len(df):,} "
               f"({100 * got / len(df):.1f}%)", file=sys.stderr)

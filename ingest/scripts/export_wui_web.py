@@ -52,6 +52,23 @@ SOURCES = {
 
 SMALL = {"de", "del", "la", "las", "los", "y", "el"}
 
+MESES = "ene feb mar abr may jun jul ago sep oct nov dic".split()
+
+
+def _fuel_source(scenes) -> str | None:
+    """The dates the fuel was actually observed, from the build itself.
+
+    The window asked for is not the window received — a search capped at 40
+    scenes returned only the last two weeks of a February–March request —
+    so the page states what the scenes say rather than what was requested.
+    """
+    days = sorted({str(s).split("_")[2] for s in scenes if isinstance(s, str)})
+    if not days:
+        return None
+    a, b = (dt.date(int(d[:4]), int(d[4:6]), int(d[6:])) for d in (days[0], days[-1]))
+    fmt = lambda d: f"{d.day} {MESES[d.month - 1]}"
+    return f"Sentinel-2, escenas del {fmt(a)} al {fmt(b)} {b.year}"
+
 
 def _nombre(s: str) -> str:
     words = str(s).lower().split()
@@ -150,6 +167,9 @@ def main():
             "consequence_weights": {k: round(v / t, 3) for k, v in terms.items()},
             "sources": {
                 **SOURCES,
+                **({"combustible": _fuel_source(s["fuel_scene"])}
+                   if "fuel_scene" in s.columns
+                   and _fuel_source(s["fuel_scene"]) else {}),
                 "egreso": "OpenStreetMap, extracto " + dt.date.fromtimestamp(
                     OSM.stat().st_mtime).isoformat() if OSM.exists()
                     else "OpenStreetMap",

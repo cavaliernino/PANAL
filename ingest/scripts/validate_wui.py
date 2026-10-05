@@ -65,6 +65,23 @@ imply it ranks danger.
   against a full rebuild with the current weights. Consequence weights moved
   on 30 September and hazard does not use them, as it should not.
 
+* **2026-10-05, with fuel from before the fire.** Every run above ranked
+  the 2024 fire by fuel from February–March **2026** — the landscape the
+  fire left, not the one it found. Re-scored with the same slope and census
+  and only the fuel date changed:
+
+  | fuel from | in top decile | lift | median pct |
+  |---|---|---|---|
+  | Jan 2024, up to the day before | 47 | **4.09×** | p78 |
+  | Feb–Mar 2023, the season before | 40 | 3.48× | p83 |
+  | Feb–Mar 2024, after the fire | 41 | 3.57× | p74 |
+  | Feb–Mar 2026, as published | 44 | 3.83× | p77 |
+
+  The hazard half survives: the post-fire landscape did not manufacture the
+  result. But the figure worth quoting is the pre-fire one, so builds now
+  record each cell's fuel scene and this script checks it against the
+  event date.
+
 Consequence still has no test at all — a burn footprint cannot give it one.
 So the public map leads with hazard and labels consequence, and anything
 derived from it, as unvalidated wherever it appears.
@@ -96,6 +113,7 @@ def main():
     burned = {c["h"] for pas in replay.get("viirs", []) for c in pas["cells"]}
     if not burned:
         sys.exit("el replay no trae celdas VIIRS")
+    event_day = replay["frames"][0]["t"][:10].replace("-", "")
 
     zone: set[str] = set()
     for b in burned:
@@ -116,6 +134,24 @@ def main():
     pct = [100.0 * (vals < v).mean() for v in near["wui"]]
     print(f"\npercentil del índice en la interfaz: "
           f"mediana p{np.median(pct):.0f}")
+
+    # Fuel observed after the event describes the landscape the fire left.
+    # The lift may survive it (it did, 2026-10-05) but it is not a test.
+    if "fuel_scene" in wui.columns:
+        day = wui["fuel_scene"].str.split("_").str[2]
+        late = day.notna() & (day >= event_day)
+        late_int = int((late & wui["interface"]).sum())
+        seen = day.dropna()
+        print(f"\ncombustible: escenas {seen.min()}..{seen.max()}, "
+              f"evento {event_day}")
+        if late_int:
+            print(f"  ! {late_int} de {n_int} celdas de la interfaz con "
+                  "combustible posterior al evento: esto no es una "
+                  "validación. Rehacer con --fuel-year/--fuel-window "
+                  "anteriores al incendio.")
+    else:
+        print("\n! el build no registra la escena del combustible: no se "
+              "puede descartar que sea posterior al evento")
 
     expected = n_int * 0.1
     print(f"\n{'ordenar por':<22}{'en decil sup':>13}{'lift':>8}")
