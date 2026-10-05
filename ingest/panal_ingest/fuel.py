@@ -45,6 +45,7 @@ module — and a cheap one to ask for, since they publish it already.
 from __future__ import annotations
 
 import json
+import math
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -67,23 +68,78 @@ SCL_BAD = frozenset({0, 1, 3, 8, 9, 10})
 OVERVIEW_DIVISOR = 16
 
 
+# Scenes kept per Sentinel-2 tile: the least cloudy across the whole window.
+PER_TILE = 4
+
+# Safety stop for paging. A 1° box over a two-month window is one or two
+# pages; this only matters if the API ever stops returning a last page.
+MAX_PAGES = 40
+
+
 def search(bbox, year: int, window=DEFAULT_WINDOW, max_cloud: float = 20.0,
-           limit: int = 40):
-    """Least-cloudy Sentinel-2 scenes over a bbox in the dry-season window."""
+           page: int = 100):
+    """Every Sentinel-2 scene over a bbox in the window, least cloudy first.
+
+    The API answers newest first, a page at a time. A first version read one
+    page of 40 and took it for the window: over Valparaíso a February–March
+    request came back as 18–30 March, and whether a cell got any fuel at all
+    depended on which tiles happened to have flown last. So every page is
+    read, and choosing among them is `select`'s job.
+
+    A window that crosses the new year — `("12-01", "01-13")` — starts in
+    `year - 1`: the fire season is named for the year it ends in.
+    """
     start, end = window
+    first = year - 1 if start > end else year
     body = {
         "collections": [COLLECTION],
         "bbox": list(bbox),
-        "datetime": f"{year}-{start}T00:00:00Z/{year}-{end}T23:59:59Z",
+        "datetime": f"{first}-{start}T00:00:00Z/{year}-{end}T23:59:59Z",
         "query": {"eo:cloud_cover": {"lt": max_cloud}},
-        "limit": limit,
+        "limit": page,
     }
-    req = Request(STAC, data=json.dumps(body).encode(),
-                  headers={"Content-Type": "application/json"})
-    with urlopen(req, timeout=90) as resp:
-        data = json.load(resp)
-    feats = data.get("features", [])
+    feats = []
+    for _ in range(MAX_PAGES):
+        req = Request(STAC, data=json.dumps(body).encode(),
+                      headers={"Content-Type": "application/json"})
+        with urlopen(req, timeout=90) as resp:
+            data = json.load(resp)
+        got = data.get("features", [])
+        feats.extend(got)
+        nxt = next((ln for ln in data.get("links", [])
+                    if ln.get("rel") == "next" and ln.get("body")), None)
+        if not got or nxt is None:
+            break
+        body = nxt["body"]
     return sorted(feats, key=lambda f: f["properties"].get("eo:cloud_cover", 100))
+
+
+def _tile(feature) -> str:
+    code = feature["properties"].get("grid:code")
+    return code or feature["id"].split("_")[1]
+
+
+def select(features, lats, lons, per_tile: int = PER_TILE):
+    """The scenes worth reading: ones that cover a cell, least cloudy per tile.
+
+    Choosing per tile rather than overall keeps one clear tile from taking
+    every slot while its neighbour gets nothing, and a scene whose footprint
+    holds no cell — most of what a regional bbox returns — is never read.
+    """
+    lats, lons = np.asarray(lats), np.asarray(lons)
+    seen, kept = set(), {}
+    for f in sorted(features, key=lambda f: f["properties"].get("eo:cloud_cover", 100)):
+        if f["id"] in seen:
+            continue
+        seen.add(f["id"])
+        w, s, e, n = f["bbox"]
+        if not ((lons >= w) & (lons <= e) & (lats >= s) & (lats <= n)).any():
+            continue
+        tile = kept.setdefault(_tile(f), [])
+        if len(tile) < per_tile:
+            tile.append(f)
+    return sorted((f for t in kept.values() for f in t),
+                  key=lambda f: f["properties"].get("eo:cloud_cover", 100))
 
 
 def _read_scaled(url: str, divisor: int):
@@ -167,11 +223,18 @@ def cells_fuel(cells, year: int, window=DEFAULT_WINDOW, max_cloud: float = 20.0,
         return {}
 
     lats, lons = zip(*(h3.cell_to_latlng(c) for c in cells))
-    bbox = (min(lons), min(lats), max(lons), max(lats))
-    scenes = search(bbox, year, window, max_cloud)
+    # One search per 1° box that holds cells, never one over their extent:
+    # a region with islands spans an ocean — Valparaíso's box reaches Rapa
+    # Nui at -109° — and its scenes would crowd out the ones that matter.
+    boxes = sorted({(math.floor(la), math.floor(lo)) for la, lo in zip(lats, lons)})
+    found = []
+    for la, lo in boxes:
+        found += search((lo, la, lo + 1, la + 1), year, window, max_cloud)
+    scenes = select(found, lats, lons)
     if progress:
-        print(f"  {len(scenes)} escenas Sentinel-2 en {year} "
-              f"({window[0]}..{window[1]}, nubes <{max_cloud:.0f}%)", flush=True)
+        print(f"  {len(scenes)} escenas Sentinel-2 de {len({f['id'] for f in found})} "
+              f"en {len(boxes)} cajas de 1° ({year}, {window[0]}..{window[1]}, "
+              f"nubes <{max_cloud:.0f}%, hasta {PER_TILE} por tesela)", flush=True)
     if not scenes:
         return {}
 
