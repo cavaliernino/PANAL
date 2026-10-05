@@ -201,9 +201,48 @@ def fuel_factor(ndvi: float, ndmi: float) -> float:
     """
     if ndvi is None or ndmi is None or not np.isfinite(ndvi) or not np.isfinite(ndmi):
         return float("nan")
-    biomass = np.clip((ndvi - 0.15) / (0.60 - 0.15), 0.0, 1.0)
-    dryness = np.clip((0.35 - ndmi) / (0.35 - (-0.10)), 0.0, 1.0)
-    return float(biomass * dryness)
+    return float(biomass(ndvi) * dryness(ndmi))
+
+
+def biomass(ndvi) -> float:
+    """0 at bare ground (NDVI 0.15), 1 at full cover (0.6)."""
+    return float(np.clip((ndvi - 0.15) / (0.60 - 0.15), 0.0, 1.0))
+
+
+def dryness(ndmi) -> float:
+    """0 at moist (NDMI 0.35), 1 at cured (-0.1)."""
+    return float(np.clip((0.35 - ndmi) / (0.35 - (-0.10)), 0.0, 1.0))
+
+
+# Vegetation other than tree cover, by WorldCover class (landcover.CLASSES).
+OTHER_VEGETATION = ("matorral", "pradera", "cultivo", "humedal")
+
+
+def fuel_by_type(ndvi, ndmi, lc: dict | None, frac_precario: float = 0.0,
+                 rule: str = "R1") -> float:
+    """The rules fixed in docs/preregistro-combustible.md, and only those.
+
+    R1: tree cover counts its biomass without the dryness term — a green
+    pine or eucalyptus canopy burns in a heat wave whatever NDMI says — and
+    other vegetation keeps biomass x dryness. Built-up, bare, water and
+    snow carry none.
+    R2: R1, plus built-up area counted as fuel in proportion to precarious
+    housing: in a camp, wood and mediaguas are what burns.
+
+    None where either the imagery or the land cover is missing: unknown,
+    not low.
+    """
+    if (lc is None or ndvi is None or ndmi is None
+            or not np.isfinite(ndvi) or not np.isfinite(ndmi)):
+        return float("nan")
+    b, s = biomass(ndvi), dryness(ndmi)
+    veg = sum(lc.get(k, 0.0) for k in OTHER_VEGETATION)
+    f = lc.get("arboles", 0.0) * b + veg * b * s
+    if rule == "R2":
+        f += lc.get("construido", 0.0) * float(frac_precario or 0.0)
+    elif rule != "R1":
+        raise ValueError(f"regla no pre-registrada: {rule!r}")
+    return float(min(1.0, f))
 
 
 def cells_fuel(cells, year: int, window=DEFAULT_WINDOW, max_cloud: float = 20.0,

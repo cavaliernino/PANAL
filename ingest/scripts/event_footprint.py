@@ -55,6 +55,19 @@ PRESETS = {
         start="2022-12-22T15:00", end="2022-12-23T15:00",
         bbox=(-71.62, -33.10, -71.42, -32.95),
         note="Entre 200 y 500 viviendas según las cifras de esos días."),
+    # Held out by docs/preregistro-combustible.md: chosen by date and place
+    # before any fuel-type rule was written or any of these was scored.
+    "quilpue2021": dict(
+        event="Quilpué, Lago Peñuelas y Las Palmas", region="valparaiso",
+        start="2021-01-15T12:00", end="2021-01-17T12:00",
+        bbox=(-71.60, -33.20, -71.30, -33.02),
+        note="Reservado. 2.630 ha; 25.000 personas evacuadas."),
+    "biobio2023": dict(
+        event="Biobío y Ñuble: Santa Ana, Santa Juana, Nacimiento",
+        region="biobio",
+        start="2023-02-02T12:00", end="2023-02-07T12:00",
+        bbox=(-73.30, -37.80, -71.90, -36.20),
+        note="Reservado. 64.500 ha el incendio Santa Ana; 873 viviendas en Biobío."),
     "biobio2026": dict(
         event="Ñuble y Biobío: Ránquil, Penco-Lirquén, Florida-Bulnes",
         region="biobio",

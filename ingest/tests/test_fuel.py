@@ -99,3 +99,40 @@ def test_a_window_across_new_year_starts_the_year_before(monkeypatch):
 ])
 def test_fuel_factor_needs_biomass_and_dryness(ndvi, ndmi, expect):
     assert fuel.fuel_factor(ndvi, ndmi) == pytest.approx(expect)
+
+
+# The pre-registered fuel-type rules (docs/preregistro-combustible.md).
+
+TREES = {"arboles": 1.0}
+SCRUB = {"matorral": 1.0}
+CAMP = {"construido": 1.0}
+
+
+def test_r1_does_not_punish_a_green_canopy_for_being_green():
+    """Plantations burn in a heat wave whatever NDMI says."""
+    canopy = (0.75, 0.30)                    # dense, moist-reading
+    assert fuel.fuel_factor(*canopy) < 0.2
+    assert fuel.fuel_by_type(*canopy, TREES) == pytest.approx(1.0)
+
+
+def test_r1_leaves_scrub_as_it_was():
+    """Where the index already worked, the rule must change nothing."""
+    for ndvi, ndmi in [(0.4, -0.05), (0.6, 0.1), (0.2, 0.3)]:
+        assert fuel.fuel_by_type(ndvi, ndmi, SCRUB) == pytest.approx(
+            fuel.fuel_factor(ndvi, ndmi))
+
+
+def test_built_up_carries_no_fuel_unless_r2_and_precarious():
+    assert fuel.fuel_by_type(0.5, 0.0, CAMP) == 0.0
+    assert fuel.fuel_by_type(0.5, 0.0, CAMP, frac_precario=0.0, rule="R2") == 0.0
+    assert fuel.fuel_by_type(0.5, 0.0, CAMP, frac_precario=0.6, rule="R2") == pytest.approx(0.6)
+
+
+def test_missing_land_cover_is_unknown_not_low():
+    import math
+    assert math.isnan(fuel.fuel_by_type(0.5, 0.0, None))
+
+
+def test_only_pre_registered_rules_exist():
+    with pytest.raises(ValueError):
+        fuel.fuel_by_type(0.5, 0.0, SCRUB, rule="R3")
