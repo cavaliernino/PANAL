@@ -1,0 +1,45 @@
+{
+ "meta": {
+  "preset": "rocuant2019",
+  "event": "Valparaíso, cerros Rocuant y San Roque",
+  "region": "valparaiso",
+  "start": "2019-12-24T15:00Z",
+  "end": "2019-12-25T15:00Z",
+  "bbox": [
+   -71.75,
+   -33.15,
+   -71.45,
+   -32.95
+  ],
+  "products": [
+   "VIIRS_SNPP_SP",
+   "VIIRS_NOAA20_SP"
+  ],
+  "detections": 37,
+  "note": "316 viviendas afectadas según el catastro del Serviu."
+ },
+ "cells": [
+  "89b2c409843ffff",
+  "89b2c40984fffff",
+  "89b2c40986bffff",
+  "89b2c40987bffff",
+  "89b2c409a07ffff",
+  "89b2c409a17ffff",
+  "89b2c409a23ffff",
+  "89b2c409a2fffff",
+  "89b2c409a33ffff",
+  "89b2c409a37ffff",
+  "89b2c409a3bffff",
+  "89b2c409a4fffff",
+  "89b2c409a6bffff",
+  "89b2c409a77ffff",
+  "89b2c409a97ffff",
+  "89b2c409aa3ffff",
+  "89b2c409aa7ffff",
+  "89b2c409aafffff",
+  "89b2c409ab3ffff",
+  "89b2c409ab7ffff",
+  "89b2c409abbffff",
+  "89b2c409e2fffff"
+ ]
+}

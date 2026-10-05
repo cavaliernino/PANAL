@@ -5,6 +5,11 @@
         --wui ../data/processed/wui_valparaiso.parquet \
         --replay ../web/data/vina2024.json
 
+    # any fire with a footprint from event_footprint.py
+    python scripts/validate_wui.py \
+        --wui ../data/processed/wui_biobio_pre2026.parquet \
+        --event panal_ingest/reference/events/biobio2026.json
+
 Ground rule 5 says validate before shipping, and publish the finding either
 way. This script exists so the negative result below can be re-run rather
 than taken on trust.
@@ -89,6 +94,37 @@ imply it ranks danger.
   **3.91×**, 45 of 115, median p84. The same build with 2026 fuel: 3.30×.
   The table above was measured before the search fix.
 
+* **2026-10-05, four fires.** One fire is one sample of cells that sit
+  next to each other, so three more were added (`event_footprint.py`), each
+  with fuel from the five weeks before it:
+
+  | fire | interface cells | in top decile | lift | median |
+  |---|---|---|---|---|
+  | Valparaíso, Rocuant–San Roque, Dec 2019 | 47 | 13 | 2.77× | p81 |
+  | Viña del Mar, Nueva Esperanza, Dec 2022 | 105 | 7 | **0.67×** | p62 |
+  | Viña del Mar–Quilpué, Feb 2024 | 115 | 45 | 3.91× | p84 |
+  | Ñuble–Biobío complex, Jan 2026 | 1,664 | 204 | **1.23×** | p59 |
+
+  The pattern holds at k = 0, 1 and 3 rings. **The hazard half works in
+  two fires of four**, the two that look like what it was built for: fire
+  running out of cured scrub on steep ground into sparse settlement (2024
+  interface cells hold a median 1.9 dwellings, 20.7° slope, fuel 0.45).
+
+  It fails two ways, and both are measurement, not tuning:
+
+  - **Dense settlement.** The 2022 fire burned through Nueva Esperanza's
+    *tomas*: a median 241 dwellings per interface cell. There the houses
+    are the fuel, and a cell's NDVI is diluted by roofs.
+  - **Plantations.** In Biobío the interface reads NDVI 0.61 yet fuel 0.26,
+    under the region's 0.32: the NDMI dryness term scores a green pine or
+    eucalyptus canopy as moist, and those burn in a heat wave regardless.
+
+  Biomass alone would lift Biobío to 1.71× and Viña 2022 to 0.95× while
+  dropping Valparaíso 2019 and 2024 to 2.13× and 3.39×. No one formula
+  wins: what is missing is fuel *type* — scrub, grass, plantation, built-up
+  — which is CONAF's Catastro, or a public land-cover proxy. Not tuned on
+  four events.
+
 Consequence still has no test at all — a burn footprint cannot give it one.
 So the public map leads with hazard and labels consequence, and anything
 derived from it, as unvalidated wherever it appears.
@@ -110,17 +146,25 @@ def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--wui", required=True)
-    p.add_argument("--replay", required=True)
+    src = p.add_mutually_exclusive_group(required=True)
+    src.add_argument("--replay", help="un replay de build_replay.py")
+    src.add_argument("--event", help="una huella de event_footprint.py")
     p.add_argument("--rings", type=int, default=3,
                    help="how far out the interface zone reaches (cells)")
     a = p.parse_args()
 
     wui = pd.read_parquet(a.wui)
-    replay = json.loads(Path(a.replay).read_text())
-    burned = {c["h"] for pas in replay.get("viirs", []) for c in pas["cells"]}
+    if a.replay:
+        replay = json.loads(Path(a.replay).read_text())
+        burned = {c["h"] for pas in replay.get("viirs", []) for c in pas["cells"]}
+        event_day = replay["frames"][0]["t"][:10].replace("-", "")
+    else:
+        event = json.loads(Path(a.event).read_text())
+        burned = set(event["cells"])
+        event_day = event["meta"]["start"][:10].replace("-", "")
+        print(f"evento: {event['meta']['event']} ({event['meta']['start'][:10]})")
     if not burned:
-        sys.exit("el replay no trae celdas VIIRS")
-    event_day = replay["frames"][0]["t"][:10].replace("-", "")
+        sys.exit("el evento no trae celdas VIIRS")
 
     zone: set[str] = set()
     for b in burned:

@@ -1,0 +1,40 @@
+{
+ "meta": {
+  "preset": "vina2022",
+  "event": "Viña del Mar, Nueva Esperanza y Forestal",
+  "region": "valparaiso",
+  "start": "2022-12-22T15:00Z",
+  "end": "2022-12-23T15:00Z",
+  "bbox": [
+   -71.62,
+   -33.1,
+   -71.42,
+   -32.95
+  ],
+  "products": [
+   "VIIRS_SNPP_SP",
+   "VIIRS_NOAA20_SP"
+  ],
+  "detections": 25,
+  "note": "Entre 200 y 500 viviendas según las cifras de esos días."
+ },
+ "cells": [
+  "89b2c408063ffff",
+  "89b2c408067ffff",
+  "89b2c40806fffff",
+  "89b2c408307ffff",
+  "89b2c40830bffff",
+  "89b2c40830fffff",
+  "89b2c408317ffff",
+  "89b2c40831bffff",
+  "89b2c40833bffff",
+  "89b2c408367ffff",
+  "89b2c408373ffff",
+  "89b2c408383ffff",
+  "89b2c40838fffff",
+  "89b2c408393ffff",
+  "89b2c40839bffff",
+  "89b2c4083c7ffff",
+  "89b2c4083d7ffff"
+ ]
+}
