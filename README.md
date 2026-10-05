@@ -54,15 +54,16 @@ published to a public bucket about a minute after each scan closes.
 VIIRS at 375 m for precision. A cron refreshes the national snapshot on
 the satellite's own cadence.
 
-**Public, and installable.** https://panal.ninobozzi.cl — live national
-detection (`national.html`, the start page) and the 2 February 2024 Viña
-del Mar fire replayed at native cadence (`index.html`), installable as one
-app from a phone's browser. See [`web/`](web) and [`deploy/`](deploy).
+**Public, and installable.** https://panal.ninobozzi.cl — three views that
+install as one app from a phone's browser: live national detection
+(`national.html`, the start page), the wildland-urban exposure map for the
+Región de Valparaíso (`wui.html`), and the 2 February 2024 Viña del Mar
+fire replayed at native cadence (`index.html`). See [`web/`](web) and
+[`deploy/`](deploy).
 
-The wildland-urban exposure map for the Región de Valparaíso (`wui.html`)
-is a **research page, out of the navigation** since 5 October 2026: tested
-against six fires, its hazard ranking clears chance in two. It stays up
-for the team and the CONAF/SENAPRED conversation, saying so at the top.
+The exposure map says at the top that it is **research, not a risk
+product**: tested against six fires, its hazard ranking clears chance in
+two, and the page lists all six.
 
 **An industrial anomaly mask.** 63 cells across 12 sites — El Teniente,
 Chuquicamata, Ventanas, Coloso. In a 24-hour window, 11 of 29 detections

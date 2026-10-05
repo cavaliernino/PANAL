@@ -13,7 +13,7 @@ python3 -m http.server 8000 --directory web
 |---|---|
 | `index.html` | The Viña del Mar 2024 replay — the demo |
 | `national.html` | Live national detection — the product, and the app's start page |
-| `wui.html` | Wildland-urban exposure, Región de Valparaíso — a research page, out of the navigation (clears chance in two fires of six) |
+| `wui.html` | Wildland-urban exposure, Región de Valparaíso — public, labelled as research (clears chance in two fires of six) |
 | `brujula.html` | Compass measurement tool, out of the navigation |
 | `panal.js` | Shared encoding rules, so the calibrated ramp cannot drift |
 | `sw.js`, `manifest.json`, `icons/` | The installable app (PWA) |
