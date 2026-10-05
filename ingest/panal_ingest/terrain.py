@@ -86,6 +86,59 @@ def fetch_tile(name: str) -> Path | None:
         return None
 
 
+def tiles_touching(lon_min, lat_min, lon_max, lat_max) -> list[str]:
+    """Every tile a small box overlaps — one, unless it straddles an edge."""
+    return [tile_name(la, lo)
+            for la in range(math.floor(lat_min), math.floor(lat_max) + 1)
+            for lo in range(math.floor(lon_min), math.floor(lon_max) + 1)]
+
+
+def _read_window(names: list[str], bounds, opened: dict) -> np.ndarray | None:
+    """Elevation over `bounds`, from every tile it touches. NaN where none.
+
+    GLO-30 tiles declare no nodata, so a boundless read past a tile's edge
+    used to fill with 0 m. A cell straddling a 1° line then saw a cliff down
+    to sea level that is not there: measured over Valparaíso, the 268 cells
+    on a tile edge — the -33° parallel runs through Reñaca and Viña — came
+    out at a median 22.3° against 9.8° for the rest, with 374 m of relief
+    against 70. Eight of them were among the 63 priority cells.
+
+    So each tile fills what it covers and anything left is NaN, which the
+    caller fills with the cell's own mean: a gap reads flat, never as a
+    cliff. `rasterio.merge` was tried first and is not a fix — on real tiles
+    it still drops the last row of some windows to 0.
+    """
+    import rasterio
+    from rasterio.windows import from_bounds
+
+    out = None
+    for name in names:
+        if name not in opened:
+            path = fetch_tile(name)
+            opened[name] = rasterio.open(path) if path is not None else None
+        ds = opened[name]
+        if ds is None:
+            continue
+        win = from_bounds(*bounds, ds.transform).round_offsets().round_lengths()
+        inside = (win.col_off >= 0 and win.row_off >= 0
+                  and win.col_off + win.width <= ds.width
+                  and win.row_off + win.height <= ds.height)
+        if inside:
+            # A boundless read builds a virtual raster on every call, which
+            # made it the bulk of the cost; most windows never need it.
+            a = ds.read(1, window=win, out_dtype="float32")
+        else:
+            a = ds.read(1, window=win, boundless=True, fill_value=np.nan,
+                        out_dtype="float32")
+        if ds.nodata is not None:
+            a = np.where(a == ds.nodata, np.nan, a)
+        if out is None:
+            out = a
+        elif a.shape == out.shape:
+            out = np.where(np.isnan(out), a, out)
+    return out
+
+
 def _smooth3(a: np.ndarray) -> np.ndarray:
     """3×3 mean. Suppresses building edges before the gradient sees them."""
     from numpy.lib.stride_tricks import sliding_window_view
@@ -118,18 +171,18 @@ def slope_degrees(elev: np.ndarray, lat: float, smooth: bool = True):
 def cells_terrain(cells, res_hint: int = 9) -> dict:
     """Slope and elevation statistics for a list of H3 cells.
 
-    Returns `{h3: {"elev_m", "slope_deg", "slope_max_deg", "aspect_deg"}}`.
+    Returns `{h3: {"elev_m", "slope_deg", "slope_max_deg", "relief_m"}}`.
     Cells with no elevation data — open ocean — are omitted rather than
     reported as flat.
     """
     import h3
-    import rasterio
-    from rasterio.windows import from_bounds
 
     if not cells:
         return {}
 
-    # Group cells by the tile that contains them, so each tile opens once.
+    # Group cells by the tile that contains them, so tiles are visited in
+    # order; the few cells on an edge open their neighbour once, and it
+    # stays open for the rest of the group.
     by_tile: dict[str, list] = {}
     for c in cells:
         lat, lon = h3.cell_to_latlng(c)
@@ -137,29 +190,19 @@ def cells_terrain(cells, res_hint: int = 9) -> dict:
                            []).append((c, lat, lon))
 
     out: dict[str, dict] = {}
-    for name, group in by_tile.items():
-        path = fetch_tile(name)
-        if path is None:
-            continue
-        with rasterio.open(path) as ds:
+    opened: dict = {}
+    try:
+        for _, group in by_tile.items():
             for cell, lat, lon in group:
                 ring = h3.cell_to_boundary(cell)
                 lats = [p[0] for p in ring]
                 lons = [p[1] for p in ring]
+                bounds = (min(lons), min(lats), max(lons), max(lats))
                 try:
-                    win = from_bounds(min(lons), min(lats), max(lons),
-                                      max(lats), ds.transform)
-                    # One pixel of margin so the gradient has neighbours.
-                    win = win.round_offsets().round_lengths()
-                    elev = ds.read(1, window=win, boundless=True,
-                                   fill_value=ds.nodata or 0)
+                    elev = _read_window(tiles_touching(*bounds), bounds, opened)
                 except Exception:                       # noqa: BLE001
                     continue
-                if elev.size < 4 or not np.isfinite(elev).any():
-                    continue
-                if ds.nodata is not None:
-                    elev = np.where(elev == ds.nodata, np.nan, elev)
-                if np.isnan(elev).all():
+                if elev is None or elev.size < 4 or np.isnan(elev).all():
                     continue
                 elev = np.nan_to_num(elev, nan=float(np.nanmean(elev)))
 
@@ -170,6 +213,15 @@ def cells_terrain(cells, res_hint: int = 9) -> dict:
                     "slope_max_deg": round(float(sl.max()), 2),
                     "relief_m": round(float(elev.max() - elev.min()), 1),
                 }
+            # Done with this tile's cells; close what they opened.
+            for ds in opened.values():
+                if ds is not None:
+                    ds.close()
+            opened.clear()
+    finally:
+        for ds in opened.values():
+            if ds is not None:
+                ds.close()
     return out
 
 

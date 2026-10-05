@@ -91,6 +91,49 @@ def test_smoothing_recovers_true_slope_under_noise():
     assert abs(sm - truth) < abs(raw - truth)
 
 
+def _write_tile(path, west, north, cols, rows, value):
+    """A flat GeoTIFF at GLO-30's 1 arc-second, with no nodata — like GLO-30."""
+    import rasterio
+    from rasterio.transform import from_origin
+
+    px = 1 / 3600
+    with rasterio.open(path, "w", driver="GTiff", width=cols, height=rows,
+                       count=1, dtype="float32", crs="EPSG:4326",
+                       transform=from_origin(west, north, px, px)) as dst:
+        dst.write(np.full((rows, cols), value, dtype="float32"), 1)
+
+
+def test_a_cell_on_a_tile_edge_reads_both_tiles(tmp_path, monkeypatch):
+    """Flat ground at 500 m on both sides of the -33° parallel must stay flat.
+
+    Read from one tile with the rest filled in, the half of the cell beyond
+    the edge came back at 0 m — a 500 m cliff that does not exist. The -33°
+    line runs through Reñaca and Viña, so this was inflating slope in exactly
+    the hills the exposure map is about.
+    """
+    h3 = pytest.importorskip("h3")
+    pytest.importorskip("rasterio")
+
+    cell = next(
+        c for c in h3.grid_disk(h3.latlng_to_cell(-33.0, -71.55, 9), 3)
+        if min(p[0] for p in h3.cell_to_boundary(c)) < -33.0
+        < max(p[0] for p in h3.cell_to_boundary(c)))
+
+    tiles = {
+        terrain.tile_name(-34, -72): tmp_path / "south.tif",
+        terrain.tile_name(-33, -72): tmp_path / "north.tif",
+    }
+    # 0.1° of longitude, 0.03° either side of the edge: enough for one cell.
+    _write_tile(tiles[terrain.tile_name(-34, -72)], -71.6, -33.0, 360, 108, 500)
+    _write_tile(tiles[terrain.tile_name(-33, -72)], -71.6, -32.97, 360, 108, 500)
+    monkeypatch.setattr(terrain, "fetch_tile", lambda name: tiles.get(name))
+
+    got = terrain.cells_terrain([cell])[cell]
+    assert got["relief_m"] == pytest.approx(0, abs=0.5)
+    assert got["slope_deg"] == pytest.approx(0, abs=0.1)
+    assert got["elev_m"] == pytest.approx(500, abs=0.5)
+
+
 def test_slope_factor_is_monotonic_and_bounded():
     vals = [terrain.slope_factor(s) for s in range(0, 50, 5)]
     assert vals == sorted(vals)
