@@ -71,6 +71,10 @@
   .key i{flex:none; width:14px; height:12px; border-radius:2px}
   .note{margin:10px 0 0; font-size:11px; line-height:1.5; color:var(--ink-dim)}
   .note b{color:var(--ink)}
+  .val{display:grid; grid-template-columns:auto 1fr auto; gap:2px 8px;
+    margin:6px 0 4px; font-size:11.5px; font-variant-numeric:tabular-nums}
+  .val span{color:var(--ink-dim)} .val b{text-align:right}
+  .val b.miss{color:var(--unval)}
   .unvalbox{margin-top:10px; padding:8px 10px; border-radius:9px; font-size:11px;
     line-height:1.5; color:var(--ink-dim); background:rgba(251,191,36,.07);
     border:1px solid rgba(251,191,36,.25)}
@@ -159,15 +163,18 @@
   <div class="sub" id="h-sub">—</div>
 
   <div class="seg" role="group" aria-label="Qué colorear">
-    <button id="m-hz" aria-pressed="true">Amenaza<small>validada</small></button>
+    <button id="m-hz" aria-pressed="true">Amenaza<small id="hz-val">—</small></button>
     <button id="m-cs" aria-pressed="false">Consecuencia<small class="unval">sin validar</small></button>
   </div>
 
   <div id="leg-hz">
     <p class="note">¿Llegaría el fuego y correría? <b>Pendiente y combustible</b>
-    junto a viviendas. Contra el incendio de Viña 2024, medido con la
-    vegetación que había antes del fuego, acierta <b id="lift">—</b> más
-    que el azar.</p>
+    junto a viviendas. Probado contra incendios reales, con la vegetación
+    de antes de cada uno — cuánto más que el azar acierta:</p>
+    <div class="val" id="val"></div>
+    <p class="note">Ordena bien el fuego que baja de matorral seco hacia
+    viviendas dispersas. <b>No el que corre por población densa ni por
+    plantaciones</b>: para eso falta el tipo de combustible.</p>
   </div>
   <div id="leg-cs" hidden>
     <div class="unvalbox"><b>Sin validar.</b> Qué tan grave sería si llegara:
@@ -467,7 +474,14 @@ function locate() {
   const m = D.meta, pr = m.priority;
 
   $("h-sub").textContent = `${m.region} · ${nf(m.cells)} celdas habitadas`;
-  $("lift").textContent = m.validation.hazard_lift.toLocaleString("es-CL") + "×";
+  // Every fire tested, not the best one. The same bar validate_wui.py uses
+  // for its verdict decides which count as working.
+  const ev = m.validation.events, works = e => e.lift >= 1.5;
+  $("hz-val").textContent = `${ev.filter(works).length} de ${ev.length} incendios`;
+  $("val").innerHTML = ev.map(e =>
+    `<span>${e.year}</span><span>${e.event.split(/[:,]/)[0]}</span>` +
+    `<b class="${works(e) ? "" : "miss"}">` +
+    `${e.lift.toLocaleString("es-CL", { maximumFractionDigits: 1 })}×</b>`).join("");
   $("s-cells").textContent = nf(pr.cells);
   $("s-viv").textContent = nf(pr.viviendas);
   $("s-per").textContent = nf(pr.personas);

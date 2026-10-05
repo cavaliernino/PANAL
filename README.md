@@ -75,10 +75,16 @@ and OpenStreetMap egress.
 | | |
 |---|---|
 | GOES first saw the Viña fire at | **12:10 local**, 2 h 37 min before VIIRS |
-| Hazard half of the index ranks the interface at, with fuel from before the fire | **3.91× chance** |
+| Hazard half, against four fires, each with fuel from before it | **works in two**: 2.8× and 3.9× chance (Valparaíso 2019, 2024); 0.7× and 1.2× (Viña 2022, Ñuble–Biobío 2026) |
 | Over Valparaíso, hazard and consequence both top-decile | **58 cells, 10,660 people** |
 | OSM road coverage of inhabited cells, by population | **95.7%** |
 | GOES coverage of Chile, every hour of the day | **100%** |
+
+**The hazard half is not general.** It ranks fire running out of cured scrub
+into sparse settlement — what it was built on — and misses fire through
+dense informal housing, where the houses are the fuel, and through
+plantations, whose green canopy Sentinel-2 reads as moist. Both need fuel
+*type*. Nothing was tuned on these four.
 
 **The consequence half is not validated and carries the largest weights.**
 A burn footprint cannot test it — only 9 of the 173 cells VIIRS saw burning

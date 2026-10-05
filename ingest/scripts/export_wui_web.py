@@ -40,6 +40,9 @@ import pandas as pd  # noqa: E402
 from panal_engine import wui  # noqa: E402
 
 COMUNAS = ROOT / "data/cache/censo/Cartografia_censo2024_Pais_Comunal.parquet"
+# Every fire the hazard was tested against, written by
+# `validate_wui.py --record`. The page quotes all of them, not the best.
+VALIDATION = ROOT / "ingest/panal_ingest/reference/events/validation.json"
 OSM = ROOT / "data/cache/osm/chile-latest.osm.pbf"
 
 # What the page has to say about where these numbers come from. Kept here,
@@ -91,9 +94,6 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--wui", required=True)
     p.add_argument("--region", default="Región de Valparaíso")
-    p.add_argument("--lift", type=float, required=True,
-                   help="lift de la amenaza en la última corrida de "
-                        "validate_wui.py contra el build que se exporta")
     p.add_argument("-o", "--out", required=True)
     a = p.parse_args()
 
@@ -162,8 +162,14 @@ def main():
                 "egreso_conocido": int(prio["has_egress"].sum()),
             },
             "validation": {
-                "hazard_lift": a.lift,
-                "event": "incendio de Viña del Mar y Quilpué, 2 feb 2024",
+                "rule": "decil superior de amenaza contra el azar, en la "
+                        "interfaz de cada incendio (3 anillos), con "
+                        "combustible anterior al incendio",
+                "events": [
+                    {"event": v["event"], "year": int(v["start"][:4]),
+                     "lift": v["lift"], "cells": v["interface_cells"]}
+                    for v in json.loads(VALIDATION.read_text()).values()
+                ] if VALIDATION.exists() else [],
                 "consequence": None,
             },
             "consequence_weights": {k: round(v / t, 3) for k, v in terms.items()},

@@ -1,0 +1,54 @@
+{
+ "rocuant2019": {
+  "event": "Valparaíso, cerros Rocuant y San Roque",
+  "start": "2019-12-24T15:00Z",
+  "region": "valparaiso",
+  "interface_cells": 47,
+  "in_top_decile": 13,
+  "expected": 4.7,
+  "lift": 2.77,
+  "median_pct": 81,
+  "fuel_scenes": "20191120..20191223",
+  "rings": 3,
+  "validated": "2026-10-05"
+ },
+ "vina2022": {
+  "event": "Viña del Mar, Nueva Esperanza y Forestal",
+  "start": "2022-12-22T15:00Z",
+  "region": "valparaiso",
+  "interface_cells": 105,
+  "in_top_decile": 7,
+  "expected": 10.5,
+  "lift": 0.67,
+  "median_pct": 62,
+  "fuel_scenes": "20221117..20221221",
+  "rings": 3,
+  "validated": "2026-10-05"
+ },
+ "vina2024": {
+  "event": "Viña del Mar y Quilpué",
+  "start": "2024-02-02T15:00Z",
+  "region": "valparaiso",
+  "interface_cells": 115,
+  "in_top_decile": 45,
+  "expected": 11.5,
+  "lift": 3.91,
+  "median_pct": 84,
+  "fuel_scenes": "20240101..20240201",
+  "rings": 3,
+  "validated": "2026-10-05"
+ },
+ "biobio2026": {
+  "event": "Ñuble y Biobío: Ránquil, Penco-Lirquén, Florida-Bulnes",
+  "start": "2026-01-13T12:00Z",
+  "region": "biobio",
+  "interface_cells": 1664,
+  "in_top_decile": 204,
+  "expected": 166.4,
+  "lift": 1.23,
+  "median_pct": 59,
+  "fuel_scenes": "20251218..20260112",
+  "rings": 3,
+  "validated": "2026-10-05"
+ }
+}

@@ -14,16 +14,30 @@ Están ordenadas por lo que destraban, no por lo fácil que sea pedirlas.
 y Quilpué. Idealmente por dirección o coordenada; sirve incluso agregado por
 manzana.
 
-**Por qué:** el índice de exposición urbano-forestal tiene dos mitades y solo
-una está validada.
+**Por qué:** el índice de exposición urbano-forestal tiene dos mitades: una
+funciona en parte y la otra no tiene ninguna prueba.
 
-La mitad de *amenaza* —¿llegará el fuego y correrá?— valida a **3,91 veces el
-azar** contra la huella satelital de ese incendio, medida con la vegetación
-que había antes del fuego (Sentinel-2, enero de 2024): 45 de las 115 celdas
-habitadas de la zona de interfaz caen en su decil superior, donde el azar
-daría 12. La pregunta obvia de un revisor —¿usaron imágenes posteriores al
-incendio?— tiene respuesta: con la vegetación de 2026, que ya muestra la
-cicatriz, da 3,30×; con la de antes, 3,91×.
+La mitad de *amenaza* —¿llegará el fuego y correrá?— está probada contra
+cuatro incendios, cada uno con la vegetación de las cinco semanas previas:
+
+| incendio | celdas de interfaz | acierto contra el azar |
+|---|---|---|
+| Valparaíso, Rocuant–San Roque, dic-2019 | 47 | 2,8× |
+| Viña del Mar, Nueva Esperanza, dic-2022 | 105 | **0,7×** |
+| Viña del Mar–Quilpué, feb-2024 | 115 | 3,9× |
+| Ñuble–Biobío, ene-2026 | 1.664 | **1,2×** |
+
+**Funciona en dos de cuatro**, y conviene decirlo así, de entrada. Ordena
+bien el fuego que baja de matorral seco hacia viviendas dispersas —el de
+2024 y el de 2019—. Falla donde el fuego corre por población densa (en
+Viña 2022 la interfaz tiene 241 viviendas por celda: las casas son el
+combustible) y por plantaciones (en Biobío el satélite lee el dosel verde
+de pino y eucalipto como húmedo). Las dos fallas apuntan a lo mismo: falta
+el **tipo de combustible**, que es el pedido 2.
+
+La pregunta obvia de un revisor —¿usaron imágenes posteriores al incendio?—
+tiene respuesta: no. Con la vegetación de 2026, que ya muestra la cicatriz,
+Viña 2024 da 3,30×; con la de antes, 3,91×.
 
 La mitad de *consecuencia* —¿qué tan grave si llega?— **no está validada, y
 lleva el peso mayor**. En el build público: egreso 0,32, precariedad 0,25,
@@ -43,6 +57,10 @@ pero no "estas celdas están en la condición que costó vidas".
 que costó vidas en 2024" en vez de "estas manzanas tienen pendiente y
 combustible".
 
+Si existen, los registros de Valparaíso 2019, Viña 2022 y Ñuble–Biobío 2026
+valen lo mismo: las huellas satelitales de esos tres ya están armadas, así
+que cada registro de daño es una validación más, no un proyecto nuevo.
+
 ---
 
 ## 2. Catastro de Uso de Suelo y Vegetación
@@ -54,6 +72,14 @@ geodatabase sirve; un WFS sería mejor.
 y qué tan seca está— y eso ya funciona sin credenciales. Lo que falta es el
 *tipo*, que es lo que los modelos **Kitral** dentro de Cell2Fire realmente
 consumen.
+
+Y ya no es solo un argumento: está medido. Contra el complejo Ñuble–Biobío
+de enero de 2026 el índice apenas supera el azar (1,2×), porque lee las
+plantaciones como vegetación húmeda; contra Viña 2022, que corrió por
+población densa, no lo supera (0,7×). Sin tipo de combustible no hay forma
+de distinguir matorral seco, plantación y techo. Mientras llega, se va a
+probar la cobertura pública de ESA (WorldCover, 10 m) como sustituto — con
+incendios reservados para no ajustarla a los mismos cuatro.
 
 Probé `sit.conaf.cl`, `ide.minagri.gob.cl` y `geoportal.cl` buscando WFS,
 ArcGIS REST y GeoServer. Ninguno responde: el SIT exige navegar su propia
@@ -149,7 +175,7 @@ construyendo sobre lo suyo".
 ### Lo que NO hay que decir
 
 Medí su capa contra la nuestra en el mismo test: recurrencia SENAPRED da
-2,17× el azar, PANAL 3,91×. **Eso no se menciona.**
+2,17× el azar, PANAL 3,91×, ambos contra Viña 2024. **Eso no se menciona.**
 
 Tres razones. Su capa cubre 2020-2024, así que probablemente *incluye* el
 incendio contra el que testeé — su 2,17× es un piso, no un techo. Combinarlas

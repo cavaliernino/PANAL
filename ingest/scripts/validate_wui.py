@@ -133,9 +133,15 @@ derived from it, as unvalidated wherever it appears.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import sys
 from pathlib import Path
+
+# What the public map quotes. Written only by a run that passes, so a figure
+# on the page always traces back to a validation that was actually run.
+RECORD = (Path(__file__).resolve().parents[1] / "panal_ingest" / "reference"
+          / "events" / "validation.json")
 
 
 def main():
@@ -151,7 +157,13 @@ def main():
     src.add_argument("--event", help="una huella de event_footprint.py")
     p.add_argument("--rings", type=int, default=3,
                    help="how far out the interface zone reaches (cells)")
+    p.add_argument("--record", action="store_true",
+                   help="guarda el resultado en reference/events/"
+                        "validation.json, que es lo que cita el mapa público. "
+                        "Solo con --event, k=3 y combustible anterior al evento")
     a = p.parse_args()
+    if a.record and (not a.event or a.rings != 3):
+        p.error("--record va con --event y el k=3 del protocolo")
 
     wui = pd.read_parquet(a.wui)
     if a.replay:
@@ -188,11 +200,13 @@ def main():
 
     # Fuel observed after the event describes the landscape the fire left.
     # The lift may survive it (it did, 2026-10-05) but it is not a test.
+    fuel_ok, fuel_span = False, None
     if "fuel_scene" in wui.columns:
         day = wui["fuel_scene"].str.split("_").str[2]
         late = day.notna() & (day >= event_day)
         late_int = int((late & wui["interface"]).sum())
         seen = day.dropna()
+        fuel_ok, fuel_span = not late_int, f"{seen.min()}..{seen.max()}"
         print(f"\ncombustible: escenas {seen.min()}..{seen.max()}, "
               f"evento {event_day}")
         if late_int:
@@ -217,10 +231,29 @@ def main():
         print(f"{col:<22}{got:>13}{got / expected:>7.2f}x")
     print(f"\n(azar daría {expected:.0f})")
 
-    lift = int(wui.nlargest(int(len(wui) * 0.1), "wui")["interface"].sum()) / expected
+    got = int(wui.nlargest(int(len(wui) * 0.1), "wui")["interface"].sum())
+    lift = got / expected
     print("\nVEREDICTO: " + (
         "el índice supera el azar." if lift > 1.5 else
         "sin habilidad demostrada. No publicar como producto de riesgo."))
+
+    if a.record:
+        if not fuel_ok:
+            sys.exit("no se registra: el combustible no es anterior al evento")
+        meta = event["meta"]
+        record = json.loads(RECORD.read_text()) if RECORD.exists() else {}
+        record[meta["preset"]] = {
+            "event": meta["event"], "start": meta["start"],
+            "region": meta["region"], "interface_cells": n_int,
+            "in_top_decile": got, "expected": round(expected, 1),
+            "lift": round(lift, 2), "median_pct": int(round(np.median(pct))),
+            "fuel_scenes": fuel_span, "rings": a.rings,
+            "validated": dt.date.today().isoformat(),
+        }
+        RECORD.write_text(json.dumps(dict(sorted(
+            record.items(), key=lambda kv: kv[1]["start"])),
+            ensure_ascii=False, indent=1) + "\n")
+        print(f"registrado en {RECORD.name}")
 
 
 if __name__ == "__main__":

@@ -125,6 +125,13 @@ defensible space, fuel breaks and evacuation planning.
 > 2026 fuel scores 3.30×, so the post-fire landscape was costing signal, not
 > inventing it.
 >
+> **Then tested against four fires, and it holds in two.** Rocuant 2019
+> 2.77×, Viña 2022 **0.67×**, Viña 2024 3.91×, Ñuble–Biobío 2026 **1.23×**.
+> It ranks fire running out of cured scrub into sparse settlement; it misses
+> fire through dense informal housing and through plantations. Both need
+> fuel *type* — CONAF's Catastro, or a land-cover proxy tested on fires held
+> out for the purpose.
+>
 > Two corrections got it there, and the second was not the obvious one. The
 > gate had to change from dwelling **magnitude** to dwelling **presence** —
 > the interface is by definition where settlement is sparse, so weighting by
