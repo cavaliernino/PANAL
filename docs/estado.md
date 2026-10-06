@@ -23,7 +23,8 @@ validarse sin datos de CONAF.
 
 ## Lo que corre solo ahora mismo
 
-**Público en https://panal.ninobozzi.cl** desde el 2-oct, servido desde
+**Público en https://panalforestal.cl** desde el 6-oct (del 2 al 6-oct
+estuvo en panal.ninobozzi.cl, que ahora redirige), servido desde
 `fuego` (VPS Linode, por Tailscale). Detalle en
 [`deploy/README.md`](../deploy/README.md).
 
@@ -218,7 +219,7 @@ Sin reunión, el orden acordado el 2-oct:
    navegador apareció que la vista nacional **nunca había dibujado un
    hexágono** (faltaba h3-js); arreglado.
 2. ~~**PWA y vista web del índice WUI**~~ — hecho el 2-oct:
-   https://panal.ninobozzi.cl/wui.html, instalable desde el navegador.
+   https://panalforestal.cl/wui.html, instalable desde el navegador.
    Regenerado el 5-oct tras corregir tres errores de medición (pendiente en
    bordes de tesela DEM, egreso que contaba vértices de forma, búsqueda de
    escenas): **58 celdas, 10.660 personas** (antes 63 y 12.591), amenaza
@@ -227,7 +228,7 @@ Sin reunión, el orden acordado el 2-oct:
    sin señal, "Cerca de mí".
 3. **Medir el error de brújula** antes de cualquier app nativa: el cruce de
    marcaciones depende de ese número y nadie lo ha medido. Desde el 5-oct
-   hay una página para eso, https://panal.ninobozzi.cl/brujula.html (fuera
+   hay una página para eso, https://panalforestal.cl/brujula.html (fuera
    de la navegación): apuntar la cámara a un faro o una torre conocida, a
    más de 1 km, y marcar. Trae nueve puntos de Viña y Valparaíso tomados de
    OSM, calcula el rumbo de la cámara con la orientación completa del

@@ -242,7 +242,7 @@ pedir.
   hueco de mapeo no afecta el resultado. Regenerado el 5-oct, tras corregir
   tres errores de medición (pendiente en bordes de tesela, egreso que
   contaba vértices, búsqueda de escenas); antes decía 63 celdas y 12.591
-  personas. Se puede abrir en https://panal.ninobozzi.cl/wui.html.
+  personas. Se puede abrir en https://panalforestal.cl/wui.html.
 
   La cobertura de OpenStreetMap sobre lo habitado es **95,7% ponderada por
   población** (95,2% entre celdas con 10 o más viviendas, 86,1% de esas en
