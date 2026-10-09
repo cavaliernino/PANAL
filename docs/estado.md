@@ -5,7 +5,7 @@ Dónde estamos, qué está bloqueado y qué se olvida si nadie lo anota.
 Este documento existe para que el estado no viva en la memoria de nadie. Si
 pasan tres semanas sin tocar el repo, esto es lo primero que hay que leer.
 
-**Última actualización:** 2026-10-05
+**Última actualización:** 2026-10-09
 
 ---
 
@@ -120,6 +120,12 @@ no volver a abrir cada una:
 ---
 
 ## Abierto, esperando decisión
+
+- **Hitos de los replays.** `web/data/hitos.json` tiene el inicio de
+  Valparaíso 2014 y el aviso de San Carlos de Apoquindo, con fuente. Faltan
+  las alertas SAE por sector de Ñuble–Biobío 2026 (las trae Carolina) y las
+  de Viña 2024. Cada una con hora, sector, un punto lat/lon y fuente; sin
+  fuente no entra.
 
 - **Notificaciones "detección cerca de ti".** Técnicamente no dependen de
   nadie, pero rozan la regla de que PANAL no emite alertas. Nino lo está

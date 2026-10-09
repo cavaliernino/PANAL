@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>PANAL · Replay</title>
-<meta name="description" content="El incendio de Viña del Mar y Quilpué del 2 de febrero de 2024, visto por GOES-East cada 10 minutos.">
+<title>PANAL · Replays</title>
+<meta name="description" content="Grandes incendios de Chile, vistos por satélite a su cadencia nativa: GOES-East cada 10 minutos y VIIRS a 375 m.">
 <meta name="theme-color" content="#0e1116">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -18,6 +18,7 @@
     --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   html,body{height:100%}
   body{
     margin:0; background:var(--bg); color:var(--ink);
@@ -42,6 +43,16 @@
     background:var(--panel)}
   .nav a[aria-current]{color:var(--ink); border-color:var(--accent)}
   .ttl{font-weight:600; font-size:15px; margin-top:1px}
+  select.ev{
+    appearance:none; -webkit-appearance:none; max-width:100%;
+    font:600 15px/1.3 inherit; color:var(--ink); cursor:pointer;
+    background:transparent; border:0; padding:2px 18px 2px 0; margin-top:4px;
+    background-image:linear-gradient(45deg,transparent 50%,var(--ink-dim) 50%),
+      linear-gradient(135deg,var(--ink-dim) 50%,transparent 50%);
+    background-position:calc(100% - 9px) 55%, calc(100% - 4px) 55%;
+    background-size:5px 5px; background-repeat:no-repeat;
+  }
+  select.ev option{background:var(--panel); color:var(--ink)}
   .sub{color:var(--ink-dim); font-size:12px}
   .badge{
     margin-left:auto; pointer-events:auto; display:flex; gap:6px; flex-wrap:wrap;
@@ -54,8 +65,11 @@
   .chip b{color:var(--ink); font-weight:600}
 
   /* ── panel de estado ────────────────────── */
-  .stats{
+  .leftcol{
     position:absolute; z-index:3; top:calc(104px + var(--safe-t)); left:14px;
+    display:flex; flex-direction:column; gap:10px; max-width:260px;
+  }
+  .stats{
     background:rgba(22,27,35,.93); border:1px solid var(--line); border-radius:12px;
     padding:12px 14px; min-width:190px; backdrop-filter:blur(8px);
   }
@@ -76,10 +90,18 @@
   .vstate{display:block; margin-top:3px; font-size:10.5px; color:var(--ink-faint)}
   .vstate.fresh{color:#7dd3a0}
   .vstate.stale{color:var(--ink-faint)}
+  .nogoes{margin-top:7px; font-size:11.5px; color:var(--ink-dim); max-width:220px}
+  .nogoes b{color:var(--ink)}
+  .hito{
+    margin-top:9px; padding-top:9px; border-top:1px solid var(--line);
+    font-size:11.5px; color:var(--ink-dim); max-width:240px;
+  }
+  .hito b{color:var(--ink); font-variant-numeric:tabular-nums}
+  .hito a{color:var(--ink-faint); font-size:10.5px}
+  .hito .lag{display:block; margin-top:3px; color:var(--accent); font-size:11px}
 
   /* ── factor 30-30-30 ────────────────────── */
   .f30{
-    position:absolute; z-index:3; left:14px; top:calc(298px + var(--safe-t));
     background:rgba(22,27,35,.93); border:1px solid var(--line); border-radius:12px;
     padding:11px 13px; min-width:190px; backdrop-filter:blur(8px);
   }
@@ -142,9 +164,20 @@
     display:grid; place-items:center;
   }
   button.play:hover{filter:brightness(1.08)}
+  .track{flex:1; min-width:0; position:relative; padding-top:12px}
   input[type=range]{
-    flex:1; min-width:0; accent-color:var(--accent); height:26px; cursor:pointer;
+    width:100%; margin:0; accent-color:var(--accent); height:26px; cursor:pointer;
   }
+  /* Timeline marks: sourced milestones in white, the first satellite look
+     in amber. Positioned over the slider so the gap between them reads as
+     a distance. */
+  .marks{position:absolute; left:8px; right:8px; top:0; height:12px}
+  .mark{
+    position:absolute; top:0; width:2px; height:11px; margin-left:-1px;
+    background:var(--ink); border-radius:1px; cursor:pointer; padding:0; border:0;
+  }
+  .mark.sat{background:var(--accent)}
+  .mark::after{content:""; position:absolute; inset:-6px -7px}
   .rate{
     flex:none; background:var(--panel); border:1px solid var(--line); color:var(--ink);
     border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer;
@@ -161,7 +194,8 @@
   }
 
   @media (max-width:640px){
-    .stats{left:10px; right:10px; top:calc(108px + var(--safe-t)); min-width:0}
+    .leftcol{left:10px; right:10px; top:calc(108px + var(--safe-t)); max-width:none}
+    .stats{min-width:0}
     .clock{font-size:24px}
     .spark{height:30px}
     .legend{display:none}
@@ -181,31 +215,37 @@
     <nav class="nav">
       <a href="national.html">Detección</a>
       <a href="wui.html">Exposición</a>
-      <a href="index.html" aria-current="page">Viña 2024</a>
+      <a href="index.html" aria-current="page">Replays</a>
     </nav>
-    <div class="ttl" id="h-title">—</div>
+    <select class="ev" id="ev" aria-label="Incendio"></select>
+    <div class="ttl" id="h-title" hidden>—</div>
     <div class="sub" id="h-sub">—</div>
   </div>
   <div class="badge">
     <span class="chip" id="c-sat">—</span>
-    <span class="chip">cadencia <b>10 min</b></span>
-    <span class="chip">píxel <b>2 km</b></span>
+    <span class="chip" id="c-cad">cadencia <b>10 min</b></span>
+    <span class="chip" id="c-pix">píxel <b>2 km</b></span>
     <span class="chip" id="c-res">grilla: —</span>
     <span class="chip" id="c-style" style="cursor:pointer">mapa: oscuro</span>
   </div>
 </header>
 
+<div class="leftcol">
 <div class="stats">
-  <div class="clock"><span id="s-clock">--:--</span><small>hora de Chile</small></div>
-  <div class="kv"><span>píxeles</span><b id="s-px">0</b></div>
-  <div class="kv"><span>FRP total</span><b id="s-frp">0 MW</b></div>
-  <div class="kv"><span>celdas H3</span><b id="s-cells">0</b></div>
+  <div class="clock"><span id="s-clock">--:--</span><small id="s-day">hora de Chile</small></div>
+  <div class="goesrows">
+    <div class="kv"><span>píxeles GOES</span><b id="s-px">0</b></div>
+    <div class="kv"><span>FRP total</span><b id="s-frp">0 MW</b></div>
+    <div class="kv"><span>celdas H3</span><b id="s-cells">0</b></div>
+  </div>
+  <div class="nogoes" id="s-nogoes" hidden></div>
   <div class="vrow">
-    <label><input type="checkbox" id="v-toggle" checked> VIIRS 375 m <i>r9</i></label>
+    <label><input type="checkbox" id="v-toggle" checked> <span id="v-label">VIIRS 375 m</span> <i>r9</i></label>
     <label><input type="checkbox" id="h-toggle" checked> extensión inferida <i>±200 m</i></label>
     <span class="vstate" id="s-viirs">—</span>
   </div>
   <svg class="spark" id="spark" preserveAspectRatio="none"></svg>
+  <div class="hito" id="s-hito" hidden></div>
 </div>
 
 <div class="f30" id="f30">
@@ -216,6 +256,7 @@
   <div class="leg" id="leg-w"><span class="dot"></span>Viento <i id="leg-w-thr">≥30 km/h</i><b>—</b></div>
   <svg class="f30strip" id="f30strip" preserveAspectRatio="none"></svg>
   <div class="src" id="f30-src">—</div>
+</div>
 </div>
 
 <div class="legend">
@@ -229,7 +270,7 @@
   <hr>
   <h4>Resolución</h4>
   <div class="lrow"><span class="swatch" style="background:#f59e0b; opacity:.2"></span> extensión inferida</div>
-  <div class="lrow"><span class="swatch" style="background:#f97316"></span> GOES 2 km · r7</div>
+  <div class="lrow" id="lg-goes"><span class="swatch" style="background:#f97316"></span> GOES 2 km · r7</div>
   <div class="lrow"><span class="swatch" style="background:#f97316; outline:1px solid #fff; outline-offset:-1px; width:9px; height:8px"></span> VIIRS 375 m · r9</div>
   <hr>
   <h4>Confianza</h4>
@@ -245,7 +286,10 @@
 <div class="dock">
   <div class="bar">
     <button class="play" id="btn" aria-label="Reproducir">▶</button>
-    <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Línea de tiempo">
+    <div class="track">
+      <div class="marks" id="marks"></div>
+      <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Línea de tiempo">
+    </div>
     <select class="rate" id="rate" aria-label="Velocidad">
       <option value="260">1×</option>
       <option value="130" selected>2×</option>
@@ -259,6 +303,7 @@
 <div class="loading" id="loading">Cargando el replay…</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/h3-js@4.2.1/dist/h3-js.umd.js"></script>
 <script src="panal.js"></script>
 <script>
 // STYLES, OPACITY, WEAK, frpColor, ZOOM_BREAKS and resForZoom come from
@@ -268,6 +313,39 @@ let styleIdx = 0;
 
 const $ = id => document.getElementById(id);
 let DATA, map, i = 0, timer = null, curRes = null, showViirs = true, showHalo = true;
+let HITOS = [];   // sourced milestones for this replay, from data/hitos.json
+
+// Cell outlines. Older replays ship them in DATA.geometry; newer ones leave
+// them out — a week of r9 VIIRS cells is megabytes of coordinates the
+// browser can derive exactly — and h3-js draws them on demand.
+const OUTLINE = {};
+function outline(h) {
+  return (DATA.geometry && DATA.geometry[h]) ||
+    (OUTLINE[h] ??= h3.cellToBoundary(h).map(([lat, lng]) => [lng, lat]));
+}
+function ring(h) { const g = outline(h); return g.concat([g[0]]); }
+
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+// Local wall-clock for a UTC instant, using the replay's own offset rather
+// than the viewer's time zone.
+function localOf(t) {
+  const d = new Date(Date.parse(t) + DATA.meta.utc_offset * 3600e3);
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return { hm: `${hh}:${mm}`, day: `${d.getUTCDate()} ${MESES[d.getUTCMonth()]}` };
+}
+function frameAt(t) {
+  const ms = Date.parse(t);
+  let k = 0;
+  while (k < DATA.frames.length - 1 && Date.parse(DATA.frames[k + 1].t) <= ms) k++;
+  return k;
+}
+function lagText(a, b) {
+  const min = Math.round((Date.parse(b) - Date.parse(a)) / 60000);
+  const sign = min < 0 ? "antes" : "después";
+  const m = Math.abs(min), h = Math.floor(m / 60), r = m % 60;
+  return (h ? `${h} h ${r} min` : `${r} min`) + " " + sign;
+}
 
 
 function cellsAt(frame, res) {
@@ -285,7 +363,7 @@ function featuresFor(frame, res) {
         weak: WEAK.has(c.c) ? 1 : 0,
         frp: c.f, n: c.n, conf: c.c,
       },
-      geometry: { type: "Polygon", coordinates: [DATA.geometry[c.h].concat([DATA.geometry[c.h][0]])] },
+      geometry: { type: "Polygon", coordinates: [ring(c.h)] },
     })),
   };
 }
@@ -296,6 +374,7 @@ function paint(idx) {
   map.getSource("cells")?.setData(featuresFor(f));
 
   $("s-clock").textContent = f.local;
+  $("s-day").textContent = localOf(f.t).day + " · hora de Chile";
   $("s-px").textContent = f.px;
   $("s-frp").textContent = f.frp.toLocaleString("es-CL") + " MW";
   $("s-cells").textContent = cellsAt(f, curRes).length;
@@ -309,12 +388,90 @@ function paint(idx) {
   else if (!pass) { vEl.textContent = "sin pasada aún"; vEl.className = "vstate"; }
   else {
     const age = f.vage ?? 0;
-    vEl.textContent = `${pass.local} · hace ${age} min · ${pass.cells.length} celdas`;
+    vEl.textContent = `${pass.local} · hace ${age} min · ${pass.cells.length} celda${pass.cells.length === 1 ? "" : "s"}`;
     vEl.className = "vstate" + (age > 60 ? " stale" : " fresh");
   }
   $("scrub").value = i;
-  drawSpark();
+  if (DATA.meta.goes !== false) drawSpark();
   paintFactor(f);
+  paintHito(f);
+}
+
+// The latest sourced milestone at or before this frame, and how far the
+// first satellite look sits from it: a clock that runs while nothing has
+// seen the fire, then stops at the measured gap. Measured, never a
+// counterfactual.
+function paintHito(f) {
+  const el = $("s-hito");
+  const now = Date.parse(f.t) + 10 * 60000;   // the frame covers ten minutes
+  const past = HITOS.filter(h => Date.parse(h.t) < now);
+  if (!past.length) { el.hidden = true; return; }
+  const h = past[past.length - 1];
+  let html = `<b>${localOf(h.t).hm}</b> ${h.txt} <a href="${h.src}" target="_blank" rel="noopener">fuente</a>`;
+
+  // A milestone is compared only with a detection that can be about the
+  // same fire: one near its own point, or — when it says so — the replay's
+  // first. A replay with several fires has no single "first".
+  const ref = [...past].reverse().find(x => x.lat != null || x.sat);
+  if (ref) {
+    const sat = ref.lat != null ? firstNear(ref.lat, ref.lon) : firstSat();
+    const of = ref === h ? "" : ` de «${ref.txt}»`;
+    if (sat && Date.parse(sat.t) < now) {
+      html += `<span class="lag">primera detección ${sat.label} ${localOf(sat.t).hm} · ` +
+        `${lagText(ref.t, sat.t)}${of}</span>`;
+    } else {
+      const since = ref === h ? "" : ` desde «${ref.txt}»`;
+      const none = DATA.meta.goes === false ? "sin pasada polar" : "sin detección satelital";
+      html += `<span class="lag">${none} · ${lagText(ref.t, new Date(now).toISOString()).replace(" después", "")}${since}</span>`;
+    }
+  }
+  el.innerHTML = html;
+  el.hidden = false;
+}
+
+const NEAR_KM = 6;
+function km(a, b) {
+  const r = Math.PI / 180, x = (b[0] - a[0]) * r * Math.cos((a[1] + b[1]) / 2 * r), y = (b[1] - a[1]) * r;
+  return Math.hypot(x, y) * 6371;
+}
+function centroid(h) {
+  const g = outline(h);
+  return [g.reduce((s, p) => s + p[0], 0) / g.length, g.reduce((s, p) => s + p[1], 0) / g.length];
+}
+// Milestones are compared with what was available live: GOES, published
+// about a minute after each scan. VIIRS sometimes observes earlier, but
+// reaches Chile some three hours later, so it stands in only where there
+// is no GOES to replay.
+function firstNear(lat, lon) {
+  const pt = [lon, lat];
+  if (DATA.meta.goes !== false) {
+    const f = DATA.frames.find(f => f.cells.some(c => km(pt, centroid(c.h)) <= NEAR_KM));
+    return f ? { t: f.t, label: "GOES" } : null;
+  }
+  const pass = (DATA.viirs || []).find(p => p.cells.some(c => km(pt, centroid(c.h)) <= NEAR_KM));
+  return pass ? { t: pass.t, label: (pass.sensor || "VIIRS").split(" ")[0] } : null;
+}
+
+function firstSat() {
+  const m = DATA.meta;
+  if (m.first_detection_t) return { t: m.first_detection_t, label: "GOES" };
+  if (m.viirs_first_t) return { t: m.viirs_first_t, label: (DATA.viirs[0].sensor || "VIIRS").split(" ")[0] };
+  return null;
+}
+
+function drawMarks() {
+  const box = $("marks"), n = DATA.frames.length - 1;
+  const at = t => (n ? frameAt(t) / n * 100 : 0).toFixed(2) + "%";
+  const items = HITOS.map(h => ({ t: h.t, cls: "mark", tip: `${localOf(h.t).hm} · ${h.txt}` }));
+  const sat = firstSat();
+  if (sat) items.push({ t: sat.t, cls: "mark sat", tip: `${localOf(sat.t).hm} · primera detección ${sat.label}` });
+  box.innerHTML = "";
+  for (const it of items) {
+    const b = document.createElement("button");
+    b.className = it.cls; b.style.left = at(it.t); b.title = it.tip; b.setAttribute("aria-label", it.tip);
+    b.onclick = () => { play(false); paint(frameAt(it.t)); };
+    box.appendChild(b);
+  }
 }
 
 const ARROW = '<svg class="wdir" viewBox="0 0 10 10" style="transform:rotate(DEGdeg)">' +
@@ -383,7 +540,7 @@ function viirsHalo(frame) {
     features: pass.halo.map(h => ({
       type: "Feature", properties: {},
       geometry: { type: "Polygon",
-        coordinates: [DATA.geometry[h].concat([DATA.geometry[h][0]])] },
+        coordinates: [ring(h)] },
     })),
   };
 }
@@ -401,10 +558,10 @@ function viirsFeatures(frame) {
         // less thing that can be wrong in a layer spec.
         color: frpColor(c.f), opacity: (OPACITY[c.c] ?? .4) * .95,
         stale: stale ? 1 : 0, frp: c.f, n: c.n, conf: c.c,
-        age: frame.vage, at: pass.local, sat: pass.sat,
+        age: frame.vage, at: pass.local, sat: pass.sat, sensor: pass.sensor || "VIIRS 375 m",
       },
       geometry: { type: "Polygon",
-        coordinates: [DATA.geometry[c.h].concat([DATA.geometry[c.h][0]])] },
+        coordinates: [ring(c.h)] },
     })),
   };
 }
@@ -473,15 +630,45 @@ function setStyle(idx) {
   map.once("styledata", addLayers);
 }
 
+const DEFAULT_REPLAY = "vina2024";
+
+// Which replay: ?e=<id>, from the list build_replay.py keeps in
+// data/replays.json. Without the list the page still opens Viña 2024, the
+// replay it was built around.
+async function pickReplay() {
+  const want = new URLSearchParams(location.search).get("e") || DEFAULT_REPLAY;
+  let list = [];
+  try { list = await (await fetch("data/replays.json")).json(); } catch (e) {}
+  const entry = list.find(r => r.id === want) || list.find(r => r.id === DEFAULT_REPLAY)
+    || { id: DEFAULT_REPLAY, file: DEFAULT_REPLAY + ".json" };
+  const sel = $("ev");
+  for (const r of list) {
+    const o = document.createElement("option");
+    o.value = r.id; o.textContent = `${r.title} · ${r.start.slice(0, 4)}`;
+    o.selected = r.id === entry.id;
+    sel.appendChild(o);
+  }
+  sel.hidden = list.length < 2;
+  $("h-title").hidden = !sel.hidden;
+  sel.onchange = () => { location.search = "?e=" + encodeURIComponent(sel.value); };
+  return entry;
+}
+
 (async function init() {
+  const entry = await pickReplay();
   try {
-    DATA = await (await fetch("data/vina2024.json")).json();
+    DATA = await (await fetch("data/" + entry.file)).json();
   } catch (e) {
-    $("loading").textContent = "No se pudo cargar data/vina2024.json. " +
-      "Genera el replay con: python scripts/build_replay.py --preset vina2024 -o ../web/data/vina2024.json";
+    $("loading").textContent = `No se pudo cargar data/${entry.file}. ` +
+      `Genera el replay con: python scripts/build_replay.py --preset ${entry.id} -o ../web/data/${entry.file}`;
     return;
   }
+  try {
+    const all = await (await fetch("data/hitos.json")).json();
+    HITOS = (all[entry.id] || []).slice().sort((a, b) => Date.parse(a.t) - Date.parse(b.t));
+  } catch (e) { HITOS = []; }
   const m = DATA.meta;
+  document.title = `PANAL · ${m.title}`;
 
   const fu = m.factor30 || {wind: 30, wind_unit: "kmh"};
   $("leg-w-thr").textContent = "≥" + fu.wind + (fu.wind_unit === "knots" ? " kt" : " km/h");
@@ -492,17 +679,49 @@ function setStyle(idx) {
 
   $("h-title").textContent = m.title;
   $("h-sub").textContent = m.subtitle;
-  $("c-sat").textContent = m.satellite.replace("noaa-", "").toUpperCase();
-  $("foot").innerHTML =
-    `Detecciones de <b>${m.product}</b> sobre celdas <b>H3 r${m.res}</b>. ` +
-    `Primera detección <b>${m.first_detection}</b>, máximo <b>${m.peak_local}</b> ` +
-    `(${m.peak_frp.toLocaleString("es-CL")} MW). ` +
-    `Datos geoestacionarios de fuego son <b>provisionales</b> y de 2 km: indican ` +
-    `que algo ocurre cerca, no una posición exacta. ` +
+  const sensors = [...new Set((DATA.viirs || []).flatMap(p => (p.sensor || "VIIRS 375 m").split(" + ")))];
+  $("v-label").textContent = sensors.length ? sensors.join(" + ") : "VIIRS 375 m";
+  const when = t => { const l = localOf(t); return `${l.day} ${l.hm}`; };
+  const caveats =
     `Esto es un <b>registro de detección, no un contrafactual</b> — no implica que ` +
     `nadie hubiera actuado distinto. ` +
     `Meteorología de reanálisis <b>MERRA-2 en grilla de ~50 km</b>: sirve de contexto ` +
     `regional, no reemplaza una estación local en terreno quebrado.`;
+  if (m.goes === false) {
+    // Before GOES-16 PANAL has no geostationary scan to replay — GOES-13
+    // flew then, but not at 2 km every ten minutes. The clock runs, the map
+    // stays empty until a polar pass, and that is the point of showing it.
+    document.querySelector(".goesrows").hidden = true;
+    $("lg-goes").hidden = true;
+    $("spark").style.display = "none";
+    $("c-sat").textContent = "sin GOES-16";
+    $("c-cad").innerHTML = "pasadas <b>~4 al día</b>";
+    $("c-pix").innerHTML = "píxel <b>375 m – 1 km</b>";
+    $("s-nogoes").innerHTML =
+      `<b>Antes de GOES-16.</b> El satélite que hoy barre Chile cada 10 minutos ` +
+      `a 2 km se lanzó en noviembre de 2016. Este replay tiene solo pasadas polares.`;
+    $("s-nogoes").hidden = false;
+    $("foot").innerHTML =
+      `En ${m.subtitle.slice(-4)} aún no existía GOES-16: este replay muestra solo las pasadas ` +
+      `polares de MODIS y VIIRS, y cada cuadro de 10 minutos sin celdas es tiempo sin ` +
+      `observación en estos datos, no ausencia de fuego. ` +
+      (m.viirs_first_t ? `Primera observación satelital <b>${when(m.viirs_first_t)}</b>, ` +
+        `de ${DATA.viirs[0].sensor}. ` : "") + caveats;
+  } else {
+    $("c-sat").textContent = m.satellite.replace("noaa-", "").toUpperCase();
+    $("foot").innerHTML =
+      `Detecciones de <b>${m.product}</b> sobre celdas <b>H3 r${m.res}</b>. ` +
+      (m.first_detection_t
+        ? `Primera detección <b>${when(m.first_detection_t)}</b>, máximo <b>${when(m.peak_t)}</b> `
+        : `Primera detección <b>${m.first_detection}</b>, máximo <b>${m.peak_local}</b> `) +
+      `(${m.peak_frp.toLocaleString("es-CL")} MW). ` +
+      `Datos geoestacionarios de fuego son <b>provisionales</b> y de 2 km: indican ` +
+      `que algo ocurre cerca, no una posición exacta. ` + caveats;
+  }
+  // A week of frames at the 2× default runs for minutes; start long
+  // replays faster.
+  const n = DATA.frames.length;
+  $("rate").value = n > 400 ? "25" : n > 200 ? "60" : "130";
 
   map = new maplibregl.Map({
     container: "map", style: STYLES[0][1],
@@ -523,6 +742,7 @@ function setStyle(idx) {
     addLayers();
     $("loading")?.remove();
     $("scrub").max = DATA.frames.length - 1;
+    drawMarks();
     paint(0);
   }
   // Resolution follows the viewport, not the other way round.
@@ -543,7 +763,7 @@ function setStyle(idx) {
     const p = e.features[0].properties;
     new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat)
       .setHTML(`<div style="font:12px system-ui;color:#111">
-        <b>VIIRS 375 m</b> · ${p.sat}<br>
+        <b>${p.sensor}</b> · ${p.sat}<br>
         ${(+p.frp).toLocaleString("es-CL")} MW · ${p.n} px · ${p.conf}<br>
         <span style="color:#666">pasada ${p.at}, hace ${p.age} min</span></div>`)
       .addTo(map);

@@ -5,35 +5,71 @@ no build step, no install.
 
 ```bash
 python3 -m http.server 8000 --directory web
-# http://localhost:8000              replay de Viña 2024
+# http://localhost:8000              replays (Viña 2024 por defecto)
 # http://localhost:8000/national.html  detección nacional en vivo
 ```
 
 | Page | What it is |
 |---|---|
-| `index.html` | The Viña del Mar 2024 replay — the demo |
+| `index.html` | Replays of the major fires since 2014 — the demo |
 | `national.html` | Live national detection — the product, and the app's start page |
 | `wui.html` | Wildland-urban exposure, Región de Valparaíso — public, labelled as research (clears chance in two fires of six) |
 | `brujula.html` | Compass measurement tool, out of the navigation |
 | `panal.js` | Shared encoding rules, so the calibrated ramp cannot drift |
 | `sw.js`, `manifest.json`, `icons/` | The installable app (PWA) |
 
-## What ships first: the Viña del Mar replay
+## What ships first: the replays
 
-`index.html` plays back the 2 February 2024 Viña del Mar / Quilpué fire from
-GOES-East, at the satellite's native 10-minute cadence, on the same H3 grid
-the live product uses. Scrub, play at 1× to 10×, click a cell for its
-readings.
+`index.html` plays back a past fire from GOES-East, at the satellite's
+native 10-minute cadence, on the same H3 grid the live product uses, with
+VIIRS on top. Scrub, play at 1× to 10×, click a cell for its readings. The
+title is a picker; `index.html?e=<id>` opens one directly, and without `e`
+it opens Viña 2024.
 
-Regenerate the data with:
+| id | fire |
+|---|---|
+| `valparaiso2014` | Gran Incendio de Valparaíso, 12 April 2014 — **no GOES** |
+| `rocuant2019` | Valparaíso, Rocuant and San Roque, 24 December 2019 |
+| `quilpue2021` | Quilpué, Lago Peñuelas and Las Palmas, 15 January 2021 |
+| `vina2022` | Viña del Mar, Nueva Esperanza and Forestal, 22 December 2022 |
+| `biobio2023` | Biobío and Ñuble, Santa Ana, 2–7 February 2023 |
+| `vina2024` | Viña del Mar and Quilpué, 2 February 2024 |
+| `sancarlos2025` | Las Condes, San Carlos de Apoquindo, 29 December 2025 |
+| `biobio2026` | Ñuble and Biobío, Ránquil and Penco-Lirquén, 13–19 January 2026 |
+
+Build one with:
 
 ```bash
 cd ingest
 ../.venv/bin/python scripts/build_replay.py --preset vina2024 -o ../web/data/vina2024.json
 ```
 
+Each build upserts its entry in `data/replays.json`, the list the picker
+offers. The scans are cached per scan and box in `data/cache/goes`; a
+week-long Biobío replay is about 880 scans and half an hour the first time.
+
+**2014 has no GOES.** GOES-16 was launched in November 2016; before it
+there is no ABI scan to replay. The 2014 replay keeps the ten-minute clock
+with empty frames and shows only the MODIS and VIIRS passes — the first of
+them came 7 h 33 min after the reported start. The empty hours are the
+point of showing it.
+
+**Milestones.** `data/hitos.json` holds sourced times per replay — reported
+start, alarms, SAE alerts — drawn as white marks on the timeline, with the
+first satellite detection in amber. A milestone with no source does not go
+in. One is compared with a detection only when the detection can be about
+the same fire: give it `lat`/`lon` and the panel uses the first detection
+within 6 km, or `sat: true` to use the replay's first, only when the box
+holds a single fire. Before the detection the panel runs a clock; after it,
+the measured gap. It is a record, not a counterfactual.
+
+**No geometry in the file.** Replays from this build on carry cell ids only;
+the page draws outlines with h3-js, which the national view already loads.
+A week of r9 VIIRS cells is megabytes of coordinates the browser derives
+exactly. Older files that still carry `geometry` keep working.
+
 This is the artifact to open in the first conversation with CONAF and
-SENAPRED. It shows the tempo layer doing the one thing it is for, on an event
+SENAPRED. It shows the tempo layer doing the one thing it is for, on events
 everyone in the room remembers.
 
 ## The national view
