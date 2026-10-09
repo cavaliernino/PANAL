@@ -1,0 +1,74 @@
+[
+ {
+  "id": "valparaiso2014",
+  "file": "valparaiso2014.json",
+  "title": "Gran Incendio de Valparaíso",
+  "subtitle": "12 de abril de 2014",
+  "start": "2014-04-12T18:00:00Z",
+  "goes": false,
+  "kb": 77
+ },
+ {
+  "id": "rocuant2019",
+  "file": "rocuant2019.json",
+  "title": "Valparaíso · Rocuant y San Roque",
+  "subtitle": "24 de diciembre de 2019",
+  "start": "2019-12-24T15:00:22.300000Z",
+  "goes": true,
+  "kb": 62
+ },
+ {
+  "id": "quilpue2021",
+  "file": "quilpue2021.json",
+  "title": "Quilpué · Lago Peñuelas y Las Palmas",
+  "subtitle": "14 al 17 de enero de 2021",
+  "start": "2021-01-14T23:00:18.900000Z",
+  "goes": true,
+  "kb": 283
+ },
+ {
+  "id": "vina2022",
+  "file": "vina2022.json",
+  "title": "Viña del Mar · Nueva Esperanza y Forestal",
+  "subtitle": "22 de diciembre de 2022",
+  "start": "2022-12-22T15:00:21Z",
+  "goes": true,
+  "kb": 50
+ },
+ {
+  "id": "biobio2023",
+  "file": "biobio2023.json",
+  "title": "Biobío y Ñuble · Santa Ana",
+  "subtitle": "2 al 7 de febrero de 2023",
+  "start": "2023-02-02T12:00:21Z",
+  "goes": true,
+  "kb": 7091
+ },
+ {
+  "id": "vina2024",
+  "file": "vina2024.json",
+  "title": "Viña del Mar / Quilpué",
+  "subtitle": "2 de febrero de 2024",
+  "start": "2024-02-02T15:00:21Z",
+  "goes": true,
+  "kb": 151
+ },
+ {
+  "id": "sancarlos2025",
+  "file": "sancarlos2025.json",
+  "title": "Las Condes · San Carlos de Apoquindo",
+  "subtitle": "29 de diciembre de 2025",
+  "start": "2025-12-29T14:00:22.500000Z",
+  "goes": true,
+  "kb": 150
+ },
+ {
+  "id": "biobio2026",
+  "file": "biobio2026.json",
+  "title": "Ñuble y Biobío · Ránquil y Penco-Lirquén",
+  "subtitle": "13 al 19 de enero de 2026",
+  "start": "2026-01-13T12:00:21.200000Z",
+  "goes": true,
+  "kb": 1388
+ }
+]

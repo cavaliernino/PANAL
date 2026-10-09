@@ -1,0 +1,53 @@
+{
+ "_formato": "Por replay: t en UTC (ISO), txt corto, src con la URL de la fuente; sin fuente no entra. Para compararlo con una detección: lat y lon del sector (la primera detección a 6 km o menos), o sat: true para la primera detección del replay, solo si en el recuadro hay un único incendio. Una hora aproximada va sin lat/lon ni sat: queda como marca, sin minutos calculados.",
+ "valparaiso2014": [
+  {
+   "t": "2014-04-12T19:40:00Z",
+   "txt": "Inicio del incendio, zona alta de Valparaíso",
+   "src": "https://ejercito.cl/descargas/desktop/MzIyMg==",
+   "sat": true
+  },
+  {
+   "t": "2014-04-12T22:00:00Z",
+   "txt": "El fuego llega a zona de viviendas (hora aproximada)",
+   "src": "https://www.cooperativa.cl/noticias/site/artic/20140412/pags-amp/20140412175748.html"
+  }
+ ],
+ "rocuant2019": [
+  {
+   "t": "2019-12-24T18:00:00Z",
+   "txt": "Inicio, pasadas las 15:00 (hora aproximada)",
+   "src": "https://www.biobiochile.cl/noticias/nacional/region-de-valparaiso/2019/12/24/incendio-forestal-se-registra-en-sector-rocuant-de-valparaiso-humo-se-aprecia-desde-otras-comunas.shtml"
+  }
+ ],
+ "quilpue2021": [
+  {
+   "t": "2021-01-15T00:00:00Z",
+   "txt": "Llamado de emergencia, borde del Lago Peñuelas (hora aproximada)",
+   "src": "https://www.meteored.cl/noticias/actualidad/avance-del-gran-incendio-en-valparaiso-consumidas-ya-mas-4-000-hectareas-afectacion-quilpue-fuerte-viento.html"
+  }
+ ],
+ "vina2024": [
+  {
+   "t": "2024-02-02T15:50:00Z",
+   "txt": "Primer aviso público: incendio en fundo Las Tablas",
+   "src": "https://www.ex-ante.cl/?p=196137",
+   "sat": true
+  },
+  {
+   "t": "2024-02-02T21:45:00Z",
+   "txt": "Primer SAE registrado en Viña del Mar: evacuar sector Jardín Botánico",
+   "src": "https://www.ex-ante.cl/?p=196137",
+   "lat": -33.044,
+   "lon": -71.501
+  }
+ ],
+ "sancarlos2025": [
+  {
+   "t": "2025-12-29T18:11:00Z",
+   "txt": "Aviso a Bomberos",
+   "src": "https://www.emol.com/noticias/Nacional/2025/12/29/1187097/declaran-incendio-forestal-las-condes.html",
+   "sat": true
+  }
+ ]
+}
