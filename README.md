@@ -56,8 +56,8 @@ the satellite's own cadence.
 
 **Public, and installable.** https://panalforestal.cl — three views that
 install as one app from a phone's browser: live national detection
-(`national.html`, the start page), the wildland-urban exposure map for the
-Región de Valparaíso (`wui.html`), and replays of the major fires since
+(`national.html`, the start page), the wildland-urban exposure map for
+Valparaíso and for Biobío–Ñuble (`wui.html`), and replays of the major fires since
 2014 at native cadence (`index.html`). See [`web/`](web) and
 [`deploy/`](deploy).
 

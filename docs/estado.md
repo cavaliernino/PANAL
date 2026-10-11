@@ -113,7 +113,10 @@ no volver a abrir cada una:
   5-oct salió de la navegación porque contra seis incendios la amenaza
   acierta con claridad en dos; ese mismo día Nino lo devolvió. Queda con un
   aviso arriba ("en investigación — no es un producto de riesgo") y la
-  lista de los seis incendios.
+  lista de los seis incendios. Desde el 10-oct cubre también Biobío y
+  Ñuble (`wui.html?r=biobio`), con el mismo aviso y una línea propia: en
+  esa región la amenaza da 1,5× y 1,2×, la más débil, por las
+  plantaciones. Se publica igual porque es el argumento para el Catastro.
 - **Moderación de reportes: puntaje automático, humano decide.** Detalle en
   [`crowdsourcing.md`](crowdsourcing.md#moderation-score-then-queue).
 

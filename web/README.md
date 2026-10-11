@@ -13,7 +13,7 @@ python3 -m http.server 8000 --directory web
 |---|---|
 | `index.html` | Replays of the major fires since 2014 — the demo |
 | `national.html` | Live national detection — the product, and the app's start page |
-| `wui.html` | Wildland-urban exposure, Región de Valparaíso — public, labelled as research (clears chance in two fires of six) |
+| `wui.html` | Wildland-urban exposure, Valparaíso and Biobío–Ñuble — public, labelled as research (clears chance in two fires of six, none of them Biobío's) |
 | `brujula.html` | Compass measurement tool, out of the navigation |
 | `panal.js` | Shared encoding rules, so the calibrated ramp cannot drift |
 | `sw.js`, `manifest.json`, `icons/` | The installable app (PWA) |
@@ -206,12 +206,23 @@ into a catastrophe: slope and fuel next to dwellings, from the index in
 tap on any hexagon for its card, and **Cerca de mí**, which finds the
 user's cell on the device and sends nothing anywhere.
 
+Two regions, each its own build: Valparaíso (`wui.html`) and Biobío with
+Ñuble (`wui.html?r=biobio`). The page lists all six tested fires in both,
+marks the region's own, and says what they showed. In Biobío that is the
+weakest result there is — 1.5× and 1.2×, neither clear — because the
+plantations that dominate it read as moist; the page says so above the map.
+Biobío's priority count (1,339 cells, 76,030 people) is not comparable to
+Valparaíso's 58: 818 of its cells are coarse rural ones, and the exit is
+known in only 489. The 521 r9 cells hold 71,008 of the people.
+
 What it is careful about:
 
 - **Hazard leads; consequence is labelled unvalidated** wherever it shows,
   including the priority outline that depends on it. Hazard is tested
-  against four fires, each with fuel from before it, and the page lists all
-  four — it works in two. Consequence has no test yet.
+  against six fires, each with fuel from before it, and the page lists all
+  six — it works in two. Consequence has no test yet. Where OSM maps no
+  road, consequence is scored without the exit term, and the page says in
+  how many priority cells that happened.
 - **Its own colour scale.** Violet, outside every other scale here: not the
   fire-intensity ramp (this is no fire), not SENAPRED's green/yellow/red
   (this is no alert), no black (the burn scar).
@@ -239,7 +250,21 @@ cd ingest
     --wui ../data/processed/wui_valparaiso_pre2024.parquet   # writes validation.json
 ../.venv/bin/python scripts/export_wui_web.py --wui ../data/processed/wui_valparaiso.parquet \
     -o ../web/data/wui_valparaiso.json                     # quotes every recorded fire
+
+../.venv/bin/python scripts/build_wui.py --region biobio \
+    -o ../data/processed/wui_biobio.parquet               # ~25 min, 4.5 GB peak
+../.venv/bin/python scripts/export_wui_web.py --region-id biobio \
+    --region "Regiones del Biobío y Ñuble" \
+    --wui ../data/processed/wui_biobio.parquet -o ../web/data/wui_biobio.json
 ```
+
+**Scenes are ranked by usable share, not cloud cover.** A scene from the
+edge of an orbit's swath is half empty and reads as 0% cloud. The first
+Biobío build took four such halves for tile 18HXD and left Concepción,
+Chiguayante, Hualqui, Santa Juana and most of Tomé without fuel — 213,225
+people unranked. `fuel.usable` weighs out the empty part; the rebuild
+observed every cell. Valparaíso's published build predates the fix and had
+99.8% coverage; a rebuild may pick different scenes.
 
 ## Compass measurement
 

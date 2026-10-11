@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PANAL · Exposición</title>
-<meta name="description" content="Dónde se vive en la condición que convierte un incendio chico en catástrofe: pendiente, combustible y viviendas, Región de Valparaíso.">
+<meta name="description" content="Dónde se vive en la condición que convierte un incendio chico en catástrofe: pendiente, combustible y viviendas, regiones de Valparaíso, Biobío y Ñuble.">
 <meta name="theme-color" content="#0e1116">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -79,6 +79,9 @@
     margin:6px 0 4px; font-size:11.5px; font-variant-numeric:tabular-nums}
   .val span{color:var(--ink-dim)} .val b{text-align:right}
   .val b.miss{color:var(--unval)}
+  /* This region's own fires, among all six. */
+  .val span.here{color:var(--ink); font-weight:600}
+  .regs{margin-top:0; margin-bottom:10px}
   .unvalbox{margin-top:10px; padding:8px 10px; border-radius:9px; font-size:11px;
     line-height:1.5; color:var(--ink-dim); background:rgba(251,191,36,.07);
     border:1px solid rgba(251,191,36,.25)}
@@ -165,8 +168,10 @@
 
   <div class="research"><b>En investigación — no es un producto de
   riesgo.</b> Probado contra incendios reales, acierta con claridad en
-  <span id="res-val">—</span>. Para validarlo hacen falta los registros de
-  daño y el catastro de vegetación de CONAF.</div>
+  <span id="res-val">—</span>.<span id="res-reg"></span> Para validarlo hacen
+  falta los registros de daño y el catastro de vegetación de CONAF.</div>
+
+  <div class="seg regs" id="regs" role="group" aria-label="Región"></div>
 
   <div class="ttl">Exposición urbano-forestal</div>
   <div class="sub" id="h-sub">—</div>
@@ -209,7 +214,8 @@
     <div><b id="s-per">—</b><span>personas</span></div>
   </div>
   <p class="note" style="margin-top:6px;font-size:10.5px">La prioridad depende de
-  la consecuencia, que <b style="color:var(--unval)">no está validada</b>.</p>
+  la consecuencia, que <b style="color:var(--unval)">no está validada</b>.
+  <span id="s-egr"></span></p>
 
   <details>
     <summary>Qué es y qué no es</summary>
@@ -425,7 +431,8 @@ function closeCard() {
 // The finest indexed cell containing a point. Cells come in several sizes,
 // so a point in the countryside may only be covered by a coarse one.
 function findCell(lat, lon) {
-  for (let r = D.meta.res_max; r >= 5; r--) {
+  const resMin = Math.min(...Object.keys(D.meta.res_cells || { 5: 0 }).map(Number));
+  for (let r = D.meta.res_max; r >= resMin; r--) {
     const c = h3.latLngToCell(lat, lon, r);
     if (byCell.has(c)) return c;
   }
@@ -440,8 +447,7 @@ function placeMe(lat, lon) {
   const h = h3.latLngToCell(lat, lon, D.meta.res_max);
   const near = h3.gridDisk(h, 20).some(c => findCell(...h3.cellToLatLng(c)));
   showCard(h, near ? "tu ubicación — celda sin viviendas censadas"
-    : `tu ubicación está fuera de lo que cubre el índice: por ahora,
-       solo la ${D.meta.region}`);
+    : `tu ubicación está fuera de este mapa (${D.meta.region})`);
 }
 
 // Location never leaves the device: the cell is computed here, and nothing
@@ -459,18 +465,36 @@ function locate() {
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
 }
 
+// One index per region, each built and exported on its own. `note` says
+// what the region's own fires showed, beside the list of all six.
+const REGIONS = {
+  valparaiso: { label: "Valparaíso", file: "data/wui_valparaiso.json",
+    center: [-71.45, -33.05], centerPhone: [-71.55, -33.05], zoom: 10.2 },
+  biobio: { label: "Biobío y Ñuble", file: "data/wui_biobio.json",
+    center: [-72.95, -36.85], centerPhone: [-73.02, -36.82], zoom: 9.6,
+    note: "Aquí domina la plantación de pino y eucalipto, que el satélite " +
+          "lee como vegetación húmeda: es donde el índice funciona peor." },
+};
+const REGION = (r => REGIONS[r] ? r : "valparaiso")(new URLSearchParams(location.search).get("r"));
+
 (async function init() {
+  const R = REGIONS[REGION];
+  $("regs").innerHTML = Object.entries(REGIONS).map(([id, r]) =>
+    `<button data-r="${id}" aria-pressed="${id === REGION}">${r.label}</button>`).join("");
+  for (const b of $("regs").querySelectorAll("button"))
+    b.onclick = () => { if (b.dataset.r !== REGION) location.search = "?r=" + b.dataset.r; };
+
   map = new maplibregl.Map({
     container: "map", style: STYLES[0][1],
-    center: window.innerWidth > 640 ? [-71.45, -33.05] : [-71.55, -33.05],
-    zoom: 10.2, attributionControl: { compact: true },
+    center: window.innerWidth > 640 ? R.center : R.centerPhone,
+    zoom: R.zoom, attributionControl: { compact: true },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
   overlay = new deck.MapboxOverlay({ interleaved: false, layers: [] });
   map.addControl(overlay);
 
   try {
-    const res = await fetch("data/wui_valparaiso.json");
+    const res = await fetch(R.file);
     if (!res.ok) throw new Error(res.status);
     D = await res.json();
   } catch (e) {
@@ -488,15 +512,26 @@ function locate() {
   const ev = m.validation.events, works = e => e.lift >= 1.5;
   $("hz-val").textContent = `${ev.filter(works).length} de ${ev.length} incendios`;
   $("res-val").textContent = `${ev.filter(works).length} de ${ev.length}`;
+  const here = ev.filter(e => e.region === m.region_id);
+  const x = v => v.toLocaleString("es-CL", { maximumFractionDigits: 1 }) + "×";
+  if (here.length) $("res-reg").textContent =
+    ` En esta región, ${here.filter(works).length} de ${here.length}: ` +
+    here.map(e => `${x(e.lift)} (${e.year})`).join(", ") + "." + (R.note ? " " + R.note : "");
   $("val").innerHTML = ev.map(e =>
-    `<span>${e.year}</span><span>${e.event.split(/[:,]/)[0]}</span>` +
+    `<span class="${e.region === m.region_id ? "here" : ""}">${e.year}</span>` +
+    `<span class="${e.region === m.region_id ? "here" : ""}">${e.event.split(/[:,]/)[0]}</span>` +
     `<b class="${works(e) ? "" : "miss"}">` +
     `${e.lift.toLocaleString("es-CL", { maximumFractionDigits: 1 })}×</b>`).join("");
   $("s-cells").textContent = nf(pr.cells);
   $("s-viv").textContent = nf(pr.viviendas);
   $("s-per").textContent = nf(pr.personas);
+  // Where OSM maps no road, consequence is scored without the exit term.
+  // Said here, because it decides how far the count can be read.
+  if (pr.egreso_conocido < pr.cells) $("s-egr").textContent =
+    `Salida conocida en ${nf(pr.egreso_conocido)} de ${nf(pr.cells)}: en las demás ` +
+    `OpenStreetMap no tiene calles y la consecuencia se calcula sin ese término.`;
   $("src").innerHTML = Object.values(m.sources).join("<br>") +
-    `<br>Celdas H3 r5–r${m.res_max} · ${nf(m.unobserved)} sin combustible observado` +
+    `<br>Celdas H3 r${Math.min(...Object.keys(m.res_cells || { 5: 0 }).map(Number))}–r${m.res_max} · ${nf(m.unobserved)} sin combustible observado` +
     `<br>Generado ${new Date(m.generated).toLocaleDateString("es-CL")}`;
   drawRamp();
   render();

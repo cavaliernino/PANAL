@@ -5,6 +5,11 @@
         --wui ../data/processed/wui_valparaiso.parquet \
         -o ../web/data/wui_valparaiso.json
 
+    python scripts/export_wui_web.py --region-id biobio \
+        --region "Regiones del Biobío y Ñuble" \
+        --wui ../data/processed/wui_biobio.parquet \
+        -o ../web/data/wui_biobio.json
+
 Only inhabited cells: the map answers "where do people live in this
 condition", and the gate already scores empty land at zero.
 
@@ -94,6 +99,9 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--wui", required=True)
     p.add_argument("--region", default="Región de Valparaíso")
+    # The validation record's own key for the region, so the page can say
+    # how the hazard did on this region's fires and not only on all six.
+    p.add_argument("--region-id", default="valparaiso")
     p.add_argument("-o", "--out", required=True)
     a = p.parse_args()
 
@@ -147,6 +155,7 @@ def main():
             "generated": dt.datetime.now(dt.timezone.utc)
                            .isoformat(timespec="seconds").replace("+00:00", "Z"),
             "region": a.region,
+            "region_id": a.region_id,
             "res_max": 9,
             "res_cells": {str(k): int(v) for k, v in
                           cells["res"].value_counts().sort_index().items()},
@@ -167,7 +176,8 @@ def main():
                         "combustible anterior al incendio",
                 "events": [
                     {"event": v["event"], "year": int(v["start"][:4]),
-                     "lift": v["lift"], "cells": v["interface_cells"]}
+                     "lift": v["lift"], "cells": v["interface_cells"],
+                     "region": v.get("region")}
                     for v in json.loads(VALIDATION.read_text()).values()
                 ] if VALIDATION.exists() else [],
                 "consequence": None,
