@@ -9,10 +9,12 @@ import pytest
 from panal_ingest import fuel
 
 
-def _scene(id_, cloud, bbox, tile=None):
+def _scene(id_, cloud, bbox, tile=None, nodata=None):
     props = {"eo:cloud_cover": cloud}
     if tile:
         props["grid:code"] = tile
+    if nodata is not None:
+        props["s2:nodata_pixel_percentage"] = nodata
     return {"id": id_, "bbox": bbox, "properties": props}
 
 
@@ -24,6 +26,16 @@ def test_select_keeps_the_least_cloudy_per_tile():
     ids = [f["id"] for f in got]
     assert ids == ["S2A_19HCD_20260300_0_L2A", "S2A_19HCD_20260301_0_L2A",
                    "S2A_19HBD_20260300_0_L2A", "S2A_19HBD_20260301_0_L2A"]
+
+
+def test_select_prefers_a_full_scene_to_clear_halves():
+    """A swath-edge scene is half empty and reads as 0% cloud. Four of them
+    from one orbit took tile 18HXD and left Concepción without fuel."""
+    halves = [_scene(f"S2B_18HXD_2026021{k}_0_L2A", 0.0, [-74, -37, -72, -36], nodata=47.5)
+              for k in range(4)]
+    full = _scene("S2A_18HXD_20260325_0_L2A", 0.1, [-74, -37, -72, -36], nodata=0)
+    got = fuel.select(halves + [full], lats=[-36.9], lons=[-72.9], per_tile=4)
+    assert got[0]["id"] == full["id"]
 
 
 def test_select_never_reads_a_scene_with_no_cell_in_it():

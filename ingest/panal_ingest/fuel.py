@@ -119,8 +119,23 @@ def _tile(feature) -> str:
     return code or feature["id"].split("_")[1]
 
 
+def usable(feature) -> float:
+    """Share of the tile, 0-100, that has data and is not cloud.
+
+    Cloud cover alone ranks a scene from the edge of an orbit's swath as
+    clear: half of it is empty, and nothing in an empty half is cloud. Over
+    Biobío the four "clearest" scenes of tile 18HXD were all such halves,
+    from the same orbit, and the eastern half — Concepción to Santa Juana —
+    went without fuel.
+    """
+    p = feature["properties"]
+    nodata = p.get("s2:nodata_pixel_percentage") or 0.0
+    cloud = p.get("eo:cloud_cover", 100)
+    return (100 - nodata) * (100 - cloud) / 100
+
+
 def select(features, lats, lons, per_tile: int = PER_TILE):
-    """The scenes worth reading: ones that cover a cell, least cloudy per tile.
+    """The scenes worth reading: ones that cover a cell, most usable per tile.
 
     Choosing per tile rather than overall keeps one clear tile from taking
     every slot while its neighbour gets nothing, and a scene whose footprint
@@ -128,7 +143,7 @@ def select(features, lats, lons, per_tile: int = PER_TILE):
     """
     lats, lons = np.asarray(lats), np.asarray(lons)
     seen, kept = set(), {}
-    for f in sorted(features, key=lambda f: f["properties"].get("eo:cloud_cover", 100)):
+    for f in sorted(features, key=usable, reverse=True):
         if f["id"] in seen:
             continue
         seen.add(f["id"])
@@ -138,8 +153,7 @@ def select(features, lats, lons, per_tile: int = PER_TILE):
         tile = kept.setdefault(_tile(f), [])
         if len(tile) < per_tile:
             tile.append(f)
-    return sorted((f for t in kept.values() for f in t),
-                  key=lambda f: f["properties"].get("eo:cloud_cover", 100))
+    return sorted((f for t in kept.values() for f in t), key=usable, reverse=True)
 
 
 def _read_scaled(url: str, divisor: int):
