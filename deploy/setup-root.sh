@@ -17,6 +17,8 @@ DOMAIN=panalforestal.cl
 # certificado: la app instalada con ese nombre necesita HTTPS para recibir el
 # sw.js que la retira (ver la conf).
 OLD=panal.ninobozzi.cl
+# Dominio extra (8-oct-2026): solo redirige a $DOMAIN, con certificado propio.
+EXTRA=panalstaysafe.cl
 # El clon se quedó en la ruta del nombre anterior: moverlo obliga a rehacer
 # el venv y el cron, y la ruta no la ve nadie.
 DIR=/var/www/$OLD
@@ -38,7 +40,7 @@ install -d -o "$OWNER" -g "$OWNER" -m 755 "$DIR"
 
 echo "2/4 DNS"
 # Antes de certbot: Let's Encrypt limita los intentos fallidos por hora.
-for h in "$DOMAIN" "www.$DOMAIN" "$OLD"; do
+for h in "$DOMAIN" "www.$DOMAIN" "$OLD" "$EXTRA" "www.$EXTRA"; do
     getent hosts "$h" >/dev/null \
         || { echo "$h todavía no resuelve: falta el DNS (ver deploy/README.md)" >&2; exit 1; }
 done
@@ -52,6 +54,10 @@ certbot certonly --webroot -w /var/www/html \
     --non-interactive --agree-tos --keep-until-expiring \
     --deploy-hook "systemctl reload nginx"
 certbot certonly --webroot -w /var/www/html -d "$OLD" \
+    --non-interactive --agree-tos --keep-until-expiring \
+    --deploy-hook "systemctl reload nginx"
+certbot certonly --webroot -w /var/www/html \
+    --cert-name "$EXTRA" -d "$EXTRA" -d "www.$EXTRA" \
     --non-interactive --agree-tos --keep-until-expiring \
     --deploy-hook "systemctl reload nginx"
 

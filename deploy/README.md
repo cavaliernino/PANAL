@@ -87,6 +87,10 @@ dominios de fuego. Los registros, en la zona de Linode:
 | `panalforestal.cl` | AAAA | 2600:3c00::f03c:91ff:fe33:3da3 |
 | `www` | A / AAAA | los mismos |
 
+**panalstaysafe.cl** (comprado el 8-oct) va igual, en su propia zona de
+Linode: A y AAAA con los mismos valores, para el dominio y para `www`. Solo
+redirige a panalforestal.cl; el porqué está en la conf.
+
 El AAAA importa: Let's Encrypt valida por IPv6 si hay registro, y uno que
 apunte a otro lado hace fallar el certificado aunque el A esté bien.
 
