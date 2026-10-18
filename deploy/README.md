@@ -38,9 +38,9 @@ ssh -t fuego sudo bash panal-setup/setup-root.sh   # dir, certificados, vhost
 ssh fuego bash panal-setup/setup-user.sh           # clon, venv, cron
 ```
 
-`setup-root.sh` corre `nginx -t` antes de recargar y, si falla, desactiva el
-vhost nuevo en vez de dejar a nginx con una configuración rota — en ese
-servidor viven otros sitios. Antes de certbot revisa que los tres nombres
+`setup-root.sh` corre `nginx -t` antes de recargar y, si falla, repone la
+conf que estaba (la primera vez, desactiva el vhost nuevo) en vez de dejar a
+nginx con una configuración rota — en ese servidor viven otros sitios. Antes de certbot revisa que los tres nombres
 resuelvan: sin DNS no sigue.
 
 La copia en `~/panal-setup` sirve solo para la primera vez, cuando todavía
@@ -73,6 +73,24 @@ ssh -t fuego sudo bash /var/www/panal.ninobozzi.cl/deploy/setup-root.sh
 ```bash
 ssh fuego tail -8 /var/www/panal.ninobozzi.cl/data/cron_national.log
 curl -s https://panalforestal.cl/data/national.json | head -c 120
+```
+
+## Analítica
+
+Umami, el mismo que ya corre en fuego para humanalegal, 33bit y bozzi
+(contenedor en `127.0.0.1:3001`). Panel: https://umami.humanalegal.cl, sitio
+«PANAL». Sin cookies. Las páginas cargan `u.js` y mandan a `/api/send`, los
+dos en este mismo origen por proxy de nginx (el porqué está en la conf).
+`brujula.html` no lo carga: es una herramienta de medición, no una página
+pública.
+
+El Website ID `35233b69-03f7-4439-abc6-5ec941bf239c` está en las tres
+páginas; el sitio se creó en la base de Umami con ese mismo ID.
+
+```bash
+curl -sI https://panalforestal.cl/u.js | grep -iE '^HTTP|content-type'   # 200, javascript
+# cuerpo vacío → 400 con el JSON de validación de Umami, sin registrar nada
+curl -s -X POST -H 'Content-Type: application/json' -d '{}' https://panalforestal.cl/api/send
 ```
 
 ## Dominio

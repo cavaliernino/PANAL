@@ -62,6 +62,13 @@ certbot certonly --webroot -w /var/www/html \
     --deploy-hook "systemctl reload nginx"
 
 echo "4/4 vhost nginx"
+# Copia de la conf que está funcionando: si la nueva no pasa `nginx -t`, el
+# sitio vuelve a ella en vez de quedar apagado.
+prev=""
+if [ -f "$AVAIL" ]; then
+    prev="$(mktemp)"
+    cp "$AVAIL" "$prev"
+fi
 cp "$CONF_SRC" "$AVAIL"
 ln -sf "$AVAIL" "$ENABLED"
 # La conf nueva ya atiende el nombre anterior; con las dos activas chocan
@@ -72,9 +79,14 @@ if [ -L "$OLD_ENABLED" ] || [ -e "$OLD_ENABLED" ]; then
     had_old=1
 fi
 if ! nginx -t; then
-    rm -f "$ENABLED"
+    if [ -n "$prev" ]; then
+        cp "$prev" "$AVAIL"
+        echo "nginx -t falló: repuesta la conf que estaba, nginx NO recargado" >&2
+    else
+        rm -f "$ENABLED"
+        echo "nginx -t falló: vhost nuevo desactivado, nginx NO recargado" >&2
+    fi
     [ "$had_old" -eq 0 ] || ln -s "$OLD_AVAIL" "$OLD_ENABLED"
-    echo "nginx -t falló: vhost nuevo desactivado, el anterior repuesto, nginx NO recargado" >&2
     exit 1
 fi
 systemctl reload nginx
