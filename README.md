@@ -111,7 +111,7 @@ web/       national.html (live) · wui.html (exposure) · index.html (replays) �
 deploy/    nginx vhost and setup scripts for panalforestal.cl
 api/       FastAPI — not started
 android/   the 2020 app, carried forward for a Phase 7 rebuild
-docs/      roadmap · data-sources · risk-model · crowdsourcing · alianzas
+docs/      roadmap · data-sources · risk-model · crowdsourcing · alianzas · design-system
 ```
 
 124 tests across `ingest` and `engine`:

@@ -15,7 +15,8 @@ python3 -m http.server 8000 --directory web
 | `national.html` | Live national detection — the product, and the app's start page |
 | `wui.html` | Wildland-urban exposure, Valparaíso and Biobío–Ñuble — public, labelled as research (clears chance in two fires of six, none of them Biobío's) |
 | `brujula.html` | Compass measurement tool, out of the navigation |
-| `panal.js` | Shared encoding rules, so the calibrated ramp cannot drift |
+| `panal.js` | Shared encoding rules, so the fire scale cannot drift |
+| `panal.css` | Shared UI tokens and components, ACHEZ design system — [`docs/design-system.md`](../docs/design-system.md), same reasoning; every page links it before its own `<style>` |
 | `sw.js`, `manifest.json`, `icons/` | The installable app (PWA) |
 
 ## What ships first: the replays
@@ -178,8 +179,10 @@ operationally relevant, not decoration.
 
 From [`../docs/roadmap.md`](../docs/roadmap.md):
 
-- **Colour carries intensity, opacity carries confidence.** The FRP ramp runs
-  pale yellow to deep red on a log scale; the evidence tier sets alpha.
+- **Colour carries intensity, opacity carries confidence.** FRP falls into
+  four named levels — baja, media, alta, muy alta — in the ACHEZ accent
+  colours, yellow to red, cut at the Viña 2024 median, p75 and p90; the
+  evidence tier sets alpha.
 - **Opacity never works alone.** The weakest tiers also get a dashed outline,
   because opacity alone fails WCAG and reads differently on light and dark
   basemaps.
