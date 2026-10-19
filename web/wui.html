@@ -203,9 +203,12 @@ const val = r => mode === "hz" ? r[HZ] : r[CS];
 // The selected cell is left out of the base layer and drawn only by "sel":
 // screen blending only ever lightens, so a darker selected state drawn on
 // top of the cell would come out lighter.
+// On the satellite map the picture under the cell is the point — the
+// slope and the vegetation the index is about — so the fill is halved and
+// the solid edge carries the class.
 function fill(r) {
   if (r[H] === selected) return [0, 0, 0, 0];
-  const p = val(r), f = RES_ALPHA[resOf(r[H])] ?? .3;
+  const p = val(r), f = (RES_ALPHA[resOf(r[H])] ?? .3) * (styleIdx === SATELLITE ? .5 : 1);
   if (p == null) return [...UNOBSERVED, Math.round(140 * f)];
   return [...ramp()[cls(p)], Math.round(FILL_ALPHA * f)];
 }
@@ -257,7 +260,7 @@ function layers() {
     new H3HexagonLayer({
       id: "prio", data: D.rows.filter(r => r[PRIO]), getHexagon: r => r[H],
       extruded: false, filled: false, stroked: true,
-      getLineColor: styleIdx === 0 ? [255, 255, 255, 235] : [17, 24, 39, 235],
+      getLineColor: STYLES[styleIdx][2] ? [255, 255, 255, 235] : [17, 24, 39, 235],
       lineWidthMinPixels: 2, updateTriggers: { getLineColor: [styleIdx] },
     }),
   ];
@@ -293,7 +296,7 @@ function drawRamp() {
 
 async function setStyle(k) {
   styleIdx = k % STYLES.length;
-  $("c-style").textContent = "mapa: " + STYLES[styleIdx][0];
+  $("c-style").textContent = "mapa: " + basemapName(styleIdx);
   map.setStyle(await basemap(styleIdx));
   $("map").classList.toggle("screen", styleIdx === 0);
   drawRamp();

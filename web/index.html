@@ -558,10 +558,18 @@ function play(on) {
   }, +$("rate").value);
 }
 
+// The satellite mosaic is dated by the fire: the year before it, so the
+// vegetation shown is what was there to burn, not the scar. 2014 has no
+// mosaic from before, and the chip says so rather than leave it to a hover.
 async function setStyle(idx) {
   styleIdx = idx % STYLES.length;
-  $("c-style").textContent = "mapa: " + STYLES[styleIdx][0];
-  map.setStyle(await basemap(styleIdx));
+  const when = DATA.frames[0].t, sat = styleIdx === SATELLITE, s2 = s2Mosaic(when);
+  $("c-style").textContent = "mapa: " + basemapName(styleIdx, when) +
+    (sat && s2.after ? " · posterior al incendio" : "");
+  $("c-style").title = !sat ? "" : s2.after
+    ? `Mosaico Sentinel-2 de ${s2.year}: no hay uno anterior al incendio.`
+    : `Mosaico Sentinel-2 de ${s2.year}: la vegetación antes del incendio.`;
+  map.setStyle(await basemap(styleIdx, when));
   map.once("styledata", addLayers);
 }
 

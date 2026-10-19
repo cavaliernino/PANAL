@@ -65,13 +65,17 @@ const CONF_ES = {
 // fails WCAG and reads differently on light and dark basemaps.
 const WEAK = new Set(["low_probability", "cloud_contaminated"]);
 
-// Keyless basemaps. The dark one is CARTO's dark-matter recoloured into the
-// ACHEZ palette by basemap() below; the other two are used as published.
+// Keyless basemaps: name, style URL, and whether it is dark enough that
+// white outlines read on it. The dark one is CARTO's dark-matter recoloured
+// into the ACHEZ palette by basemap() below; the satellite one is built by
+// satellite(); the other two are used as published.
 const STYLES = [
-  ["oscuro", "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"],
-  ["claro", "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"],
-  ["callejero", "https://tiles.openfreemap.org/styles/liberty"],
+  ["oscuro", "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json", true],
+  ["claro", "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json", false],
+  ["callejero", "https://tiles.openfreemap.org/styles/liberty", false],
+  ["satélite", null, true],
 ];
+const SATELLITE = 3;
 
 // Dark-matter is greys. Each grey is moved onto the Petróleo–Cielo scale by
 // its lightness, so the style's own hierarchy (land < roads < labels) holds
@@ -132,14 +136,11 @@ function recolour(v, fixed) {
 
 let darkStyle = null;
 
-/** The style for STYLES[k]: a URL, or for the dark one the recoloured
- *  style object. Falls back to the plain URL if it cannot be fetched. */
-async function basemap(k) {
-  const url = STYLES[k % STYLES.length][1];
-  if (k % STYLES.length !== 0) return url;
+/** Dark-matter recoloured, fetched once; null if it cannot be fetched. */
+async function darkMatter() {
   if (!darkStyle) {
     try {
-      const style = await (await fetch(url)).json();
+      const style = await (await fetch(STYLES[0][1])).json();
       for (const layer of style.layers) {
         const fixed = PETROLEO_FIXED[layer.id];
         for (const key of Object.keys(layer.paint || {}))
@@ -148,10 +149,91 @@ async function basemap(k) {
       }
       darkStyle = style;
     } catch {
-      return url;
+      return null;
     }
   }
   return JSON.parse(JSON.stringify(darkStyle));
+}
+
+// Sentinel-2 cloudless, EOX's yearly mosaic: 10 m pixels, keyless, and
+// dated. The date is why it is this one and not a sharper undated mosaic:
+// a replay can show the vegetation that stood before the fire instead of
+// its scar — the 2024 mosaic already carries Viña 2024's, the 2023 one
+// does not. 2016 is the first mosaic, 2025 the newest published (EOX WMTS
+// capabilities, checked 2026-10-19).
+const S2_FIRST = 2016, S2_LAST = 2025;
+
+/** The mosaic for a map about `when` (an ISO time): the newest from a year
+ *  before it, so none of it can show the fire itself. Without `when`, the
+ *  newest. Before 2017 there is none from before, and the first is used
+ *  with `after` set. */
+function s2Mosaic(when) {
+  const y = when ? new Date(when).getUTCFullYear() - 1 : S2_LAST;
+  return { year: Math.max(S2_FIRST, Math.min(S2_LAST, y)), after: y < S2_FIRST };
+}
+
+/** The satellite style: the mosaic, relief shading from the AWS terrain
+ *  tiles, and dark-matter's place names when it can be fetched. */
+async function satellite(when) {
+  const { year } = s2Mosaic(when);
+  const layer = year === 2016 ? "s2cloudless_3857" : `s2cloudless-${year}_3857`;
+  const style = {
+    version: 8,
+    sources: {
+      s2: {
+        type: "raster", tileSize: 256, maxzoom: 14,
+        tiles: [`https://tiles.maps.eox.at/wmts/1.0.0/${layer}/default/g/{z}/{y}/{x}.jpg`],
+        attribution: `<a href="https://s2maps.eu">Sentinel-2 cloudless ${year}</a> by ` +
+          `EOX IT Services GmbH (Contains modified Copernicus Sentinel data ${year})`,
+      },
+      relief: {
+        type: "raster-dem", encoding: "terrarium", tileSize: 256, maxzoom: 15,
+        tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+        attribution: '<a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a>',
+      },
+    },
+    layers: [
+      { id: "background", type: "background", paint: { "background-color": "#0A2E38" } },
+      { id: "s2", type: "raster", source: "s2" },
+      // Shadows in Petróleo, not black: black is the burn scar's.
+      { id: "relief", type: "hillshade", source: "relief", paint: {
+        "hillshade-exaggeration": 0.35,
+        "hillshade-shadow-color": "rgba(6,34,43,0.6)",
+        "hillshade-highlight-color": "rgba(255,255,255,0.12)",
+        "hillshade-accent-color": "rgba(6,34,43,0.25)",
+      } },
+    ],
+  };
+  const dark = await darkMatter();
+  if (dark) {
+    // Place names only: the roads, rivers and coast are in the picture.
+    // One colour with a heavy halo, because the picture under them is busy.
+    Object.assign(style, { glyphs: dark.glyphs, sprite: dark.sprite });
+    style.sources.carto = dark.sources.carto;
+    for (const l of dark.layers)
+      if (l.type === "symbol" && l["source-layer"] === "place")
+        style.layers.push({ ...l, paint: { ...l.paint,
+          "text-color": "#EAF4F7", "text-halo-color": "rgba(6,34,43,0.85)",
+          "text-halo-width": 1.4 } });
+  }
+  return style;
+}
+
+/** The style for STYLES[k]: a URL, or a style object for the recoloured
+ *  dark one and the satellite one. `when` dates the satellite mosaic. The
+ *  dark one falls back to the plain URL if it cannot be fetched. */
+async function basemap(k, when) {
+  k %= STYLES.length;
+  if (k === SATELLITE) return satellite(when);
+  if (k !== 0) return STYLES[k][1];
+  return (await darkMatter()) || STYLES[0][1];
+}
+
+/** The basemap's name as the chip shows it; the satellite one says its
+ *  year, because a mosaic is a picture of one year and not of today. */
+function basemapName(k, when) {
+  k %= STYLES.length;
+  return k === SATELLITE ? `satélite ${s2Mosaic(when).year}` : STYLES[k][0];
 }
 
 /** Which H3 level to serve at a given zoom.
