@@ -27,7 +27,7 @@ cambia) y pégalo antes de tu propio `<style>`:
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Nunito+Sans:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400&family=Poppins:wght@400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Nunito+Sans:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400&display=swap">
 <link rel="stylesheet" href="panal.css">
 <style>
   /* Tokens y componentes: panal.css. Aquí solo lo propio de esta vista. */
@@ -68,7 +68,7 @@ panel flotante, los dos con `position:absolute` sobre el `#map`:
 <header>
   <div>
     <div class="logo"><img src="icons/achez.svg" alt="" width="30" height="36">
-      <span><b>ACHEZ</b><small>POWERED BY PANAL</small></span></div>
+      <span><b>PANAL</b></span></div>
     <nav class="nav">
       <a href="national.html" aria-current="page">Detección</a>
       <a href="wui.html">Exposición</a>

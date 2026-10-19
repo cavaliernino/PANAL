@@ -1,10 +1,9 @@
 # Sistema de diseño — ACHEZ
 
 La interfaz de `web/` sigue el sistema de diseño **ACHEZ** (lienzo "ACHEZ
-Design System" en Claude): la marca de producto de la plataforma, *powered
-by PANAL*. Este documento es su traducción a la web; el lienzo manda en
-color, tipografía, logo y componentes, y este documento agrega lo que el
-lienzo no cubre (mapas, rampas de datos, la hoja inferior, la confianza).
+Design System" en Claude). Este documento es su traducción a la web; el
+lienzo manda en color, tipografía, logo y componentes, y este documento
+agrega lo que el lienzo no cubre (mapas, rampas de datos, la hoja inferior, la confianza).
 [`web/panal.css`](../web/panal.css) es su implementación en código, al
 mismo nivel que [`web/panal.js`](../web/panal.js) resuelve lo mismo para
 las reglas de color de los datos — por la misma razón que da su cabecera:
@@ -19,19 +18,18 @@ inline, y las cuatro ya habían divergido (ver
 
 ## 1. Marca
 
-**ACHEZ** es el producto; **PANAL** es el motor de datos debajo, y por eso
-el logo lleva la bajada *POWERED BY PANAL*. El nombre del repositorio, del
-dominio (`panalforestal.cl`) y de la PWA sigue siendo PANAL.
+El logo dice **PANAL**, el mismo nombre del repositorio, del dominio
+(`panalforestal.cl`) y de la PWA. ACHEZ es el nombre del lienzo de donde
+vienen la paleta, la tipografía y el isotipo.
 
 `web/icons/achez.svg` es el isotipo: una llama doble, naranja (degradado
 `#F4C160` → `#D96704`) y celeste (`#64D9F2` → `#03738C`). Se usa el archivo
 tal cual — sin cambiar proporciones, colores ni degradados.
 
-El logo completo (`.logo`) es isotipo + **ACHEZ** en Plus Jakarta Sans
-Regular blanco + **POWERED BY PANAL** en Poppins Regular `#64D9F2`, con la
-bajada a 0,35× el tamaño de ACHEZ. Va solo sobre fondos oscuros, arriba a
-la izquierda, seguido de los pills de navegación (`.nav`) — nunca centrado,
-nunca solo. En la cabecera: isotipo de 36px de alto, ACHEZ a 22px.
+El logo completo (`.logo`) es isotipo + **PANAL** en Plus Jakarta Sans
+Regular blanco. Va solo sobre fondos oscuros, arriba a la izquierda,
+seguido de los pills de navegación (`.nav`) — nunca centrado, nunca solo.
+En la cabecera: isotipo de 36px de alto, PANAL a 22px.
 
 El favicon (`icons/icon.svg`) es el isotipo solo, sobre fondo
 transparente. Los íconos de la PWA (`icon-192.png`, `icon-512.png`,
@@ -107,7 +105,6 @@ ninguna.
 | `--accent` | `#F59A55` | Fuego 400 | Destacados sobre oscuro: foco, nav activa, antetítulos, sliders (5,2:1) |
 | `--action` | `#B9500C` | Fuego 600 | Botón que hace algo, con texto blanco (5:1) |
 | `--ink-on-accent` | `#0A2E38` | Petróleo 900 | Texto sobre `--accent` |
-| `--brand-sky` | `#64D9F2` | — | Solo la bajada del logo |
 | `--ok` | `#7dd3a0` | — | "Fresco": ACHEZ no tiene verde y "fresco" no puede ser fuego |
 | `--warn` | `#FBC98E` | Fuego 200 | Avisos: "no validado", "stale", "research" |
 | `--danger` | `#EE7A2A` | Fuego 500 | Como relleno. Como texto pequeño sobre panel no llega a 4,5:1: ahí va `--accent` en negrita |
@@ -240,7 +237,7 @@ Dos voces, desde Google Fonts (un `<link>` por página, `display=swap`):
 |---|---|---|
 | Montserrat 700–800 | `--font-display` | Títulos (`.ttl`, en mayúsculas), antetítulos de sección (`h4`, 700, `letter-spacing: .14em`, en `--accent`), cifras grandes (`.big`, `.clock`), botones |
 | Nunito Sans 400–700 | `--font-text` | Texto e interfaz |
-| Plus Jakarta Sans 400, Poppins 400 | — | Solo el logo |
+| Plus Jakarta Sans 400 | — | Solo el logo |
 
 Sin conexión, todo cae a `system-ui`. Monoespaciada únicamente para
 lecturas instrumentales (`brujula.html`, el HUD de la cámara):
@@ -257,7 +254,7 @@ paneles sobre el mapa son más densos y conservan la escala de antes:
 | 10.5–11px | Chips, antetítulos uppercase |
 | 12–12.5px | Cuerpo por defecto dentro de paneles |
 | 13–15px | Texto base del documento, títulos de sección (`.ttl`) |
-| 17–22px | Cifras secundarias, ACHEZ en el logo |
+| 17–22px | Cifras secundarias, PANAL en el logo |
 | 24–30px | Cifra principal del panel (reloj, conteo) |
 
 Regla fija: **todo número que cambia en vivo lleva
@@ -367,7 +364,7 @@ controles instrumentales de `brujula.html`, el sparkline y la línea de
 tiempo de `index.html`. Una regla de `panal.css` se pisa en la página con la
 misma especificidad, porque el `<style>` va después.
 
-- Cabecera con el logo ACHEZ completo en las cuatro páginas.
+- Cabecera con el logo PANAL completo en las cuatro páginas.
 - Tokens Petróleo/Fuego, Montserrat + Nunito Sans, radios y botones píldora.
 - Intensidad del fuego en tres niveles (§4.1), en mapas, leyendas y
   tooltips.

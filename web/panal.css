@@ -1,5 +1,5 @@
 /* Tokens y componentes compartidos de la interfaz — sistema de diseño
- * ACHEZ (powered by PANAL).
+ * ACHEZ.
  *
  * Viven en un solo archivo por la misma razón que panal.js: una copia de
  * estos valores en el <style> de una segunda página se desalinea en cuanto
@@ -13,8 +13,8 @@
  * Cada página lo enlaza antes de su propio <style>, que guarda solo lo
  * específico de ella (mapa, controles instrumentales, posiciones) y puede
  * pisar cualquier regla de aquí con la misma especificidad. Las fuentes
- * (Montserrat, Nunito Sans y, solo para el logo, Plus Jakarta Sans y
- * Poppins) las carga cada página con un <link> a Google Fonts.
+ * (Montserrat, Nunito Sans y, solo para el logo, Plus Jakarta Sans) las
+ * carga cada página con un <link> a Google Fonts.
  */
 
 :root{
@@ -39,7 +39,6 @@
   --action:#B9500C;
   --ink-on-accent:#0A2E38;
   --ink-on-action:#FFFFFF;
-  --brand-sky:#64D9F2;   /* bajada "POWERED BY PANAL" del logo */
 
   /* Estado semántico. --warn es Fuego 200 (avisos); --danger es Fuego 500,
      como relleno — como texto pequeño sobre panel no llega a 4.5:1, ahí se
@@ -93,16 +92,13 @@ body{
 :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
 /* ── logo y navegación ─────────────────────────────────── */
-/* El logo completo: isotipo de llama, ACHEZ en Plus Jakarta Sans blanco y
-   la bajada en Poppins celeste. Nunca se recolorea ni se separa la bajada;
-   va solo sobre fondos oscuros. */
+/* El logo completo: isotipo de llama y PANAL en Plus Jakarta Sans blanco.
+   Nunca se recolorea; va solo sobre fondos oscuros. */
 
 .logo{display:flex; align-items:center; gap:8px; color:var(--ink); text-decoration:none}
 .logo img{display:block; width:30px; height:36px; flex:none}
 .logo span{display:flex; flex-direction:column; line-height:1}
 .logo b{font:400 22px/1 "Plus Jakarta Sans",var(--font-text); letter-spacing:.01em}
-.logo small{font:400 7.75px/1.3 Poppins,var(--font-text); color:var(--brand-sky);
-  letter-spacing:.02em; white-space:nowrap}
 
 .nav{display:flex; gap:4px; margin-top:8px; flex-wrap:wrap}
 .nav a{font-size:12px; font-weight:600; color:var(--ink-dim); text-decoration:none;
