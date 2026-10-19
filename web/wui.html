@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PANAL · Exposición</title>
-<meta name="description" content="Dónde se vive en la condición que convierte un incendio chico en catástrofe: pendiente, combustible y viviendas, regiones de Valparaíso, Biobío y Ñuble.">
+<meta name="description" content="Dónde hay viviendas junto a pendientes y vegetación que puede arder, lo que convierte un incendio chico en una catástrofe. Regiones de Valparaíso, Biobío y Ñuble.">
 <meta name="theme-color" content="#0A2E38">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -81,10 +81,10 @@
 
   <div class="card" id="card" hidden></div>
 
-  <div class="research"><b>En investigación — no es un producto de
-  riesgo.</b> Probado contra incendios reales, acierta con claridad en
-  <span id="res-val">—</span>.<span id="res-reg"></span> Para validarlo hacen
-  falta los registros de daño y el catastro de vegetación de CONAF.</div>
+  <div class="research"><b>Mapa en investigación: todavía no es un producto
+  de riesgo.</b> Lo probamos con incendios reales y acierta con claridad en
+  <span id="res-val">—</span>.<span id="res-reg"></span> Para validarlo faltan
+  los registros de daño y el catastro de vegetación de CONAF.</div>
 
   <div class="seg regs" id="regs" role="group" aria-label="Región"></div>
 
@@ -97,31 +97,36 @@
   </div>
 
   <div id="leg-hz">
-    <p class="note">¿Llegaría el fuego y correría? <b>Pendiente y combustible</b>
-    junto a viviendas. Probado contra incendios reales, con la vegetación
-    de antes de cada uno — cuánto más que el azar acierta:</p>
+    <p class="note">Qué tan peligroso sería un incendio que llegue hasta
+    aquí, según la <b>pendiente</b> y el <b>combustible</b> (la vegetación
+    que puede arder) junto a las viviendas. Lo probamos con incendios
+    reales, usando la vegetación que había antes de cada uno. Cuántas veces
+    acertó más que el azar:</p>
     <div class="val" id="val"></div>
-    <p class="note">Ordena bien el fuego que baja de matorral seco hacia
-    viviendas dispersas. <b>No el que corre por población densa ni por
-    plantaciones</b>: para eso falta el tipo de combustible.</p>
+    <p class="note">Funciona bien cuando el fuego baja por matorral seco
+    hacia casas dispersas. <b>No funciona bien con incendios que avanzan
+    por poblaciones densas o por plantaciones</b>: para eso falta saber qué
+    tipo de vegetación hay.</p>
   </div>
   <div id="leg-cs" hidden>
-    <div class="unvalbox"><b>Sin validar.</b> Qué tan grave sería si llegara:
-    salida, precariedad, vulnerabilidad y agua. Los pesos no tienen evidencia
-    todavía — eso requiere los registros de daño de 2024.</div>
+    <div class="unvalbox"><b>Sin validar.</b> Qué tan grave sería si el
+    fuego llega: qué tan difícil es salir del sector, si hay viviendas
+    precarias o personas que no podrían irse por su cuenta, y si falta red
+    de agua. Todavía no hay evidencia para el peso de cada factor; para eso
+    hacen falta los registros de daño de 2024.</div>
   </div>
 
   <h4>Percentil en la región</h4>
   <div class="ramp" id="ramp"></div>
-  <div class="ramp-lbl"><span>&lt; 25</span><span>50</span><span>75</span><span>90</span><span>top 10%</span></div>
+  <div class="ramp-lbl"><span>&lt; 25</span><span>50</span><span>75</span><span>90</span><span>10% más alto</span></div>
   <div class="key"><i style="background:rgba(79,96,103,.5);
-    border:1px solid #4F6067"></i><span><b style="color:var(--ink)">Sin combustible
-    observado</b> — sin ranking. No es riesgo bajo.</span></div>
+    border:1px solid #4F6067"></i><span><b style="color:var(--ink)">Sin datos de
+    combustible</b>: no se clasifica, y eso no significa riesgo bajo.</span></div>
   <div class="key"><i style="border:2px solid #fff"></i><span>Prioridad: amenaza
-    y consecuencia en el 10% superior</span></div>
+    y consecuencia, las dos en el 10% más alto</span></div>
   <div class="key"><i style="background:rgba(242,135,5,.3);
     border:2px solid rgba(242,135,5,.8)"></i><span>Hexágonos grandes y tenues:
-    zona rural, pocas viviendas dispersas.</span></div>
+    zona rural, con pocas casas dispersas.</span></div>
 
   <div class="stat">
     <div><b id="s-cells">—</b><span>celdas prioritarias</span></div>
@@ -140,9 +145,9 @@
       <li><b>No es una alerta.</b> Las alertas oficiales son de SENAPRED.
       Ante un incendio: <b>130</b> CONAF, <b>132</b> Bomberos.</li>
       <li><b>No reemplaza el criterio</b> de quien conoce el terreno. Ordena
-      miles de celdas para que alguien mire decenas.</li>
-      <li>Sirve <b>antes</b> de la temporada: limpieza de combustible,
-      cortafuegos, planificar salidas.</li>
+      miles de celdas para que alguien revise solo las decenas que importan.</li>
+      <li>Sirve para prepararse <b>antes</b> de la temporada: limpiar
+      vegetación, hacer cortafuegos, planificar salidas.</li>
       <li>Cada hexágono mide unos 400 m. Es un promedio de la celda, no de
       tu casa.</li>
     </ul>
@@ -295,7 +300,7 @@ async function setStyle(k) {
   render();
 }
 
-const rankText = p => p >= 90 ? `top ${Math.max(1, 100 - p)}%` : `percentil ${p}`;
+const rankText = p => p >= 90 ? `entre el ${Math.max(1, 100 - p)}% más alto` : `percentil ${p}`;
 
 // Components are described by where they sit in the region, not by labels
 // like "high" or "difficult": those would need thresholds nobody has
@@ -339,9 +344,9 @@ function showCard(h, note) {
   let html = "";
   if (!r) {
     html += `<div class="where">${note}</div>
-      <div class="why" style="margin-top:6px">El índice solo puntúa celdas
-      donde el Censo 2024 registra viviendas. <b>Que una celda no esté no
-      significa que no haya peligro.</b></div>`;
+      <div class="why" style="margin-top:6px">El índice solo califica celdas
+      donde el Censo 2024 registró viviendas. <b>Que una celda no aparezca
+      no significa que no haya peligro.</b></div>`;
   } else {
     const comuna = r[COMUNA] != null ? D.meta.comunas[r[COMUNA]] : "—";
     const km2 = h3.cellArea(r[H], "km2");
@@ -350,9 +355,10 @@ function showCard(h, note) {
       ${km2 >= 10 ? Math.round(km2) : km2.toFixed(1)} km²: sus valores son el
       promedio de pocas viviendas dispersas, no de un punto.</div>`;
     if (r[HZ] == null) {
-      html += `<div class="row"><span>Amenaza</span><b>sin ranking</b></div>
-        <div class="why">No hay observación de combustible para esta celda
-        (nubes en las escenas de verano). <b>No significa que sea segura.</b></div>`;
+      html += `<div class="row"><span>Amenaza</span><b>sin clasificar</b></div>
+        <div class="why">No hay datos de combustible para esta celda: las
+        imágenes de verano salieron con nubes. <b>Eso no significa que sea
+        segura.</b></div>`;
     } else {
       html += `<div class="row"><span>Amenaza</span><b>${rankText(r[HZ])}</b></div>
         <div class="why">pendiente ${r[PEND] ?? "—"}° · más combustible que
@@ -361,7 +367,7 @@ function showCard(h, note) {
     html += `<div class="row"><span>Consecuencia <small style="color:var(--warn)">
       sin validar</small></span><b>${rankText(r[CS])}</b></div>
       <div class="why">${nf(r[VIV])} viviendas · ${nf(r[PER])} personas ·
-      ${r[EGR] == null ? "salida sin dato en OpenStreetMap"
+      ${r[EGR] == null ? "salida: sin datos en OpenStreetMap"
         : `salida más difícil que en el ${share("egr", r[EGR])}% de las celdas`}</div>`;
     if (r[PRIO]) html += `<span class="tag u">prioridad · consecuencia sin validar</span>`;
   }
@@ -393,21 +399,21 @@ function placeMe(lat, lon) {
   if (found) return showCard(found, "tu ubicación");
   const h = h3.latLngToCell(lat, lon, D.meta.res_max);
   const near = h3.gridDisk(h, 20).some(c => findCell(...h3.cellToLatLng(c)));
-  showCard(h, near ? "tu ubicación — celda sin viviendas censadas"
+  showCard(h, near ? "tu ubicación: aquí el censo no registra viviendas"
     : `tu ubicación está fuera de este mapa (${D.meta.region})`);
 }
 
 // Location never leaves the device: the cell is computed here, and nothing
 // about it is sent anywhere.
 function locate() {
-  if (!navigator.geolocation) return showMsg("Este navegador no da ubicación.");
+  if (!navigator.geolocation) return showMsg("Este navegador no permite obtener la ubicación.");
   $("locate").textContent = "◎ Buscando…";
   navigator.geolocation.getCurrentPosition(pos => {
     $("locate").textContent = "◎ Cerca de mí";
     placeMe(pos.coords.latitude, pos.coords.longitude);
   }, err => {
     $("locate").textContent = "◎ Cerca de mí";
-    showMsg(err.code === 1 ? "Sin permiso de ubicación. Se puede tocar el mapa."
+    showMsg(err.code === 1 ? "No diste permiso de ubicación. Puedes tocar el mapa para ver una celda."
                            : "No se pudo obtener la ubicación.");
   }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
 }
@@ -419,8 +425,8 @@ const REGIONS = {
     center: [-71.45, -33.05], centerPhone: [-71.55, -33.05], zoom: 10.2 },
   biobio: { label: "Biobío y Ñuble", file: "data/wui_biobio.json",
     center: [-72.95, -36.85], centerPhone: [-73.02, -36.82], zoom: 9.6,
-    note: "Aquí domina la plantación de pino y eucalipto, que el satélite " +
-          "lee como vegetación húmeda: es donde el índice funciona peor." },
+    note: "Aquí dominan las plantaciones de pino y eucalipto, que el " +
+          "satélite ve como vegetación húmeda. Es donde el índice funciona peor." },
 };
 const REGION = (r => REGIONS[r] ? r : "valparaiso")(new URLSearchParams(location.search).get("r"));
 
@@ -462,7 +468,7 @@ const REGION = (r => REGIONS[r] ? r : "valparaiso")(new URLSearchParams(location
   const here = ev.filter(e => e.region === m.region_id);
   const x = v => v.toLocaleString("es-CL", { maximumFractionDigits: 1 }) + "×";
   if (here.length) $("res-reg").textContent =
-    ` En esta región, ${here.filter(works).length} de ${here.length}: ` +
+    ` En esta región, en ${here.filter(works).length} de ${here.length}: ` +
     here.map(e => `${x(e.lift)} (${e.year})`).join(", ") + "." + (R.note ? " " + R.note : "");
   $("val").innerHTML = ev.map(e =>
     `<span class="${e.region === m.region_id ? "here" : ""}">${e.year}</span>` +
@@ -475,8 +481,8 @@ const REGION = (r => REGIONS[r] ? r : "valparaiso")(new URLSearchParams(location
   // Where OSM maps no road, consequence is scored without the exit term.
   // Said here, because it decides how far the count can be read.
   if (pr.egreso_conocido < pr.cells) $("s-egr").textContent =
-    `Salida conocida en ${nf(pr.egreso_conocido)} de ${nf(pr.cells)}: en las demás ` +
-    `OpenStreetMap no tiene calles y la consecuencia se calcula sin ese término.`;
+    `Solo en ${nf(pr.egreso_conocido)} de ${nf(pr.cells)} se conoce la salida. En las ` +
+    `demás, OpenStreetMap no tiene las calles y la consecuencia se calcula sin ese dato.`;
   $("src").innerHTML = Object.values(m.sources).join("<br>") +
     `<br>Celdas H3 r${Math.min(...Object.keys(m.res_cells || { 5: 0 }).map(Number))}–r${m.res_max} · ${nf(m.unobserved)} sin combustible observado` +
     `<br>Generado ${new Date(m.generated).toLocaleDateString("es-CL")}`;

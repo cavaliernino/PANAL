@@ -1,7 +1,7 @@
 {
   "name": "PANAL — incendios en Chile",
   "short_name": "PANAL",
-  "description": "Detección satelital de incendios en todo Chile cada 10 minutos, y dónde se vive en la condición que convierte un incendio chico en catástrofe.",
+  "description": "Incendios detectados por satélite en todo Chile cada 10 minutos, y las zonas donde un incendio chico puede convertirse en catástrofe.",
   "lang": "es-CL",
   "dir": "ltr",
   "start_url": "national.html",

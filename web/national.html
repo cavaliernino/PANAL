@@ -59,7 +59,7 @@
   <button class="grip" id="grip" aria-label="Abrir o cerrar el panel"></button>
   <div class="big"><span id="s-count">—</span><small id="s-count-lbl">focos detectados</small></div>
   <div class="kv"><span>FRP total</span><b id="s-frp">—</b></div>
-  <div class="kv"><span>GOES último barrido</span><b id="s-goes">—</b></div>
+  <div class="kv"><span>Último barrido GOES</span><b id="s-goes">—</b></div>
   <div class="kv" id="row-ind" hidden><span>fuentes fijas</span><b id="s-ind">0</b></div>
 
   <div id="quiet" class="quiet" hidden></div>
@@ -88,15 +88,15 @@
   <p class="warn"><span style="display:inline-block;width:11px;height:9px;
   background:#64748b;border-radius:3px;vertical-align:middle"></span>
   <b>Fuentes fijas</b>: minas, fundiciones y plantas que el satélite detecta
-  todo el año. Se marcan, nunca se borran — un incendio real puede empezar
-  ahí.</p>
+  todo el año. Se marcan pero no se borran, porque un incendio real también
+  puede empezar ahí.</p>
   <p class="warn"><span style="display:inline-block;width:11px;height:9px;
   border:2px solid var(--fire-mid);border-radius:2px;vertical-align:middle"></span>
-  <b>Hexágono hueco</b>: GOES lo vio en la última hora pero no en el último
-  barrido — humo, nube, o el foco bajó.</p>
-  <p class="warn">Sin celda significa <b>sin detección</b>, no ausencia de
-  fuego. Un foco bajo el umbral del sensor, o tapado por humo o nube, no
-  aparece. Los datos geoestacionarios son <b>provisionales</b>.</p>
+  <b>Hexágono hueco</b>: GOES lo vio en la última hora, pero no en el último
+  barrido. Puede ser humo, nubes o que el foco se debilitó.</p>
+  <p class="warn">Que no haya celda significa que <b>no hubo detección</b>,
+  no que no haya fuego. Un foco demasiado chico para el sensor, o tapado por
+  humo o nubes, no aparece. Los datos de GOES son <b>provisionales</b>.</p>
 </div>
 
 <div class="loading" id="loading">Cargando detección nacional…</div>
@@ -204,22 +204,22 @@ function quiet(total) {
   q.hidden = total > 0 && !stale && DATA.viirs.ok !== false;
   q.className = "quiet" + (stale ? " stale" : "");
   if (stale) {
-    q.innerHTML = `<b>Datos de hace ${fmtAge(ageMin)}.</b> ` +
-      (offline ? "Sin conexión. " : "La cadena no se actualizó. ") +
-      "Lo que haya pasado después no está en este mapa: que no aparezcan " +
-      "celdas no significa que no haya fuego.";
+    q.innerHTML = `<b>Los datos son de hace ${fmtAge(ageMin)}.</b> ` +
+      (offline ? "Sin conexión. " : "No se han actualizado. ") +
+      "Lo que pasó después no está en el mapa, así que la falta de celdas " +
+      "no significa que no haya fuego.";
   } else if (DATA.viirs.ok === false) {
-    q.innerHTML = "<b>VIIRS no respondió</b> en esta corrida" +
-      (DATA.goes ? "" : ", y tampoco GOES") + ". Sin esa fuente, que no " +
+    q.innerHTML = "<b>VIIRS no respondió</b> en la última actualización" +
+      (DATA.goes ? "" : ", y GOES tampoco") + ". Sin esos datos, que no " +
       "aparezcan celdas no significa que no haya fuego.";
   } else if (!DATA.goes) {
-    q.innerHTML = "<b>Sin detecciones VIIRS, y sin barrido GOES</b> en esta " +
-      "corrida: el satélite geoestacionario no respondió. Sin GOES no hay " +
-      "detección de los últimos minutos.";
+    q.innerHTML = "<b>Sin detecciones VIIRS y sin barrido GOES</b> en la " +
+      "última actualización: GOES no respondió, así que no hay detección de " +
+      "los últimos minutos.";
   } else {
-    q.innerHTML = "<b>Sin detecciones activas.</b> Es el estado normal fuera " +
-      "de temporada. La cadena está viva: el último barrido GOES llegó y se " +
-      "procesó.";
+    q.innerHTML = "<b>No hay detecciones activas.</b> Es lo normal fuera de " +
+      "temporada, y el sistema está funcionando: el último barrido GOES " +
+      "llegó y se procesó.";
   }
 }
 
@@ -267,7 +267,7 @@ async function load() {
     offline = true;
     if (!DATA) {
       $("loading").innerHTML = "<div><b>Sin conexión y sin datos guardados.</b>" +
-        "<br>Esto no dice nada sobre incendios: solo que no hay datos que " +
+        "<br>Esto no dice nada sobre incendios, solo que no hay datos para " +
         "mostrar.</div>";
       return;
     }
@@ -277,7 +277,7 @@ async function load() {
   const gen = new Date(m.generated);
   ageMin = (Date.now() - gen) / 60000;
   $("c-age").textContent = (offline ? "sin conexión · " : "") +
-    "datos hace " + fmtAge(ageMin);
+    "datos de hace " + fmtAge(ageMin);
   $("c-age").className = "chip" + (ageMin <= STALE_MIN ? " fresh" : " stale");
   $("h-sub").textContent =
     `GOES-East, última hora · VIIRS ${DATA.viirs.window} · actualizado ` +
@@ -303,8 +303,8 @@ async function load() {
       html: `<div style="font:12px system-ui">
         ${layer.id === "industrial"
           ? "<b>Fuente fija conocida</b><br><span style=\"color:#666\">" +
-            "anomalía térmica persistente, no incendio</span><br>" : ""}
-        <b>Fuego ${frpLabel(object.f)}</b> · ${Math.round(object.f).toLocaleString("es-CL")} MW<br>
+            "fuente de calor permanente, no es un incendio</span><br>" : ""}
+        <b>Intensidad ${frpLabel(object.f)}</b> · ${Math.round(object.f).toLocaleString("es-CL")} MW<br>
         ${object.n} px · ${CONF_ES[object.c] ?? object.c}
         ${object.age != null ? "<br>hace " + fmtAge(ageNow(object)) : ""}
         ${layer.id === "goes" && object.k != null

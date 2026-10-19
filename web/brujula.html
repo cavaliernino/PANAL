@@ -67,10 +67,11 @@
 <div class="logo"><img src="icons/achez.svg" alt="" width="30" height="36">
       <span><b>PANAL</b></span></div>
 <h1>Medición de brújula</h1>
-<p>Cuánto se equivoca el teléfono al decir hacia dónde apunta la cámara. De
-ese número depende ubicar un incendio cruzando lo que reportan dos personas,
-y nadie lo ha medido. La ubicación no sale del teléfono: los datos se
-guardan acá y se exportan a mano.</p>
+<p>Esta página mide cuánto se equivoca el teléfono al indicar hacia dónde
+apunta la cámara. Para ubicar un incendio cruzando lo que reportan dos
+personas hay que conocer ese error, y nadie lo ha medido. Tu ubicación no
+sale del teléfono: los datos se guardan acá y tú decides cuándo
+exportarlos.</p>
 
 <details>
   <summary>Cómo medir</summary>
@@ -82,8 +83,8 @@ guardan acá y se exportan a mano.</p>
     <li>Con el teléfono vertical, centra la mira en el punto y toca
       <b>Marcar</b>. Quédate quieto 2 segundos.</li>
     <li>Repite desde varios lugares y hacia varios puntos. Marca también
-      cerca de autos, rejas o postes, con la casilla activada: eso es lo que
-      pasa en la calle.</li>
+      cerca de autos, rejas o postes, con la casilla marcada: así es como se
+      va a usar en la calle.</li>
     <li>Al final, <b>Compartir</b> o <b>Descargar CSV</b>.</li>
   </ol>
 </details>
@@ -113,7 +114,7 @@ guardan acá y se exportan a mano.</p>
     <label class="t"><input type="checkbox" id="metal"> cerca de metal o autos</label>
   </div>
   <div class="row"><button class="go" id="mark" disabled>Marcar</button>
-    <button id="here">Este lugar es un punto</button></div>
+    <button id="here">Usar este lugar como punto</button></div>
 </div>
 
 <div class="box">
@@ -181,7 +182,7 @@ function onOrientation(e) {
     alpha = 360 - e.webkitCompassHeading; source = "iPhone (experimental)";
   } else if (e.absolute || e.type === "deviceorientationabsolute") {
     source = "Android, absoluta";
-  } else { source = "relativa — no sirve para medir"; return; }
+  } else { source = "relativa: no sirve para medir"; return; }
   if (alpha == null || e.beta == null || e.gamma == null) return;
   const d = cameraDirection(alpha, e.beta, e.gamma);
   heading = wrap(d.heading + DECLINATION); pitch = d.pitch;
@@ -217,7 +218,7 @@ function showTarget() {
   $("lm-info").textContent = `${(dist / 1000).toFixed(2)} km · ${bearing.toFixed(1)}°`;
   // How much the position uncertainty alone moves the true bearing.
   const g = deg(Math.atan((fix.acc + l.tol) / dist));
-  $("lm-gps").innerHTML = `±${g.toFixed(1)}°` + (dist < 1000 ? ` <span class="warn">— muy cerca</span>` : "");
+  $("lm-gps").innerHTML = `±${g.toFixed(1)}°` + (dist < 1000 ? ` <span class="warn">muy cerca</span>` : "");
 }
 
 let samples = null;
@@ -324,8 +325,8 @@ $("mark").onclick = mark;
 $("lm").onchange = showTarget;
 $("here").onclick = () => {
   if (!fix) return alert("Todavía no hay ubicación.");
-  if (fix.acc > 15) return alert(`El GPS está a ±${Math.round(fix.acc)} m. Espera a que baje de 15 m.`);
-  const name = prompt("Nombre del punto (estás parado en él):");
+  if (fix.acc > 15) return alert(`El GPS tiene un error de ±${Math.round(fix.acc)} m. Espera a que baje de 15 m.`);
+  const name = prompt("Nombre de este punto (donde estás parado):");
   if (!name) return;
   custom.push({ id: "c" + Date.now(), name, lat: fix.lat, lon: fix.lon, tol: Math.round(fix.acc) });
   save(); fillLandmarks();

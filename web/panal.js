@@ -56,7 +56,7 @@ const OPACITY = {
 // vocabulary (GOES mask categories; VIIRS high/nominal/low maps onto the
 // probability ones) and never reach the reader as-is.
 const CONF_ES = {
-  good: "detección de buena calidad", saturated: "saturada — fuego muy intenso",
+  good: "detección de buena calidad", saturated: "saturada: fuego muy intenso",
   high_probability: "probabilidad alta", medium_probability: "probabilidad media",
   cloud_contaminated: "con nubes", low_probability: "probabilidad baja",
 };

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PANAL · Replays</title>
-<meta name="description" content="Grandes incendios de Chile, vistos por satélite a su cadencia nativa: GOES-East cada 10 minutos y VIIRS a 375 m.">
+<meta name="description" content="Los grandes incendios de Chile, como los vio el satélite: GOES-East cada 10 minutos y VIIRS a 375 m.">
 <meta name="theme-color" content="#0A2E38">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -211,9 +211,9 @@
   <div class="lrow"><span class="swatch" style="opacity:.5"></span> probable</div>
   <div class="lrow"><span class="swatch" style="opacity:.3; outline:1px dashed var(--danger); outline-offset:-1px"></span> baja</div>
   <hr>
-  <p class="warn">Sin celda significa <b>sin detección</b>, no ausencia de
-  fuego. Un foco bajo el umbral del sensor, o tapado por humo o nube, no
-  aparece.</p>
+  <p class="warn">Que no haya celda significa que <b>no hubo detección</b>,
+  no que no haya fuego. Un foco demasiado chico para el sensor, o tapado por
+  humo o nubes, no aparece.</p>
 </div>
 
 <div class="dock">
@@ -318,7 +318,7 @@ function paint(idx) {
   const pass = (DATA.viirs || [])[f.v];
   const vEl = $("s-viirs");
   if (!showViirs) { vEl.textContent = "oculta"; vEl.className = "vstate"; }
-  else if (!pass) { vEl.textContent = "sin pasada aún"; vEl.className = "vstate"; }
+  else if (!pass) { vEl.textContent = "aún sin pasada"; vEl.className = "vstate"; }
   else {
     const age = f.vage ?? 0;
     vEl.textContent = `${pass.local} · hace ${age} min · ${pass.cells.length} celda${pass.cells.length === 1 ? "" : "s"}`;
@@ -430,8 +430,8 @@ function paintFactor(f) {
   const met = g.met ?? 0;
   $("f30").classList.toggle("hit", !!g.all);
   $("f30-state").textContent = wx.t2m == null
-    ? "sin dato meteorológico"
-    : g.all ? "los tres criterios presentes" : `${met} de 3 criterios`;
+    ? "sin datos del clima"
+    : g.all ? "se cumplen los tres" : `se cumplen ${met} de 3`;
 }
 
 function drawFactorStrip() {
@@ -608,8 +608,8 @@ async function pickReplay() {
   const fu = m.factor30 || {wind: 30, wind_unit: "kmh"};
   $("leg-w-thr").textContent = "≥" + fu.wind + (fu.wind_unit === "knots" ? " kt" : " km/h");
   $("f30-src").innerHTML =
-    `${m.weather_source || "—"}<br>Punto ${m.weather_point ? m.weather_point.join(", ") : "—"}. ` +
-    `Valor horario, sin interpolar.`;
+    `${m.weather_source || "—"}<br>Punto: ${m.weather_point ? m.weather_point.join(", ") : "—"}. ` +
+    `Valores por hora, sin interpolar.`;
   drawFactorStrip();
 
   $("h-title").textContent = m.title;
@@ -618,10 +618,10 @@ async function pickReplay() {
   $("v-label").textContent = sensors.length ? sensors.join(" + ") : "VIIRS 375 m";
   const when = t => { const l = localOf(t); return `${l.day} ${l.hm}`; };
   const caveats =
-    `Esto es un <b>registro de detección, no un contrafactual</b> — no implica que ` +
-    `nadie hubiera actuado distinto. ` +
-    `Meteorología de reanálisis <b>MERRA-2 en grilla de ~50 km</b>: sirve de contexto ` +
-    `regional, no reemplaza una estación local en terreno quebrado.`;
+    `Esto <b>registra lo que detectó el satélite</b>; no dice qué habría pasado si ` +
+    `alguien hubiera actuado distinto. ` +
+    `El clima viene del reanálisis <b>MERRA-2, en una grilla de unos 50 km</b>: da el ` +
+    `contexto regional, pero no reemplaza una estación local en terreno accidentado.`;
   if (m.goes === false) {
     // Before GOES-16 PANAL has no geostationary scan to replay — GOES-13
     // flew then, but not at 2 km every ten minutes. The clock runs, the map
@@ -634,24 +634,24 @@ async function pickReplay() {
     $("c-pix").innerHTML = "píxel <b>375 m – 1 km</b>";
     $("s-nogoes").innerHTML =
       `<b>Antes de GOES-16.</b> El satélite que hoy barre Chile cada 10 minutos ` +
-      `a 2 km se lanzó en noviembre de 2016. Este replay tiene solo pasadas polares.`;
+      `a 2 km se lanzó en noviembre de 2016. Este replay solo tiene pasadas de satélites polares.`;
     $("s-nogoes").hidden = false;
     $("foot").innerHTML =
-      `En ${m.subtitle.slice(-4)} aún no existía GOES-16: este replay muestra solo las pasadas ` +
-      `polares de MODIS y VIIRS, y cada cuadro de 10 minutos sin celdas es tiempo sin ` +
+      `En ${m.subtitle.slice(-4)} todavía no existía GOES-16, así que este replay muestra solo ` +
+      `las pasadas de MODIS y VIIRS. Cada cuadro de 10 minutos sin celdas es tiempo sin ` +
       `observación en estos datos, no ausencia de fuego. ` +
-      (m.viirs_first_t ? `Primera observación satelital <b>${when(m.viirs_first_t)}</b>, ` +
+      (m.viirs_first_t ? `Primera observación satelital: <b>${when(m.viirs_first_t)}</b>, ` +
         `de ${DATA.viirs[0].sensor}. ` : "") + caveats;
   } else {
     $("c-sat").textContent = m.satellite.replace("noaa-", "").toUpperCase();
     $("foot").innerHTML =
-      `Detecciones de <b>${m.product}</b> sobre celdas <b>H3 r${m.res}</b>. ` +
+      `Detecciones de <b>${m.product}</b> en celdas <b>H3 r${m.res}</b>. ` +
       (m.first_detection_t
         ? `Primera detección <b>${when(m.first_detection_t)}</b>, máximo <b>${when(m.peak_t)}</b> `
         : `Primera detección <b>${m.first_detection}</b>, máximo <b>${m.peak_local}</b> `) +
       `(${m.peak_frp.toLocaleString("es-CL")} MW). ` +
-      `Datos geoestacionarios de fuego son <b>provisionales</b> y de 2 km: indican ` +
-      `que algo ocurre cerca, no una posición exacta. ` + caveats;
+      `Los datos de fuego de GOES son <b>provisionales</b> y tienen píxeles de 2 km: ` +
+      `dicen que algo está pasando cerca, no la posición exacta. ` + caveats;
   }
   // A week of frames at the 2× default runs for minutes; start long
   // replays faster.
@@ -699,7 +699,7 @@ async function pickReplay() {
     new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat)
       .setHTML(`<div style="font:12px system-ui;color:#111">
         <b>${p.sensor}</b> · ${p.sat}<br>
-        fuego ${frpLabel(+p.frp)} · ${(+p.frp).toLocaleString("es-CL")} MW · ${p.n} px · ${p.conf}<br>
+        intensidad ${frpLabel(+p.frp)} · ${(+p.frp).toLocaleString("es-CL")} MW · ${p.n} px · ${p.conf}<br>
         <span style="color:#666">pasada ${p.at}, hace ${p.age} min</span></div>`)
       .addTo(map);
   });
@@ -708,7 +708,7 @@ async function pickReplay() {
     new maplibregl.Popup({ closeButton: false })
       .setLngLat(e.lngLat)
       .setHTML(`<div style="font:12px system-ui;color:#111">
-        <b>Fuego ${frpLabel(+p.frp)}</b> · ${(+p.frp).toLocaleString("es-CL")} MW<br>
+        <b>Intensidad ${frpLabel(+p.frp)}</b> · ${(+p.frp).toLocaleString("es-CL")} MW<br>
         ${p.n} píxel${p.n > 1 ? "es" : ""} · ${p.conf}</div>`)
       .addTo(map);
   });
