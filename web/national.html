@@ -252,7 +252,7 @@ function setAge(idx) {
 async function setStyle(k) {
   styleIdx = k % STYLES.length;
   $("c-style").textContent = "mapa: " + basemapName(styleIdx);
-  map.setStyle(await basemap(styleIdx));
+  await setBasemap(map, styleIdx);
 }
 
 async function load() {

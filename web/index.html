@@ -569,8 +569,7 @@ async function setStyle(idx) {
   $("c-style").title = !sat ? "" : s2.after
     ? `Mosaico Sentinel-2 de ${s2.year}: no hay uno anterior al incendio.`
     : `Mosaico Sentinel-2 de ${s2.year}: la vegetación antes del incendio.`;
-  map.setStyle(await basemap(styleIdx, when));
-  map.once("styledata", addLayers);
+  if (await setBasemap(map, styleIdx, when)) map.once("styledata", addLayers);
 }
 
 const DEFAULT_REPLAY = "vina2024";

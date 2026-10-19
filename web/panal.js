@@ -229,6 +229,21 @@ async function basemap(k, when) {
   return (await darkMatter()) || STYLES[0][1];
 }
 
+// Taps on the chip can outrun the styles they ask for. Only the latest is
+// drawn, and never as a diff: MapLibre diffs against a style URL by
+// fetching it with no way to cancel, so a slow one landed after the next
+// tap's map and replaced it — the chip said satélite over the street map.
+let basemapSeq = 0;
+
+/** Switch `map` to STYLES[k]; false if a later call superseded this one. */
+async function setBasemap(map, k, when) {
+  const seq = ++basemapSeq;
+  const style = await basemap(k, when);
+  if (seq !== basemapSeq) return false;
+  map.setStyle(style, { diff: false });
+  return true;
+}
+
 /** The basemap's name as the chip shows it; the satellite one says its
  *  year, because a mosaic is a picture of one year and not of today. */
 function basemapName(k, when) {

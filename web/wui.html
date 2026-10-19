@@ -297,7 +297,7 @@ function drawRamp() {
 async function setStyle(k) {
   styleIdx = k % STYLES.length;
   $("c-style").textContent = "mapa: " + basemapName(styleIdx);
-  map.setStyle(await basemap(styleIdx));
+  if (!await setBasemap(map, styleIdx)) return;
   $("map").classList.toggle("screen", styleIdx === 0);
   drawRamp();
   render();
