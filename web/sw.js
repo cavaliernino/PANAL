@@ -16,7 +16,7 @@ const VERSION = "panal-v3";
 
 const SHELL = [
   "./", "index.html", "national.html", "wui.html", "panal.js", "panal.css",
-  "manifest.json", "icons/icon.svg", "icons/icon-192.png",
+  "manifest.json", "icons/icon.svg", "icons/achez.svg", "icons/icon-192.png",
 ];
 
 const CDN = [

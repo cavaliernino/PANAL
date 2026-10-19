@@ -5,13 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PANAL · Chile</title>
 <meta name="description" content="Detección satelital de incendios en todo Chile, cada 10 minutos.">
-<meta name="theme-color" content="#0e1116">
+<meta name="theme-color" content="#0A2E38">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <!-- Analítica sin cookies (Umami). u.js no está en web/: lo sirve nginx, ver deploy/nginx. -->
 <script defer src="u.js" data-website-id="35233b69-03f7-4439-abc6-5ec941bf239c"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Nunito+Sans:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400&family=Poppins:wght@400&display=swap">
 <link rel="stylesheet" href="panal.css">
 <style>
   /* Tokens y componentes: panal.css. Aquí solo lo propio de esta vista. */
@@ -34,7 +37,8 @@
 
 <header>
   <div>
-    <div class="brand">PANAL</div>
+    <div class="logo"><img src="icons/achez.svg" alt="" width="30" height="36">
+      <span><b>ACHEZ</b><small>POWERED BY PANAL</small></span></div>
     <nav class="nav">
       <a href="national.html" aria-current="page">Detección</a>
       <a href="wui.html">Exposición</a>
@@ -74,21 +78,20 @@
   <input type="range" id="age" min="0" max="4" step="1" value="4">
   <div class="ramp-lbl"><span>6 h</span><span id="age-lbl">7 d</span></div>
 
-  <h4>Potencia radiativa</h4>
+  <h4>Intensidad del fuego</h4>
   <div class="ramp">
-    <i style="background:#fde68a"></i><i style="background:#fbbf24"></i>
-    <i style="background:#f97316"></i><i style="background:#ef4444"></i>
-    <i style="background:#b91c1c"></i>
+    <i style="background:var(--fire-low)"></i><i style="background:var(--fire-mid)"></i><i style="background:var(--fire-high)"></i><i style="background:var(--fire-max)"></i>
   </div>
-  <div class="ramp-lbl"><span>0</span><span>500</span><span>3200+ MW</span></div>
+  <div class="ramp-lbl"><span>baja</span><span>media</span><span>alta</span><span>muy alta</span></div>
+  <div class="ramp-lbl"><span>0</span><span>250</span><span>650</span><span>1250</span><span>MW</span></div>
 
   <p class="warn"><span style="display:inline-block;width:11px;height:9px;
-  background:#64748b;border-radius:2px;vertical-align:middle"></span>
+  background:#64748b;border-radius:3px;vertical-align:middle"></span>
   <b>Fuentes fijas</b>: minas, fundiciones y plantas que el satélite detecta
   todo el año. Se marcan, nunca se borran — un incendio real puede empezar
   ahí.</p>
   <p class="warn"><span style="display:inline-block;width:11px;height:9px;
-  border:2px solid #f97316;border-radius:2px;vertical-align:middle"></span>
+  border:2px solid var(--fire-mid);border-radius:2px;vertical-align:middle"></span>
   <b>Hexágono hueco</b>: GOES lo vio en la última hora pero no en el último
   barrido — humo, nube, o el foco bajó.</p>
   <p class="warn">Sin celda significa <b>sin detección</b>, no ausencia de
@@ -246,10 +249,10 @@ function setAge(idx) {
   render();
 }
 
-function setStyle(k) {
+async function setStyle(k) {
   styleIdx = k % STYLES.length;
   $("c-style").textContent = "mapa: " + STYLES[styleIdx][0];
-  map.setStyle(STYLES[styleIdx][1]);
+  map.setStyle(await basemap(styleIdx));
 }
 
 async function load() {
@@ -289,7 +292,7 @@ async function load() {
 
 (async function init() {
   map = new maplibregl.Map({
-    container: "map", style: STYLES[0][1],
+    container: "map", style: await basemap(0),
     center: [-71.0, -38.0], zoom: 4.1,
     attributionControl: { compact: true },
   });
@@ -301,7 +304,7 @@ async function load() {
         ${layer.id === "industrial"
           ? "<b>Fuente fija conocida</b><br><span style=\"color:#666\">" +
             "anomalía térmica persistente, no incendio</span><br>" : ""}
-        <b>${Math.round(object.f).toLocaleString("es-CL")} MW</b><br>
+        <b>Fuego ${frpLabel(object.f)}</b> · ${Math.round(object.f).toLocaleString("es-CL")} MW<br>
         ${object.n} px · ${CONF_ES[object.c] ?? object.c}
         ${object.age != null ? "<br>hace " + fmtAge(ageNow(object)) : ""}
         ${layer.id === "goes" && object.k != null

@@ -5,13 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PANAL · Replays</title>
 <meta name="description" content="Grandes incendios de Chile, vistos por satélite a su cadencia nativa: GOES-East cada 10 minutos y VIIRS a 375 m.">
-<meta name="theme-color" content="#0e1116">
+<meta name="theme-color" content="#0A2E38">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <!-- Analítica sin cookies (Umami). u.js no está en web/: lo sirve nginx, ver deploy/nginx. -->
 <script defer src="u.js" data-website-id="35233b69-03f7-4439-abc6-5ec941bf239c"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Nunito+Sans:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400&family=Poppins:wght@400&display=swap">
 <link rel="stylesheet" href="panal.css">
 <style>
   /* Tokens y componentes: panal.css. Aquí solo lo propio de esta vista. */
@@ -23,7 +26,7 @@
   /* ── cabecera ───────────────────────────── */
   select.ev{
     appearance:none; -webkit-appearance:none; max-width:100%;
-    font:600 15px/1.3 inherit; color:var(--ink); cursor:pointer;
+    font:800 15px/1.3 var(--font-display); text-transform:uppercase; color:var(--ink); cursor:pointer;
     background:transparent; border:0; padding:2px 18px 2px 0; margin-top:4px;
     background-image:linear-gradient(45deg,transparent 50%,var(--ink-dim) 50%),
       linear-gradient(135deg,var(--ink-dim) 50%,transparent 50%);
@@ -34,14 +37,14 @@
 
   /* ── panel de estado ────────────────────── */
   .leftcol{
-    position:absolute; z-index:3; top:calc(104px + var(--safe-t)); left:14px;
+    position:absolute; z-index:3; top:calc(126px + var(--safe-t)); left:14px;
     display:flex; flex-direction:column; gap:10px; max-width:260px;
   }
   .stats{
-    background:rgba(22,27,35,.93); border:1px solid var(--line); border-radius:12px;
+    background:var(--glass); border:1px solid var(--line); border-radius:16px;
     padding:12px 14px; min-width:190px; backdrop-filter:blur(8px);
   }
-  .clock{font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1}
+  .clock{font:800 30px/1 var(--font-display); font-variant-numeric:tabular-nums; line-height:1}
   .clock small{font-size:12px; font-weight:500; color:var(--ink-faint); margin-left:6px}
   .kv{gap:18px}
   .spark{display:block; width:100%; height:38px; margin-top:10px}
@@ -69,12 +72,12 @@
   /* Los puntos (.leg) y la escala de la franja (--sev-*) viven en
      panal.css. */
   .f30{
-    background:rgba(22,27,35,.93); border:1px solid var(--line); border-radius:12px;
+    background:var(--glass); border:1px solid var(--line); border-radius:16px;
     padding:11px 13px; min-width:190px; backdrop-filter:blur(8px);
   }
   .f30 h4{margin:0 0 2px}
   .f30 .state{font-size:12px; font-weight:600; color:var(--ink-faint); margin-bottom:8px}
-  .f30.hit{border-color:#b45309; box-shadow:0 0 0 1px rgba(245,158,11,.25)}
+  .f30.hit{border-color:var(--accent); box-shadow:0 0 0 1px rgba(245,154,85,.25)}
   .f30.hit .state{color:var(--accent)}
   .wdir{
     display:inline-block; width:11px; height:11px; margin-left:5px;
@@ -86,7 +89,7 @@
   /* ── leyenda ────────────────────────────── */
   .legend{
     position:absolute; z-index:3; right:14px; bottom:calc(112px + var(--safe-b));
-    background:rgba(22,27,35,.93); border:1px solid var(--line); border-radius:12px;
+    background:var(--glass); border:1px solid var(--line); border-radius:16px;
     padding:10px 12px; font-size:11px; backdrop-filter:blur(8px); max-width:200px;
   }
   .legend h4{margin:0 0 7px; font-size:11px; letter-spacing:.06em}
@@ -99,7 +102,7 @@
   .dock{
     position:absolute; z-index:3; left:0; right:0; bottom:0;
     padding:10px 14px calc(10px + var(--safe-b));
-    background:linear-gradient(0deg,rgba(14,17,22,.96) 65%,transparent);
+    background:linear-gradient(0deg,var(--glass-bg) 65%,transparent);
   }
   .bar{display:flex; align-items:center; gap:12px}
   .track{flex:1; min-width:0; position:relative; padding-top:12px}
@@ -116,7 +119,7 @@
   .mark::after{content:""; position:absolute; inset:-6px -7px}
   .rate{
     flex:none; background:var(--panel); border:1px solid var(--line); color:var(--ink);
-    border-radius:8px; padding:6px 8px; font-size:12px; cursor:pointer;
+    border-radius:999px; padding:6px 12px; font:700 12px var(--font-text); cursor:pointer;
   }
   .foot{
     margin-top:7px; font-size:10.5px; color:var(--ink-faint); line-height:1.5;
@@ -124,7 +127,7 @@
   .foot b{color:var(--ink-dim); font-weight:600}
 
   @media (max-width:640px){
-    .leftcol{left:10px; right:10px; top:calc(108px + var(--safe-t)); max-width:none}
+    .leftcol{left:10px; right:10px; top:calc(130px + var(--safe-t)); max-width:none}
     .stats{min-width:0}
     .clock{font-size:24px}
     .spark{height:30px}
@@ -141,7 +144,8 @@
 
 <header>
   <div>
-    <div class="brand">PANAL</div>
+    <div class="logo"><img src="icons/achez.svg" alt="" width="30" height="36">
+      <span><b>ACHEZ</b><small>POWERED BY PANAL</small></span></div>
     <nav class="nav">
       <a href="national.html">Detección</a>
       <a href="wui.html">Exposición</a>
@@ -190,23 +194,22 @@
 </div>
 
 <div class="legend">
-  <h4>Potencia radiativa</h4>
+  <h4>Intensidad del fuego</h4>
   <div class="ramp">
-    <i style="background:#fde68a"></i><i style="background:#fbbf24"></i>
-    <i style="background:#f97316"></i><i style="background:#ef4444"></i>
-    <i style="background:#b91c1c"></i>
+    <i style="background:var(--fire-low)"></i><i style="background:var(--fire-mid)"></i><i style="background:var(--fire-high)"></i><i style="background:var(--fire-max)"></i>
   </div>
-  <div class="ramp-lbl"><span>0</span><span>100</span><span>500</span><span>1500</span><span>3200+ MW</span></div>
+  <div class="ramp-lbl"><span>baja</span><span>media</span><span>alta</span><span>muy alta</span></div>
+  <div class="ramp-lbl"><span>0</span><span>250</span><span>650</span><span>1250</span><span>MW</span></div>
   <hr>
   <h4>Resolución</h4>
-  <div class="lrow"><span class="swatch" style="background:#f59e0b; opacity:.2"></span> extensión inferida</div>
-  <div class="lrow" id="lg-goes"><span class="swatch" style="background:#f97316"></span> GOES 2 km · r7</div>
-  <div class="lrow"><span class="swatch" style="background:#f97316; outline:1px solid #fff; outline-offset:-1px; width:9px; height:8px"></span> VIIRS 375 m · r9</div>
+  <div class="lrow"><span class="swatch" style="background:var(--accent); opacity:.2"></span> extensión inferida</div>
+  <div class="lrow" id="lg-goes"><span class="swatch"></span> GOES 2 km · r7</div>
+  <div class="lrow"><span class="swatch" style="outline:1px solid #fff; outline-offset:-1px; width:9px; height:8px"></span> VIIRS 375 m · r9</div>
   <hr>
   <h4>Confianza</h4>
   <div class="lrow"><span class="swatch" style="opacity:.85"></span> confirmada</div>
   <div class="lrow"><span class="swatch" style="opacity:.5"></span> probable</div>
-  <div class="lrow"><span class="swatch" style="opacity:.3; outline:1px dashed #ef4444; outline-offset:-1px"></span> baja</div>
+  <div class="lrow"><span class="swatch" style="opacity:.3; outline:1px dashed var(--danger); outline-offset:-1px"></span> baja</div>
   <hr>
   <p class="warn">Sin celda significa <b>sin detección</b>, no ausencia de
   fuego. Un foco bajo el umbral del sensor, o tapado por humo o nube, no
@@ -236,8 +239,8 @@
 <script src="https://cdn.jsdelivr.net/npm/h3-js@4.2.1/dist/h3-js.umd.js"></script>
 <script src="panal.js"></script>
 <script>
-// STYLES, OPACITY, WEAK, frpColor, ZOOM_BREAKS and resForZoom come from
-// panal.js, shared with the national view so the calibrated ramp cannot
+// STYLES, basemap, OPACITY, WEAK, frpColor, ZOOM_BREAKS and resForZoom come from
+// panal.js, shared with the national view so the fire scale cannot
 // drift between pages.
 let styleIdx = 0;
 
@@ -457,9 +460,9 @@ function drawSpark() {
   const x = pts[i][0].toFixed(1);
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.innerHTML =
-    `<path d="${d} L${W} ${H} L0 ${H} Z" fill="rgba(245,158,11,.16)"/>` +
-    `<path d="${d}" fill="none" stroke="#f59e0b" stroke-width="1.4"/>` +
-    `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#e8edf4" stroke-width="1" opacity=".75"/>`;
+    `<path d="${d} L${W} ${H} L0 ${H} Z" fill="rgba(245,154,85,.16)"/>` +
+    `<path d="${d}" fill="none" stroke="#F59A55" stroke-width="1.4"/>` +
+    `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#FFFFFF" stroke-width="1" opacity=".75"/>`;
 }
 
 // The inferred halo. Rendered beneath the detections, in one flat neutral
@@ -528,7 +531,7 @@ function addLayers() {
   map.addSource("vhalo", { type: "geojson", data: viirsHalo(DATA.frames[i]) });
   map.addLayer({
     id: "vhalo-fill", type: "fill", source: "vhalo",
-    paint: { "fill-color": "#f59e0b", "fill-opacity": .13 },
+    paint: { "fill-color": "#F59A55", "fill-opacity": .13 },
   });
 
   map.addSource("viirs", { type: "geojson", data: viirsFeatures(DATA.frames[i]) });
@@ -555,11 +558,10 @@ function play(on) {
   }, +$("rate").value);
 }
 
-function setStyle(idx) {
+async function setStyle(idx) {
   styleIdx = idx % STYLES.length;
-  const [name, url] = STYLES[styleIdx];
-  $("c-style").textContent = "mapa: " + name;
-  map.setStyle(url);
+  $("c-style").textContent = "mapa: " + STYLES[styleIdx][0];
+  map.setStyle(await basemap(styleIdx));
   map.once("styledata", addLayers);
 }
 
@@ -657,7 +659,7 @@ async function pickReplay() {
   $("rate").value = n > 400 ? "25" : n > 200 ? "60" : "130";
 
   map = new maplibregl.Map({
-    container: "map", style: STYLES[0][1],
+    container: "map", style: await basemap(0),
     center: m.center, zoom: m.zoom, attributionControl: { compact: true },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
@@ -697,7 +699,7 @@ async function pickReplay() {
     new maplibregl.Popup({ closeButton: false }).setLngLat(e.lngLat)
       .setHTML(`<div style="font:12px system-ui;color:#111">
         <b>${p.sensor}</b> · ${p.sat}<br>
-        ${(+p.frp).toLocaleString("es-CL")} MW · ${p.n} px · ${p.conf}<br>
+        fuego ${frpLabel(+p.frp)} · ${(+p.frp).toLocaleString("es-CL")} MW · ${p.n} px · ${p.conf}<br>
         <span style="color:#666">pasada ${p.at}, hace ${p.age} min</span></div>`)
       .addTo(map);
   });
@@ -706,7 +708,7 @@ async function pickReplay() {
     new maplibregl.Popup({ closeButton: false })
       .setLngLat(e.lngLat)
       .setHTML(`<div style="font:12px system-ui;color:#111">
-        <b>${(+p.frp).toLocaleString("es-CL")} MW</b><br>
+        <b>Fuego ${frpLabel(+p.frp)}</b> · ${(+p.frp).toLocaleString("es-CL")} MW<br>
         ${p.n} píxel${p.n > 1 ? "es" : ""} · ${p.conf}</div>`)
       .addTo(map);
   });

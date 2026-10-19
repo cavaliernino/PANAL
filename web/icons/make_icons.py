@@ -1,97 +1,80 @@
 #!/usr/bin/env python3
-"""Draw the PWA icons. No image library: numpy coverage plus a PNG writer.
+"""Draw the favicon and the PWA icons from the ACHEZ isotipo.
 
-    ../../.venv/bin/python make_icons.py
+    python3 make_icons.py
 
-A hexagon, because the project is named for a honeycomb and every map in it
-is drawn on hexagons. Amber on the app's own background.
+The favicon (icon.svg) is the isotipo alone on a transparent ground, so it
+sits on whatever the browser tab is. The PWA icons put it on a Petróleo 900
+tile: launchers need an opaque, full shape, and iOS dislikes transparency. achez.svg is used
+as-is — no recolouring, no reshaping — and only scaled and centred here.
+
+The SVGs are written directly. The PNGs are rasterised by headless Chrome,
+since nothing else on hand renders SVG gradients; set CHROME to another
+binary if it lives elsewhere.
 
 Maskable icons are cropped by the launcher to any shape inside a circle of
-40% radius, so everything that matters stays within that.
+40% radius, so the flame's bounding box stays within that.
 """
 
-import math
-import struct
-import zlib
+import os
+import re
+import subprocess
+import tempfile
 from pathlib import Path
 
-import numpy as np
-
-BG = (14, 17, 22)          # --bg
-AMBER = (245, 158, 11)     # --accent
 HERE = Path(__file__).parent
-SS = 4                     # supersampling per axis
+BG = "#0A2E38"            # --bg, Petróleo 900
+CHROME = os.environ.get(
+    "CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+
+ISO_W, ISO_H = 138, 166   # achez.svg's viewBox
 
 
-def _hex(x, y, cx, cy, r):
-    """Inside a pointy-top regular hexagon of circumradius r."""
-    dx, dy = np.abs(x - cx), np.abs(y - cy)
-    a = r * math.sqrt(3) / 2                      # apothem
-    return (dx <= a) & (dy <= r - dx / math.sqrt(3))
+def isotipo():
+    """achez.svg's drawing, without its outer <svg> or comment."""
+    src = (HERE / "achez.svg").read_text()
+    body = re.search(r"<svg[^>]*>(.*)</svg>", src, re.S).group(1)
+    return re.sub(r"<!--.*?-->", "", body, flags=re.S).strip()
 
 
-def _rounded(x, y, n, rad):
-    cx = np.clip(x, rad, n - rad)
-    cy = np.clip(y, rad, n - rad)
-    return (x - cx) ** 2 + (y - cy) ** 2 <= rad ** 2
-
-
-def draw(n, corner=0.0, scale=1.0):
-    m = n * SS
-    y, x = np.mgrid[0:m, 0:m].astype(np.float64) + 0.5
-    x, y = x / SS, y / SS
-    c = n / 2
-    outer = _hex(x, y, c, c, 0.34 * n * scale)
-    inner = _hex(x, y, c, c, 0.17 * n * scale)
-    core = _hex(x, y, c, c, 0.075 * n * scale)
-    bg = _rounded(x, y, n, corner * n) if corner else np.ones_like(outer)
-
-    amber = (outer & ~inner) | core
-    img = np.zeros((m, m, 4))
-    img[bg] = (*BG, 255)
-    img[amber & bg] = (*AMBER, 255)
-    # Box-filter the supersamples down to n x n.
-    img = img.reshape(n, SS, n, SS, 4).mean(axis=(1, 3))
-    return np.round(img).astype(np.uint8)
-
-
-def write_png(path, rgba):
-    h, w, _ = rgba.shape
-    raw = b"".join(b"\x00" + rgba[i].tobytes() for i in range(h))
-
-    def chunk(kind, data):
-        body = kind + data
-        return struct.pack(">I", len(data)) + body + struct.pack(
-            ">I", zlib.crc32(body) & 0xFFFFFFFF)
-
-    path.write_bytes(
-        b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
-        + chunk(b"IDAT", zlib.compress(raw, 9))
-        + chunk(b"IEND", b""))
-
-
-def svg():
-    def pts(r):
-        return " ".join(
-            f"{32 + r * math.cos(math.radians(90 + 60 * k)):.2f},"
-            f"{32 + r * math.sin(math.radians(90 + 60 * k)):.2f}"
-            for k in range(6))
+def svg(n=64, corner=0.22, height=0.68, tile=True):
+    """A square of side n with the flame `height` of it tall, centred, on a
+    Petróleo tile unless `tile` is false."""
+    s = height * n / ISO_H
+    tx, ty = (n - ISO_W * s) / 2, (n - ISO_H * s) / 2
+    rx = f' rx="{corner * n:g}"' if corner else ""
     return (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
-        f'<rect width="64" height="64" rx="14" fill="rgb{BG}"/>'
-        f'<polygon points="{pts(21.8)}" fill="rgb{AMBER}"/>'
-        f'<polygon points="{pts(10.9)}" fill="rgb{BG}"/>'
-        f'<polygon points="{pts(4.8)}" fill="rgb{AMBER}"/>'
-        "</svg>\n")
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {n} {n}">'
+        + (f'<rect width="{n}" height="{n}"{rx} fill="{BG}"/>' if tile else "") +
+        f'<g transform="translate({tx:.3f} {ty:.3f}) scale({s:.5f})">'
+        f"{isotipo()}</g></svg>\n")
+
+
+def png(path, n, **kw):
+    with tempfile.TemporaryDirectory() as tmp:
+        page = Path(tmp) / "icon.html"
+        page.write_text(
+            "<!doctype html><style>html,body{margin:0;background:transparent}"
+            f"svg{{display:block;width:{n}px;height:{n}px}}</style>"
+            + svg(n, **kw))
+        subprocess.run(
+            [CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+             "--no-first-run", "--no-default-browser-check",
+             f"--user-data-dir={tmp}/profile",
+             "--force-device-scale-factor=1",
+             "--default-background-color=00000000",
+             f"--window-size={n},{n}", f"--screenshot={path.resolve()}",
+             page.as_uri()],
+            check=True, capture_output=True, timeout=60)
 
 
 if __name__ == "__main__":
-    write_png(HERE / "icon-192.png", draw(192, corner=0.22))
-    write_png(HERE / "icon-512.png", draw(512, corner=0.22))
-    # Full bleed, motif inside the 40% safe circle (0.34 * 1.0 < 0.40).
-    write_png(HERE / "maskable-512.png", draw(512))
+    # Favicon: transparent, the flame as tall as the square allows.
+    (HERE / "icon.svg").write_text(svg(tile=False, height=1.0))
+    png(HERE / "icon-192.png", 192)
+    png(HERE / "icon-512.png", 512)
+    # Full bleed; the flame's half-diagonal is 0.36 n, inside the 0.40 circle.
+    png(HERE / "maskable-512.png", 512, corner=0, height=0.55)
     # iOS rounds the corners itself and dislikes transparency.
-    write_png(HERE / "apple-touch-icon.png", draw(180))
-    (HERE / "icon.svg").write_text(svg())
+    png(HERE / "apple-touch-icon.png", 180, corner=0)
     print("ok")

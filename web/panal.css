@@ -1,56 +1,78 @@
-/* Tokens y componentes compartidos de la interfaz de PANAL.
+/* Tokens y componentes compartidos de la interfaz — sistema de diseño
+ * ACHEZ (powered by PANAL).
  *
  * Viven en un solo archivo por la misma razón que panal.js: una copia de
  * estos valores en el <style> de una segunda página se desalinea en cuanto
  * se retoca cualquiera de las dos — y ya había pasado (ver
  * docs/design-system.md §9, "Inconsistencias encontradas").
  *
- * Fuente de verdad legible: docs/design-system.md. Este archivo es su
- * implementación en código, no al revés — si hay que cambiar un valor,
- * cámbialo en ambos lados.
+ * Fuente de verdad legible: docs/design-system.md, que a su vez sigue el
+ * lienzo "ACHEZ Design System". Este archivo es su implementación en
+ * código — si hay que cambiar un valor, cámbialo en ambos lados.
  *
  * Cada página lo enlaza antes de su propio <style>, que guarda solo lo
  * específico de ella (mapa, controles instrumentales, posiciones) y puede
- * pisar cualquier regla de aquí con la misma especificidad.
+ * pisar cualquier regla de aquí con la misma especificidad. Las fuentes
+ * (Montserrat, Nunito Sans y, solo para el logo, Plus Jakarta Sans y
+ * Poppins) las carga cada página con un <link> a Google Fonts.
  */
 
 :root{
-  /* Superficies e ink — una sola interfaz oscura; el basemap del mapa es
-     lo único que cambia entre claro y oscuro. */
-  --bg:#0e1116;
-  --panel:#161b23;
-  --panel-2:#1d232d;
-  --line:#2a323f;
-  --ink:#e8edf4;
-  --ink-dim:#94a3b8;
-  --ink-faint:#64748b;
+  /* Superficies: la escala Petróleo. Una sola interfaz oscura; el basemap
+     del mapa es lo único que cambia entre claro y oscuro. */
+  --bg:#0A2E38;          /* Petróleo 900 */
+  --panel:#0E3F4D;       /* Petróleo 800 */
+  --panel-2:#155566;     /* Petróleo 600 — tarjetas dentro de un panel */
+  --line:#2A6A7C;
+  --glass:rgba(14,63,77,.94);   /* Petróleo 800 sobre el mapa */
+  --glass-bg:rgba(10,46,56,.94); /* Petróleo 900 sobre el mapa */
 
-  /* Marca — único acento interactivo. Nunca se usa otro color para foco,
-     selección activa o control principal. */
-  --accent:#f59e0b;
-  --ink-on-accent:#1a1205;
+  /* Texto sobre petróleo — los tres pasan 4.5:1 sobre --panel-2. */
+  --ink:#FFFFFF;
+  --ink-dim:#D5E6EC;
+  --ink-faint:#9FC9D6;
 
-  /* Estado semántico. --warn y --danger existían con nombres distintos
-     por página (--unval, --bad, --hot) para el mismo rol — unificados
-     aquí. --danger reutiliza el escalón "alto" de la rampa FRP de
-     panal.js a propósito, para no sumar un rojo nuevo al sistema. */
+  /* Fuego. --accent es Fuego 400, el naranja que se lee sobre oscuro
+     (5,2:1 sobre Petróleo 800): foco, selección, destacados. --action es
+     Fuego 600 con texto blanco (5:1): el botón que hace algo. */
+  --accent:#F59A55;
+  --action:#B9500C;
+  --ink-on-accent:#0A2E38;
+  --ink-on-action:#FFFFFF;
+  --brand-sky:#64D9F2;   /* bajada "POWERED BY PANAL" del logo */
+
+  /* Estado semántico. --warn es Fuego 200 (avisos); --danger es Fuego 500,
+     como relleno — como texto pequeño sobre panel no llega a 4.5:1, ahí se
+     usa --accent. --ok no existe en la paleta ACHEZ; se conserva el verde
+     de PANAL porque "fresco" necesita un color que no sea fuego. */
   --ok:#7dd3a0;
-  --warn:#fbbf24;
-  --danger:#ef4444;
+  --warn:#FBC98E;
+  --danger:#EE7A2A;
+
+  /* Escala de intensidad del fuego en el mapa (panal.js, FRP_LEVELS):
+     acentos ACHEZ, del amarillo al rojo. */
+  --fire-low:#F0C328;
+  --fire-mid:#F28705;
+  --fire-high:#F33204;
+  --fire-max:#A70604;
 
   /* Escala de severidad cuantizada (Factor 30-30-30 en index.html): un
-     solo matiz, oscureciéndose hacia --panel según cuántas condiciones
+     solo matiz, Fuego 400 mezclado hacia --panel según cuántas condiciones
      coinciden. Reutilizable para cualquier "cuántos de N criterios". */
-  --sev-3:#f59e0b; /* = --accent */
-  --sev-2:#78581a;
-  --sev-1:#3b3527;
-  --sev-0:#242b36;
+  --sev-3:#F59A55;
+  --sev-2:#766851;
+  --sev-1:#354E4E;
+  --sev-0:#1A444D;
 
-  /* Interruptor apagado/encendido (puntos de criterio en el Factor
-     30-30-30). El estado "encendido" usa --accent con el glow definido en
-     .leg.on más abajo. */
-  --off-fill:#334155;
-  --off-ring:#475569;
+  /* Interruptor apagado/encendido (puntos de criterio del Factor
+     30-30-30). Encendido usa --accent con el resplandor de .leg.on. */
+  --off-fill:#1A444D;
+  --off-ring:#3E7F91;
+
+  /* Tipografía: dos voces. Montserrat para títulos y cifras, Nunito Sans
+     para texto e interfaz. */
+  --font-display:Montserrat,ui-sans-serif,system-ui,sans-serif;
+  --font-text:"Nunito Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
 
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
@@ -62,30 +84,41 @@
 html,body{height:100%}
 body{
   margin:0; background:var(--bg); color:var(--ink);
-  font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font:14px/1.45 var(--font-text);
 }
 /* Todo número que cambia en vivo (reloj, conteo, FRP, slider de edad)
    lleva esta clase o la propiedad directa, para que el ancho no salte
    cuadro a cuadro. */
 .num, .tabular{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
-/* ── marca y navegación ────────────────────────────────── */
+/* ── logo y navegación ─────────────────────────────────── */
+/* El logo completo: isotipo de llama, ACHEZ en Plus Jakarta Sans blanco y
+   la bajada en Poppins celeste. Nunca se recolorea ni se separa la bajada;
+   va solo sobre fondos oscuros. */
 
-.brand{font-weight:700; letter-spacing:.14em; font-size:13px; color:var(--accent)}
-.nav{display:flex; gap:4px; margin-top:6px; flex-wrap:wrap}
-.nav a{font-size:12px; color:var(--ink-dim); text-decoration:none;
-  padding:3px 9px; border-radius:999px; border:1px solid var(--line);
+.logo{display:flex; align-items:center; gap:8px; color:var(--ink); text-decoration:none}
+.logo img{display:block; width:30px; height:36px; flex:none}
+.logo span{display:flex; flex-direction:column; line-height:1}
+.logo b{font:400 22px/1 "Plus Jakarta Sans",var(--font-text); letter-spacing:.01em}
+.logo small{font:400 7.75px/1.3 Poppins,var(--font-text); color:var(--brand-sky);
+  letter-spacing:.02em; white-space:nowrap}
+
+.nav{display:flex; gap:4px; margin-top:8px; flex-wrap:wrap}
+.nav a{font-size:12px; font-weight:600; color:var(--ink-dim); text-decoration:none;
+  padding:4px 11px; border-radius:999px; border:1px solid var(--line);
   background:var(--panel)}
-.nav a[aria-current]{color:var(--ink); border-color:var(--accent)}
+.nav a[aria-current]{color:var(--ink-on-accent); background:var(--accent); border-color:var(--accent)}
 
 header{
   position:absolute; z-index:3; inset:0 0 auto 0;
   padding:calc(10px + var(--safe-t)) 14px 10px;
-  background:linear-gradient(180deg,rgba(14,17,22,.94) 60%,transparent);
+  background:linear-gradient(180deg,var(--glass-bg) 60%,transparent);
   display:flex; gap:12px; align-items:flex-start; pointer-events:none;
 }
 header > *{pointer-events:auto}
-.ttl{font-weight:600; font-size:15px; margin-top:1px}
+.ttl{font:800 15px/1.25 var(--font-display); text-transform:uppercase;
+  letter-spacing:.02em; margin-top:6px}
 .sub{color:var(--ink-dim); font-size:12px}
 
 /* ── chip de estado ────────────────────────────────────── */
@@ -93,12 +126,12 @@ header > *{pointer-events:auto}
 .chips{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap;
   justify-content:flex-end; pointer-events:auto}
 .chip{background:var(--panel); border:1px solid var(--line); border-radius:999px;
-  padding:4px 10px; font-size:11px; color:var(--ink-dim); white-space:nowrap}
-.chip b{color:var(--ink); font-weight:600}
+  padding:4px 11px; font-size:11px; font-weight:600; color:var(--ink-dim); white-space:nowrap}
+.chip b{color:var(--ink); font-weight:700}
 .chip.act, button.chip{cursor:pointer}
-button.chip{font:inherit; font-size:11px}
+button.chip{font:inherit; font-size:11px; font-weight:600}
 .chip.fresh b{color:var(--ok)}
-.chip.stale{color:var(--warn); border-color:rgba(251,191,36,.45)}
+.chip.stale{color:var(--warn); border-color:rgba(251,201,142,.45)}
 
 /* ── panel flotante / hoja inferior ────────────────────── */
 /* Un solo patrón con dos usos: panel lateral en escritorio, hoja inferior
@@ -107,50 +140,52 @@ button.chip{font:inherit; font-size:11px}
    national.html, el título y el modo en wui.html). */
 
 .panel{
-  position:absolute; z-index:3; left:14px; top:calc(110px + var(--safe-t));
-  width:280px; max-height:calc(100% - 140px - var(--safe-t)); overflow:auto;
-  background:rgba(22,27,35,.94); border:1px solid var(--line);
-  border-radius:12px; padding:13px 14px; backdrop-filter:blur(8px);
+  position:absolute; z-index:3; left:14px; top:calc(130px + var(--safe-t));
+  width:280px; max-height:calc(100% - 160px - var(--safe-t)); overflow:auto;
+  background:var(--glass); border:1px solid var(--line);
+  border-radius:16px; padding:14px 16px; backdrop-filter:blur(8px);
 }
 .panel-2{background:var(--panel-2)}
 
-.big{font-size:27px; font-weight:700; line-height:1.05; font-variant-numeric:tabular-nums}
-.big small{display:block; font-size:11px; font-weight:500; color:var(--ink-faint); margin-top:3px}
+.big{font:800 28px/1.05 var(--font-display); font-variant-numeric:tabular-nums}
+.big small{display:block; font:500 11px/1.3 var(--font-text); color:var(--ink-faint); margin-top:4px}
 .kv{display:flex; justify-content:space-between; gap:14px; margin-top:7px; font-size:12px}
 .kv span{color:var(--ink-dim)} .kv b{font-variant-numeric:tabular-nums}
 
-h4{margin:13px 0 6px; font-size:10.5px; color:var(--ink-dim); font-weight:600;
-  text-transform:uppercase; letter-spacing:.07em}
+/* Antetítulo de sección: Montserrat 700, mayúsculas, tracking amplio. */
+h4{margin:14px 0 6px; font:700 10.5px/1.3 var(--font-display); color:var(--accent);
+  text-transform:uppercase; letter-spacing:.14em}
 
 .grip{display:none}
 
 @media (max-width:640px){
   .panel{--peek:112px;
     left:0; right:0; top:auto; bottom:0; width:auto; max-height:72vh;
-    overflow:auto; border-radius:16px 16px 0 0; border-bottom:0;
-    padding:6px 14px calc(14px + var(--safe-b));
+    overflow:auto; border-radius:24px 24px 0 0; border-bottom:0;
+    padding:6px 16px calc(14px + var(--safe-b));
     transform:translateY(calc(100% - var(--peek) - var(--safe-b)));
     transition:transform .28s cubic-bezier(.2,.8,.2,1)}
   .panel.open{transform:none}
   .grip{display:block; width:100%; background:none; border:0; padding:6px 0 8px; cursor:pointer}
-  .grip::before{content:""; display:block; margin:0 auto; width:38px; height:4px;
-    border-radius:2px; background:var(--line)}
+  .grip::before{content:""; display:block; margin:0 auto; width:40px; height:4px;
+    border-radius:999px; background:var(--line)}
 }
 @media (prefers-reduced-motion:reduce){ .panel{transition:none} }
 
 /* ── control segmentado ────────────────────────────────── */
+/* Píldora con fondo hundido; la opción activa se rellena. */
 
-.seg{display:flex; margin-top:11px; border:1px solid var(--line);
-  border-radius:9px; overflow:hidden}
-.seg button{flex:1; background:none; border:0; color:var(--ink-dim);
-  padding:7px 6px; font:inherit; font-size:12px; cursor:pointer}
-.seg button[aria-pressed=true]{background:var(--line); color:var(--ink)}
-.seg small{display:block; font-size:9.5px; color:var(--ink-faint)}
+.seg{display:flex; gap:4px; margin-top:11px; padding:4px; border-radius:999px;
+  background:var(--bg)}
+.seg button{flex:1; background:none; border:0; border-radius:999px; color:var(--ink-dim);
+  padding:7px 8px; font:inherit; font-size:12px; font-weight:700; cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--panel-2); color:var(--ink)}
+.seg small{display:block; font-size:9.5px; font-weight:400; color:var(--ink-faint)}
 .seg button[aria-pressed=true] small.unval{color:var(--warn)}
 
 /* ── fila de interruptor / control de rango ────────────── */
 
-label.row{display:flex; align-items:center; gap:7px; margin-top:6px;
+label.row{display:flex; align-items:center; gap:8px; margin-top:7px;
   font-size:12px; color:var(--ink-dim); cursor:pointer}
 label.row i{font-style:normal; color:var(--ink-faint); font-size:10px; margin-left:auto}
 input[type=checkbox]{accent-color:var(--accent); margin:0}
@@ -158,38 +193,46 @@ input[type=range]{width:100%; accent-color:var(--accent); margin:5px 0 0}
 
 /* ── rampa y leyenda ────────────────────────────────────── */
 /* El contenido de cada <i> (el color) lo define quien use el componente:
-   la rampa de FRP, la de exposición WUI y los niveles de confianza de
+   la escala de fuego, la de exposición WUI y los niveles de confianza de
    panal.js son escalas distintas y no intercambiables — ver
    docs/design-system.md §4. */
 
-.ramp{display:flex; height:9px; border-radius:3px; overflow:hidden; margin:2px 0 3px}
+.ramp{display:flex; height:10px; border-radius:999px; overflow:hidden; margin:2px 0 4px}
 .ramp i{flex:1}
-.ramp-lbl{display:flex; justify-content:space-between; font-size:9.5px; color:var(--ink-faint)}
+.ramp-lbl{display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint)}
 
 .key{display:flex; align-items:center; gap:8px; margin-top:7px; font-size:11.5px; color:var(--ink-dim)}
-.key i{flex:none; width:14px; height:12px; border-radius:2px}
+.key i{flex:none; width:14px; height:12px; border-radius:3px}
 .lrow{display:flex; align-items:center; gap:7px; margin-top:5px; color:var(--ink-dim)}
-.swatch{width:15px; height:13px; border-radius:2px; background:var(--danger); flex:none}
+.swatch{width:15px; height:13px; border-radius:3px; background:var(--fire-mid); flex:none}
+
+/* Etiqueta de nivel: el nivel siempre se escribe, el color nunca va solo. */
+.lvl{display:inline-flex; align-items:center; height:24px; padding:0 10px;
+  border-radius:999px; font-size:11.5px; font-weight:700; color:var(--ink-on-accent)}
+.lvl.low{background:var(--fire-low)}
+.lvl.mid{background:var(--fire-mid)}
+.lvl.high{background:var(--fire-high); color:#FFFFFF}
+.lvl.max{background:var(--fire-max); color:#FFFFFF}
 
 /* ── avisos ─────────────────────────────────────────────── */
 /* .quiet = estado calmo (verde). .research / .unvalbox = no validado o
-   fuera del alcance medido (ámbar): .research encabeza el panel, .unvalbox
-   es la versión más tenue que acompaña un dato puntual. Nunca en un
-   tooltip, siempre visible sin interactuar (principio §2.5 de
+   fuera del alcance medido (Fuego 200): .research encabeza el panel,
+   .unvalbox es la versión más tenue que acompaña un dato puntual. Nunca en
+   un tooltip, siempre visible sin interactuar (principio §2.5 de
    docs/design-system.md). */
 
-.quiet{margin-top:11px; padding:9px 10px; border-radius:9px;
-  background:rgba(125,211,160,.08); border:1px solid rgba(125,211,160,.22);
+.quiet{margin-top:11px; padding:10px 12px; border-radius:12px;
+  background:rgba(125,211,160,.08); border:1px solid rgba(125,211,160,.25);
   font-size:11px; line-height:1.5; color:var(--ink-dim)}
 .quiet b{color:var(--ok)}
-.quiet.stale{background:rgba(251,191,36,.07); border-color:rgba(251,191,36,.25)}
+.quiet.stale{background:rgba(251,201,142,.07); border-color:rgba(251,201,142,.28)}
 .quiet.stale b{color:var(--warn)}
 
-.research, .unvalbox{margin:0 0 10px; padding:8px 10px; border-radius:9px;
-  font-size:11.5px; line-height:1.5; background:rgba(251,191,36,.08);
-  border:1px solid rgba(251,191,36,.35); color:var(--ink-dim)}
-.unvalbox{margin:10px 0 0; font-size:11px; background:rgba(251,191,36,.07);
-  border-color:rgba(251,191,36,.25)}
+.research, .unvalbox{margin:0 0 10px; padding:10px 12px; border-radius:12px;
+  font-size:11.5px; line-height:1.5; background:rgba(251,201,142,.09);
+  border:1px solid rgba(251,201,142,.38); color:var(--ink-dim)}
+.unvalbox{margin:10px 0 0; font-size:11px; background:rgba(251,201,142,.06);
+  border-color:rgba(251,201,142,.26)}
 .research b, .unvalbox b{color:var(--warn)}
 
 .warn{margin:11px 0 0; font-size:10px; line-height:1.5; color:var(--ink-faint)}
@@ -198,8 +241,8 @@ input[type=range]{width:100%; accent-color:var(--accent); margin:5px 0 0}
 
 /* ── tarjeta de detalle ─────────────────────────────────── */
 
-.card{margin-bottom:12px; padding:11px 12px; border-radius:10px;
-  background:var(--bg); border:1px solid var(--line)}
+.card{margin-bottom:12px; padding:14px; border-radius:16px;
+  background:var(--panel-2); border:0}
 .card[hidden]{display:none}
 .card .x{float:right; background:none; border:0; color:var(--ink-faint);
   font-size:18px; line-height:1; cursor:pointer; padding:0 2px}
@@ -207,31 +250,32 @@ input[type=range]{width:100%; accent-color:var(--accent); margin:5px 0 0}
 .card .row{display:flex; justify-content:space-between; gap:10px; margin-top:6px; font-size:12.5px}
 .card .row span{color:var(--ink-dim)} .card .row b{font-variant-numeric:tabular-nums}
 .card .why{font-size:11px; color:var(--ink-faint); margin-top:2px}
-.tag{display:inline-block; font-size:10px; font-weight:600; letter-spacing:.05em;
-  text-transform:uppercase; padding:2px 7px; border-radius:999px; margin-top:7px;
-  border:1px solid var(--ink-dim); color:var(--ink)}
-.tag.u{border-color:rgba(251,191,36,.5); color:var(--warn)}
+.tag{display:inline-flex; align-items:center; height:24px; font-size:10.5px; font-weight:700;
+  letter-spacing:.04em; text-transform:uppercase; padding:0 10px; border-radius:999px; margin-top:8px;
+  background:var(--panel); color:var(--ink)}
+.tag.u{background:rgba(251,201,142,.14); color:var(--warn)}
 
 /* ── divulgación progresiva ─────────────────────────────── */
 
 details{margin-top:12px; border-top:1px solid var(--line); padding-top:9px}
-summary{cursor:pointer; font-size:12px; color:var(--ink-dim)}
+summary{cursor:pointer; font-size:12px; font-weight:700; color:var(--ink-dim)}
 details p, details li{font-size:11.5px; line-height:1.55; color:var(--ink-dim)}
 details ul{padding-left:17px; margin:6px 0}
 
 /* ── botones ────────────────────────────────────────────── */
+/* Acción principal: Fuego 600 con texto blanco, siempre píldora. */
 
 button.play{
-  flex:none; width:42px; height:42px; border-radius:50%; border:1px solid var(--line);
-  background:var(--accent); color:var(--ink-on-accent); font-size:17px; cursor:pointer;
+  flex:none; width:44px; height:44px; border-radius:50%; border:0;
+  background:var(--action); color:var(--ink-on-action); font-size:17px; cursor:pointer;
   display:grid; place-items:center;
 }
-button.play:hover{filter:brightness(1.08)}
+button.play:hover{filter:brightness(1.1)}
 
 .locate{position:absolute; z-index:3; right:12px;
   bottom:calc(110px + var(--safe-b)); background:var(--panel);
-  border:1px solid var(--line); color:var(--ink); border-radius:999px;
-  padding:9px 14px; font:inherit; font-size:13px; cursor:pointer;
+  border:2px solid var(--ink); color:var(--ink); border-radius:999px;
+  min-height:44px; padding:0 18px; font:700 13px var(--font-display); cursor:pointer;
   box-shadow:0 4px 14px rgba(0,0,0,.35)}
 
 /* ── indicador encendido/apagado (Factor 30-30-30 y similares) ─────── */
@@ -240,8 +284,8 @@ button.play:hover{filter:brightness(1.08)}
 .leg .dot{width:8px; height:8px; border-radius:50%; flex:none;
   background:var(--off-fill); box-shadow:inset 0 0 0 1px var(--off-ring)}
 .leg.on{color:var(--ink)}
-.leg.on .dot{background:var(--accent); box-shadow:0 0 6px rgba(245,158,11,.7)}
-.leg b{margin-left:auto; font-variant-numeric:tabular-nums; font-weight:600}
+.leg.on .dot{background:var(--accent); box-shadow:0 0 6px rgba(245,154,85,.7)}
+.leg b{margin-left:auto; font-variant-numeric:tabular-nums; font-weight:700}
 .leg i{font-style:normal; color:var(--ink-faint); font-size:10.5px; min-width:44px; text-align:right}
 
 /* ── estado de carga ────────────────────────────────────── */
