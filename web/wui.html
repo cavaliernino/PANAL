@@ -12,137 +12,44 @@
 <!-- Analítica sin cookies (Umami). u.js no está en web/: lo sirve nginx, ver deploy/nginx. -->
 <script defer src="u.js" data-website-id="35233b69-03f7-4439-abc6-5ec941bf239c"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css">
+<link rel="stylesheet" href="panal.css">
 <style>
-  :root{
-    --bg:#0e1116; --panel:#161b23; --line:#2a323f;
-    --ink:#e8edf4; --ink-dim:#94a3b8; --ink-faint:#64748b;
-    --accent:#f59e0b; --ok:#7dd3a0; --unval:#fbbf24;
-    --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; background:var(--bg); color:var(--ink); overflow:hidden;
-    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  }
+  /* Tokens y componentes: panal.css. Aquí solo lo propio de esta vista. */
+  body{overflow:hidden}
   #map{position:absolute; inset:0}
+  header{padding-bottom:14px}
 
-  header{
-    position:absolute; z-index:3; inset:0 0 auto 0;
-    padding:calc(10px + var(--safe-t)) 14px 14px;
-    background:linear-gradient(180deg,rgba(14,17,22,.94) 60%,transparent);
-    display:flex; gap:12px; align-items:flex-start; pointer-events:none;
-  }
-  header > *{pointer-events:auto}
-  .brand{font-weight:700; letter-spacing:.14em; font-size:13px; color:var(--accent)}
-  .nav{display:flex; gap:4px; margin-top:6px; flex-wrap:wrap}
-  .nav a{font-size:12px; color:var(--ink-dim); text-decoration:none;
-    padding:3px 9px; border-radius:999px; border:1px solid var(--line);
-    background:var(--panel)}
-  .nav a[aria-current]{color:var(--ink); border-color:var(--accent)}
-  .chips{margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end}
-  .chip{background:var(--panel); border:1px solid var(--line); border-radius:999px;
-    padding:4px 10px; font-size:11px; color:var(--ink-dim); white-space:nowrap;
-    cursor:pointer; font:inherit; font-size:11px}
-
-  /* The sheet: a side panel on wide screens, a bottom sheet on phones. */
-  .sheet{
-    position:absolute; z-index:3; left:14px; top:calc(86px + var(--safe-t));
-    width:300px; max-height:calc(100% - 110px - var(--safe-t)); overflow:auto;
-    background:rgba(22,27,35,.95); border:1px solid var(--line);
-    border-radius:12px; padding:13px 14px; backdrop-filter:blur(8px);
-  }
-  .grip{display:none}
-  .ttl{font-weight:600; font-size:15px}
-  .sub{color:var(--ink-dim); font-size:12px; margin-top:2px}
-  .seg{display:flex; margin-top:11px; border:1px solid var(--line);
-    border-radius:9px; overflow:hidden}
-  .seg button{flex:1; background:none; border:0; color:var(--ink-dim);
-    padding:7px 6px; font:inherit; font-size:12px; cursor:pointer}
-  .seg button[aria-pressed=true]{background:var(--line); color:var(--ink)}
-  .seg small{display:block; font-size:9.5px; color:var(--ink-faint)}
-  .seg button[aria-pressed=true] small.unval{color:var(--unval)}
-  h4{margin:13px 0 6px; font-size:10.5px; color:var(--ink-dim); font-weight:600;
-    text-transform:uppercase; letter-spacing:.07em}
-  .ramp{display:flex; height:10px; border-radius:3px; overflow:hidden}
-  .ramp i{flex:1}
-  .rlbl{display:flex; justify-content:space-between; font-size:9.5px;
-    color:var(--ink-faint); margin-top:3px}
-  .key{display:flex; align-items:center; gap:8px; margin-top:7px; font-size:11.5px;
-    color:var(--ink-dim)}
-  .key i{flex:none; width:14px; height:12px; border-radius:2px}
-  .research{margin:0 0 10px; padding:8px 10px; border-radius:9px; font-size:11.5px;
-    line-height:1.5; background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.35);
-    color:var(--ink-dim)}
-  .research b{color:var(--unval)}
+  /* The panel: a side panel on wide screens, a bottom sheet on phones —
+     wider and higher up than in national.html, since there is no title
+     block in the header. */
+  .panel{--peek:142px; top:calc(86px + var(--safe-t)); width:300px;
+    max-height:calc(100% - 110px - var(--safe-t)); background:rgba(22,27,35,.95)}
+  .ttl{margin-top:0}
+  .sub{margin-top:2px}
+  .ramp{height:10px; margin:0}
+  .ramp-lbl{margin-top:3px}
   .note{margin:10px 0 0; font-size:11px; line-height:1.5; color:var(--ink-dim)}
   .note b{color:var(--ink)}
   .val{display:grid; grid-template-columns:auto 1fr auto; gap:2px 8px;
     margin:6px 0 4px; font-size:11.5px; font-variant-numeric:tabular-nums}
   .val span{color:var(--ink-dim)} .val b{text-align:right}
-  .val b.miss{color:var(--unval)}
+  .val b.miss{color:var(--warn)}
   /* This region's own fires, among all six. */
   .val span.here{color:var(--ink); font-weight:600}
   .regs{margin-top:0; margin-bottom:10px}
-  .unvalbox{margin-top:10px; padding:8px 10px; border-radius:9px; font-size:11px;
-    line-height:1.5; color:var(--ink-dim); background:rgba(251,191,36,.07);
-    border:1px solid rgba(251,191,36,.25)}
-  .unvalbox b{color:var(--unval)}
   .stat{display:flex; gap:14px; margin-top:8px}
   .stat div{flex:1}
   .stat b{display:block; font-size:19px; font-variant-numeric:tabular-nums}
   .stat span{font-size:10.5px; color:var(--ink-faint)}
-  details{margin-top:12px; border-top:1px solid var(--line); padding-top:9px}
-  summary{cursor:pointer; font-size:12px; color:var(--ink-dim)}
-  details p, details li{font-size:11.5px; line-height:1.55; color:var(--ink-dim)}
-  details ul{padding-left:17px; margin:6px 0}
-  .src{font-size:10px; color:var(--ink-faint); line-height:1.5; margin-top:10px}
-
-  /* Cell card. */
-  .card{margin-bottom:12px; padding:11px 12px; border-radius:10px;
-    background:var(--bg); border:1px solid var(--line)}
-  .card[hidden]{display:none}
-  .card .x{float:right; background:none; border:0; color:var(--ink-faint);
-    font-size:18px; line-height:1; cursor:pointer; padding:0 2px}
-  .card .where{font-size:11px; color:var(--ink-faint)}
-  .card .row{display:flex; justify-content:space-between; gap:10px; margin-top:6px;
-    font-size:12.5px}
-  .card .row span{color:var(--ink-dim)} .card .row b{font-variant-numeric:tabular-nums}
-  .card .why{font-size:11px; color:var(--ink-faint); margin-top:2px}
-  .tag{display:inline-block; font-size:10px; font-weight:600; letter-spacing:.05em;
-    text-transform:uppercase; padding:2px 7px; border-radius:999px; margin-top:7px;
-    border:1px solid var(--ink-dim); color:var(--ink)}
-  .tag.u{border-color:rgba(251,191,36,.5); color:var(--unval)}
-
-  .locate{position:absolute; z-index:3; right:12px;
-    bottom:calc(110px + var(--safe-b)); background:var(--panel);
-    border:1px solid var(--line); color:var(--ink); border-radius:999px;
-    padding:9px 14px; font:inherit; font-size:13px; cursor:pointer;
-    box-shadow:0 4px 14px rgba(0,0,0,.35)}
-  .loading{position:absolute; inset:0; z-index:5; display:grid; place-items:center;
-    background:var(--bg); color:var(--ink-dim); font-size:13px; padding:24px;
-    text-align:center}
 
   @media (max-width:640px){
     header{padding-bottom:22px}
     .chips{display:none}
-    .sheet{
-      left:0; right:0; top:auto; bottom:0; width:auto;
-      max-height:72vh; border-radius:16px 16px 0 0; border-bottom:0;
-      padding:6px 14px calc(14px + var(--safe-b));
-      transform:translateY(calc(100% - 142px - var(--safe-b)));
-      transition:transform .28s cubic-bezier(.2,.8,.2,1);
-    }
-    .sheet.open{transform:none}
-    .grip{display:block; width:100%; background:none; border:0; padding:6px 0 8px;
-      cursor:pointer}
-    .grip::before{content:""; display:block; margin:0 auto; width:38px; height:4px;
-      border-radius:2px; background:var(--line)}
+    .panel{top:auto; width:auto; max-height:72vh}
     .locate{bottom:calc(152px + var(--safe-b))}
     .maplibregl-ctrl-bottom-right{bottom:calc(142px + var(--safe-b))}
+    .panel.open ~ .locate{display:none}
   }
-  @media (prefers-reduced-motion:reduce){ .sheet{transition:none} }
-  @media (max-width:640px){ .sheet.open ~ .locate{display:none} }
 </style>
 </head>
 <body>
@@ -163,7 +70,7 @@
   </div>
 </header>
 
-<aside class="sheet" id="sheet">
+<aside class="panel" id="sheet">
   <button class="grip" id="grip" aria-label="Abrir o cerrar el panel"></button>
 
   <div class="card" id="card" hidden></div>
@@ -200,7 +107,7 @@
 
   <h4>Percentil en la región</h4>
   <div class="ramp" id="ramp"></div>
-  <div class="rlbl"><span>&lt; 50</span><span>75</span><span>90</span><span>top 10%</span></div>
+  <div class="ramp-lbl"><span>&lt; 50</span><span>75</span><span>90</span><span>top 10%</span></div>
   <div class="key"><i style="background:rgba(148,163,184,.3);
     border:1px solid #94a3b8"></i><span><b style="color:var(--ink)">Sin combustible
     observado</b> — sin ranking. No es riesgo bajo.</span></div>
@@ -216,7 +123,7 @@
     <div><b id="s-per">—</b><span>personas</span></div>
   </div>
   <p class="note" style="margin-top:6px;font-size:10.5px">La prioridad depende de
-  la consecuencia, que <b style="color:var(--unval)">no está validada</b>.
+  la consecuencia, que <b style="color:var(--warn)">no está validada</b>.
   <span id="s-egr"></span></p>
 
   <details>
@@ -413,7 +320,7 @@ function showCard(h, note) {
         <div class="why">pendiente ${r[PEND] ?? "—"}° · más combustible que
         el ${share("comb", r[COMB])}% de las celdas</div>`;
     }
-    html += `<div class="row"><span>Consecuencia <small style="color:var(--unval)">
+    html += `<div class="row"><span>Consecuencia <small style="color:var(--warn)">
       sin validar</small></span><b>${rankText(r[CS])}</b></div>
       <div class="why">${nf(r[VIV])} viviendas · ${nf(r[PER])} personas ·
       ${r[EGR] == null ? "salida sin dato en OpenStreetMap"

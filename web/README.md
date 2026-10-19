@@ -16,6 +16,7 @@ python3 -m http.server 8000 --directory web
 | `wui.html` | Wildland-urban exposure, Valparaíso and Biobío–Ñuble — public, labelled as research (clears chance in two fires of six, none of them Biobío's) |
 | `brujula.html` | Compass measurement tool, out of the navigation |
 | `panal.js` | Shared encoding rules, so the calibrated ramp cannot drift |
+| `panal.css` | Shared UI tokens and components — [`docs/design-system.md`](../docs/design-system.md), same reasoning; every page links it before its own `<style>` |
 | `sw.js`, `manifest.json`, `icons/` | The installable app (PWA) |
 
 ## What ships first: the replays
