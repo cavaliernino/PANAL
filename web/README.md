@@ -14,8 +14,10 @@ python3 -m http.server 8000 --directory web
 | `index.html` | Replays of the major fires since 2014 — the demo |
 | `national.html` | Live national detection — the product, and the app's start page |
 | `wui.html` | Wildland-urban exposure, Valparaíso and Biobío–Ñuble — public, labelled as research (clears chance in two fires of six, none of them Biobío's) |
+| `chile.html` | The same exposure map for all sixteen regions, each cell ranked against the whole country, opening on a summary of it — tested only in Valparaíso, Biobío and Ñuble, and it says so |
 | `brujula.html` | Compass measurement tool, out of the navigation |
 | `panal.js` | Shared encoding rules, so the fire scale cannot drift |
+| `wui.js` | The exposure map itself, for both `wui.html` and `chile.html`; each page sets its regions and scope |
 | `panal.css` | Shared UI tokens and components, ACHEZ design system — [`docs/design-system.md`](../docs/design-system.md), same reasoning; every page links it before its own `<style>` |
 | `sw.js`, `manifest.json`, `icons/` | The installable app (PWA) |
 
@@ -295,6 +297,60 @@ Chiguayante, Hualqui, Santa Juana and most of Tomé without fuel — 213,225
 people unranked. `fuel.usable` weighs out the empty part; the rebuild
 observed every cell. Valparaíso's published build predates the fix and had
 99.8% coverage; a rebuild may pick different scenes.
+
+## The exposure map for all of Chile
+
+`chile.html` is the same map for all sixteen regions, run by the same
+`wui.js` as `wui.html`, with one difference that changes what it says:
+**every cell is ranked against the whole country, not its region.** The
+same colour means the same thing in Arica and in Aysén, so a region can be
+set beside the others. `wui.html` keeps ranking each region against itself,
+which is what shows the contrast inside one region; the two answer
+different questions and both stay.
+
+It opens on a summary of the whole country, light enough for a phone
+(`data/chile/resumen.json`): the inhabited cells summed up to H3 r6, and
+coarser as the map zooms out. Picking a region from the list, or following
+a hexagon's card, loads that region's cells (`data/chile/<region>.json`,
+the same shape as the regional files).
+
+What it is careful about:
+
+- **It was tested in three regions.** Every fire in the validation record
+  is in Valparaíso, Biobío or Ñuble. In the other thirteen it is the same
+  arithmetic on the same sources, untested, and the panel says so on the
+  summary and on each of those regions. The summary's table marks the
+  three.
+- **The summary's colour is a density** — homes in the country's top
+  decile per km² — not a count. A count would change meaning with the size
+  of the hexagon, and the hexagons grow as the map zooms out. Summing is
+  exact, so coarsening changes no count; it does spread a dense hillside
+  over a larger cell, which is why the zoomed-out view reads paler.
+- **No fuel observation is still not low.** A summary hexagon with none of
+  its homes in the top decile and at least half of them unobserved is grey.
+- **Magallanes reads its fuel with a looser cloud limit.** With the usual
+  20%, Punta Arenas had no clear scene in February–March and 70% of the
+  region's homes went unobserved. Its build takes scenes up to 40% cloud,
+  from January–April; the city's homes still came almost all (99.7%) from
+  February–March scenes, and the summary states Magallanes' dates apart.
+
+Rebuild after the per-region builds (one per region, a few minutes each
+with the DEM tiles cached; Biobío and Ñuble are the one `biobio` build the
+regional map publishes):
+
+```bash
+cd ingest
+for r in arica tarapaca antofagasta atacama coquimbo valparaiso metropolitana \
+         ohiggins maule biobio araucania los_rios los_lagos aysen; do
+  ../.venv/bin/python scripts/build_wui.py --region $r -o ../data/processed/wui_$r.parquet
+done
+../.venv/bin/python scripts/build_wui.py --region magallanes \
+  --fuel-window 01-01 04-30 --max-cloud 40 -o ../data/processed/wui_magallanes.parquet
+../.venv/bin/python scripts/export_wui_chile.py -o ../web/data/chile
+```
+
+The exporter refuses to run with a region missing (`--partial` exists for
+testing): ranked without one, the top decile is not Chile's.
 
 ## Compass measurement
 

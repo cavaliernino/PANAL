@@ -12,10 +12,11 @@
  * Bump VERSION when the shell changes shape; old caches are dropped.
  */
 
-const VERSION = "panal-v3";
+const VERSION = "panal-v4";
 
 const SHELL = [
-  "./", "index.html", "national.html", "wui.html", "panal.js", "panal.css",
+  "./", "index.html", "national.html", "wui.html", "chile.html", "panal.js",
+  "wui.js", "panal.css",
   "manifest.json", "icons/icon.svg", "icons/achez.svg", "icons/icon-192.png",
 ];
 

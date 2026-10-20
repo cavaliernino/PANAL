@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PANAL · Exposición Chile</title>
+<meta name="description" content="Dónde hay viviendas junto a pendientes y vegetación que puede arder, en las 16 regiones de Chile, cada celda comparada con todo el país.">
+<meta name="theme-color" content="#0A2E38">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- Analítica sin cookies (Umami). u.js no está en web/: lo sirve nginx, ver deploy/nginx. -->
+<script defer src="u.js" data-website-id="35233b69-03f7-4439-abc6-5ec941bf239c"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Nunito+Sans:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400&display=swap">
+<link rel="stylesheet" href="panal.css">
+<style>
+  /* Tokens y componentes: panal.css. Lo propio de la exposición está
+     repetido de wui.html, más el selector de región y la tabla. */
+  body{overflow:hidden}
+  #map{position:absolute; inset:0}
+  header{padding-bottom:14px}
+
+  .panel{--peek:142px; top:calc(106px + var(--safe-t)); width:300px;
+    max-height:calc(100% - 130px - var(--safe-t))}
+  .sub{margin-top:2px}
+  .ramp{margin:0}
+  .ramp-lbl{margin-top:4px}
+  .note{margin:10px 0 0; font-size:11px; line-height:1.5; color:var(--ink-dim)}
+  .note b{color:var(--ink)}
+  .val{display:grid; grid-template-columns:auto 1fr auto; gap:2px 8px;
+    margin:6px 0 4px; font-size:11.5px; font-variant-numeric:tabular-nums}
+  .val span{color:var(--ink-dim)} .val b{text-align:right}
+  .val b.miss{color:var(--warn)}
+  .val span.here{color:var(--ink); font-weight:600}
+  #map.screen canvas:not(.maplibregl-canvas){mix-blend-mode:screen}
+  .stat{display:flex; gap:14px; margin-top:8px}
+  .stat div{flex:1}
+  .stat b{display:block; font:800 19px/1.2 var(--font-display); font-variant-numeric:tabular-nums}
+  .stat span{font-size:10.5px; color:var(--ink-faint)}
+
+  /* Sixteen regions do not fit as buttons. */
+  .pick{display:block; width:100%; margin:0 0 10px; padding:8px 34px 8px 14px;
+    border-radius:999px; border:1px solid var(--line); background:var(--panel-2);
+    color:var(--ink); font:700 12.5px var(--font-text); appearance:none;
+    background-image:linear-gradient(45deg,transparent 50%,var(--ink-faint) 50%),
+      linear-gradient(135deg,var(--ink-faint) 50%,transparent 50%);
+    background-position:calc(100% - 18px) 52%, calc(100% - 13px) 52%;
+    background-size:5px 5px; background-repeat:no-repeat}
+  .rtab{display:grid; grid-template-columns:1fr auto auto; gap:3px 10px;
+    margin-top:6px; font-size:11.5px; font-variant-numeric:tabular-nums}
+  .rtab > span{font-size:10px; color:var(--ink-faint)}
+  .rtab > span:not(:first-child), .rtab b{text-align:right}
+  .rtab a{color:var(--ink-dim); text-decoration:none}
+  .rtab a:hover{color:var(--ink); text-decoration:underline}
+  .rtab a i{font-style:normal; font-size:9.5px; font-weight:700; color:var(--accent)}
+  .rtab .miss{color:var(--ink-faint); font-weight:400}
+  .card .go{display:inline-block; margin-top:10px; font-size:12px; font-weight:700;
+    color:var(--accent); text-decoration:none}
+  /* .key and the rest set their own display, which would beat `hidden`. */
+  [data-only][hidden]{display:none}
+
+  @media (max-width:640px){
+    header{padding-bottom:22px}
+    .chips{display:none}
+    .panel{top:auto; width:auto; max-height:72vh}
+    .locate{bottom:calc(152px + var(--safe-b))}
+    .maplibregl-ctrl-bottom-right{bottom:calc(142px + var(--safe-b))}
+    .panel.open ~ .locate{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="map" class="screen"></div>
+
+<header>
+  <div>
+    <div class="logo"><img src="icons/achez.svg" alt="" width="30" height="36">
+      <span><b>PANAL</b></span></div>
+    <nav class="nav">
+      <a href="national.html">Detección</a>
+      <a href="wui.html">Exposición</a>
+      <a href="chile.html" aria-current="page">Exposición Chile</a>
+      <a href="index.html">Replays</a>
+    </nav>
+  </div>
+  <div class="chips">
+    <button class="chip" id="c-style">mapa: oscuro</button>
+  </div>
+</header>
+
+<aside class="panel" id="sheet">
+  <button class="grip" id="grip" aria-label="Abrir o cerrar el panel"></button>
+
+  <div class="card" id="card" hidden></div>
+
+  <div class="research"><b>Mapa en investigación: todavía no es un producto
+  de riesgo.</b> Lo probamos con incendios reales y acierta con claridad en
+  <span id="res-val">—</span>.<span id="res-reg"></span> Para validarlo faltan
+  los registros de daño y el catastro de vegetación de CONAF.</div>
+
+  <select class="pick" id="regs" aria-label="Región"></select>
+
+  <div class="ttl">Exposición urbano-forestal</div>
+  <div class="sub" id="h-sub">—</div>
+
+  <div class="seg" role="group" aria-label="Qué colorear">
+    <button id="m-hz" aria-pressed="true">Amenaza<small id="hz-val">—</small></button>
+    <button id="m-cs" aria-pressed="false">Consecuencia<small class="unval">sin validar</small></button>
+  </div>
+
+  <div id="leg-hz">
+    <p class="note">Qué tan peligroso sería un incendio que llegue hasta
+    aquí, según la <b>pendiente</b> y el <b>combustible</b> (la vegetación
+    que puede arder) junto a las viviendas. Lo probamos con incendios
+    reales, usando la vegetación que había antes de cada uno. Cuántas veces
+    acertó más que el azar:</p>
+    <div class="val" id="val"></div>
+    <p class="note">Funciona bien cuando el fuego baja por matorral seco
+    hacia casas dispersas. <b>No funciona bien con incendios que avanzan
+    por poblaciones densas o por plantaciones</b>: para eso falta saber qué
+    tipo de vegetación hay.</p>
+  </div>
+  <div id="leg-cs" hidden>
+    <div class="unvalbox"><b>Sin validar.</b> Qué tan grave sería si el
+    fuego llega: qué tan difícil es salir del sector, si hay viviendas
+    precarias o personas que no podrían irse por su cuenta, y si falta red
+    de agua. Todavía no hay evidencia para el peso de cada factor; para eso
+    hacen falta los registros de daño de 2024.</div>
+  </div>
+
+  <h4 data-only="summary" hidden>Viviendas en el 10% más alto de Chile, por km²</h4>
+  <h4 data-only="region" hidden>Percentil en Chile</h4>
+  <div class="ramp" id="ramp"></div>
+  <div class="ramp-lbl" id="ramp-lbl"><span>&lt; 25</span><span>50</span><span>75</span><span>90</span><span>10% más alto</span></div>
+  <div class="key"><i style="background:rgba(79,96,103,.5);
+    border:1px solid #4F6067"></i><span><b style="color:var(--ink)">Sin datos de
+    combustible</b>: no se clasifica, y eso no significa riesgo bajo.</span></div>
+  <div class="key" data-only="summary" hidden><i style="background:rgba(100,217,242,.27);
+    border:1px solid rgba(100,217,242,.43)"></i><span>Hexágonos tenues: hay
+    viviendas, pero ninguna en el 10% más alto.</span></div>
+  <div class="key" data-only="region" hidden><i style="border:2px solid #fff"></i><span>Prioridad: amenaza
+    y consecuencia, las dos en el 10% más alto de Chile</span></div>
+  <div class="key" data-only="region" hidden><i style="background:rgba(242,135,5,.3);
+    border:2px solid rgba(242,135,5,.8)"></i><span>Hexágonos grandes y tenues:
+    zona rural, con pocas casas dispersas.</span></div>
+
+  <div data-only="summary" hidden>
+    <div class="stat">
+      <div><b id="t-viv">—</b><span>viviendas en el 10% de mayor amenaza de Chile</span></div>
+      <div><b id="t-per">—</b><span>personas</span></div>
+    </div>
+    <h4>Por región</h4>
+    <p class="note" style="margin-top:0">Viviendas y personas en el 10% de
+    mayor amenaza del país. Toca una región para ver sus celdas.</p>
+    <div class="rtab" id="rtab"></div>
+    <h4>Prioridad</h4>
+  </div>
+
+  <div class="stat">
+    <div><b id="s-cells">—</b><span>celdas prioritarias</span></div>
+    <div><b id="s-viv">—</b><span>viviendas</span></div>
+    <div><b id="s-per">—</b><span>personas</span></div>
+  </div>
+  <p class="note" style="margin-top:6px;font-size:10.5px">La prioridad depende de
+  la consecuencia, que <b style="color:var(--warn)">no está validada</b>.
+  <span id="s-egr"></span></p>
+
+  <details>
+    <summary>Qué es y qué no es</summary>
+    <ul>
+      <li><b>Cada celda se compara con todo Chile</b>, no con su región. Por
+      eso el mismo color significa lo mismo en Arica y en Aysén, y una
+      región se puede poner al lado de otra. En <a href="wui.html">Exposición</a>
+      cada región se compara consigo misma.</li>
+      <li><b>No predice dónde empieza un incendio.</b> Dice qué tan mal
+      podría ir si uno llegara.</li>
+      <li><b>No es una alerta.</b> Las alertas oficiales son de SENAPRED.
+      Ante un incendio: <b>130</b> CONAF, <b>132</b> Bomberos.</li>
+      <li><b>No reemplaza el criterio</b> de quien conoce el terreno. Ordena
+      miles de celdas para que alguien revise solo las decenas que importan.</li>
+      <li>Sirve para prepararse <b>antes</b> de la temporada: limpiar
+      vegetación, hacer cortafuegos, planificar salidas.</li>
+      <li data-only="region" hidden>Cada hexágono mide unos 400 m. Es un
+      promedio de la celda, no de tu casa.</li>
+      <li data-only="summary" hidden>En esta vista los hexágonos son
+      grandes: suman las celdas de 400 m que hay adentro. Elige una región
+      para verlas una por una.</li>
+    </ul>
+  </details>
+  <div class="src" id="src">—</div>
+</aside>
+
+<button class="locate" id="locate">◎ Cerca de mí</button>
+
+<div class="loading" id="loading">Cargando el índice de exposición…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.js"></script>
+<!-- deck.gl's standalone bundle needs h3-js loaded first, as globalThis.h3. -->
+<script src="https://cdn.jsdelivr.net/npm/h3-js@4.2.1/dist/h3-js.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/deck.gl@9.1.14/dist.min.js"></script>
+<script src="panal.js"></script>
+<script>
+// Every region, north to south, each ranked against the whole country
+// (ingest/scripts/export_wui_chile.py). With no region it opens on the
+// summary of all of them.
+const PAGE = {
+  scope: "chile",
+  home: null,
+  summary: "data/chile/resumen.json",
+  regions: Object.fromEntries([
+    ["arica", "Arica y Parinacota"], ["tarapaca", "Tarapacá"],
+    ["antofagasta", "Antofagasta"], ["atacama", "Atacama"],
+    ["coquimbo", "Coquimbo"], ["valparaiso", "Valparaíso"],
+    ["metropolitana", "Metropolitana"], ["ohiggins", "O'Higgins"],
+    ["maule", "Maule"], ["nuble", "Ñuble"], ["biobio", "Biobío"],
+    ["araucania", "La Araucanía"], ["los_rios", "Los Ríos"],
+    ["los_lagos", "Los Lagos"], ["aysen", "Aysén"], ["magallanes", "Magallanes"],
+  ].map(([id, label]) => [id, { label, file: `data/chile/${id}.json` }])),
+};
+// The two regions whose fires showed it, as on wui.html.
+PAGE.regions.biobio.note = PAGE.regions.nuble.note =
+  "Aquí dominan las plantaciones de pino y eucalipto, que el satélite ve " +
+  "como vegetación húmeda. Es donde el índice funciona peor.";
+</script>
+<script src="wui.js"></script>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>

@@ -54,10 +54,11 @@ published to a public bucket about a minute after each scan closes.
 VIIRS at 375 m for precision. A cron refreshes the national snapshot on
 the satellite's own cadence.
 
-**Public, and installable.** https://panalforestal.cl — three views that
+**Public, and installable.** https://panalforestal.cl — four views that
 install as one app from a phone's browser: live national detection
 (`national.html`, the start page), the wildland-urban exposure map for
-Valparaíso and for Biobío–Ñuble (`wui.html`), and replays of the major fires since
+Valparaíso and for Biobío–Ñuble (`wui.html`), the same map for all of Chile
+ranked against the country (`chile.html`), and replays of the major fires since
 2014 at native cadence (`index.html`). See [`web/`](web) and
 [`deploy/`](deploy).
 
@@ -107,7 +108,7 @@ would be if it arrived.
 ```
 ingest/    goes · viirs · power · anomaly · census · terrain · fuel · egress
 engine/    wui — the exposure index (pure, no I/O, 21 tests)
-web/       national.html (live) · wui.html (exposure) · index.html (replays) · sw.js (app)
+web/       national.html (live) · wui.html, chile.html (exposure) · index.html (replays) · sw.js (app)
 deploy/    nginx vhost and setup scripts for panalforestal.cl
 api/       FastAPI — not started
 android/   the 2020 app, carried forward for a Phase 7 rebuild

@@ -30,6 +30,20 @@ REGIONS = {
     "metropolitana": (13,),
     "biobio": (8, 16),
     "centro_sur": (5, 13, 6, 7, 16, 8),
+    # The rest of the country, one build each, for the national map (see
+    # export_wui_chile.py). Biobío and Ñuble stay one build, as published.
+    "arica": (15,),
+    "tarapaca": (1,),
+    "antofagasta": (2,),
+    "atacama": (3,),
+    "coquimbo": (4,),
+    "ohiggins": (6,),
+    "maule": (7,),
+    "araucania": (9,),
+    "los_rios": (14,),
+    "los_lagos": (10,),
+    "aysen": (11,),
+    "magallanes": (12,),
 }
 
 
@@ -46,6 +60,10 @@ def main():
                    help="días de esa temporada (default feb–mar). Para "
                         "validar contra un incendio, una ventana que termine "
                         "antes del incendio: ver validate_wui.py")
+    p.add_argument("--max-cloud", type=float, default=20.0,
+                   help="nubosidad máxima por escena, %% (default 20). "
+                        "Magallanes necesita 40 y enero–abril: con 20 en "
+                        "feb–mar, Punta Arenas queda sin combustible")
     p.add_argument("--no-fuel", action="store_true")
     p.add_argument("--no-egress", action="store_true")
     p.add_argument("--with-senapred", action="store_true",
@@ -94,7 +112,7 @@ def main():
         print(f"combustible Sentinel-2 ({a.fuel_year}, "
               f"{a.fuel_window[0]}..{a.fuel_window[1]})…", file=sys.stderr)
         f = fuel.cells_fuel(cells, year=a.fuel_year,
-                            window=tuple(a.fuel_window))
+                            window=tuple(a.fuel_window), max_cloud=a.max_cloud)
         df["ndvi"] = [f.get(c, {}).get("ndvi") for c in cells]
         df["ndmi"] = [f.get(c, {}).get("ndmi") for c in cells]
         df["fuel_factor"] = [f.get(c, {}).get("fuel_factor") for c in cells]

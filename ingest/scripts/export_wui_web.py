@@ -95,25 +95,25 @@ def _r(v, nd):
     return None if v is None or v != v else round(float(v), nd)
 
 
-def main():
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--wui", required=True)
-    p.add_argument("--region", default="Región de Valparaíso")
-    # The validation record's own key for the region, so the page can say
-    # how the hazard did on this region's fires and not only on all six.
-    p.add_argument("--region-id", default="valparaiso")
-    p.add_argument("-o", "--out", required=True)
-    a = p.parse_args()
-
-    s = pd.read_parquet(a.wui)
-
+def refuse_senapred(s, name):
     for col in ("response_factor", "ignition"):
         if col in s.columns and s[col].notna().any():
-            sys.exit(f"{a.wui} trae `{col}`: es el build con capas SENAPRED. "
+            sys.exit(f"{name} trae `{col}`: es el build con capas SENAPRED. "
                      "No se publica sin su permiso explícito.")
 
-    scored = s[s["wui"].notna()]
-    both = set(wui.priority(s)["h3"])
+
+def export(s, region: str, region_id: str, ref=None) -> dict:
+    """The page's JSON for the cells in `s`.
+
+    Percentiles and the priority outline are taken over `ref`, the frame
+    the cells are ranked against: the region itself by default, the whole
+    country for the national map (export_wui_chile.py). With a `ref`, the
+    meta also carries its fuel and exit quantiles, so the card can place a
+    cell's components against the same frame as its rank.
+    """
+    ref = s if ref is None else ref
+    scored = ref[ref["wui"].notna()]
+    both = set(wui.priority(ref)["h3"])
 
     cells = s[s["inhabited"]].copy()
     ranked = cells["wui"].notna()
@@ -154,8 +154,8 @@ def main():
         "meta": {
             "generated": dt.datetime.now(dt.timezone.utc)
                            .isoformat(timespec="seconds").replace("+00:00", "Z"),
-            "region": a.region,
-            "region_id": a.region_id,
+            "region": region,
+            "region_id": region_id,
             "res_max": 9,
             "res_cells": {str(k): int(v) for k, v in
                           cells["res"].value_counts().sort_index().items()},
@@ -198,8 +198,19 @@ def main():
                  "comuna", "prio"],
         "rows": rows,
     }
+    if ref is not s:
+        inh = ref[ref["inhabited"]]
+        q = np.linspace(0, 1, 101)
+        out["meta"]["ref_quantiles"] = {
+            "comb": [_r(v, 2) for v in inh["fuel_factor"].dropna().quantile(q)],
+            "egr": [_r(v, 2) for v in inh.loc[inh["has_egress"], "egress_deficit"]
+                    .dropna().quantile(q)],
+        }
+    return out
 
-    path = Path(a.out)
+
+def write(out: dict, path) -> None:
+    path = Path(path)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
     tmp.replace(path)
@@ -212,6 +223,21 @@ def main():
     print(f"  prioridad: {pr['cells']} celdas · {pr['viviendas']:,} viviendas · "
           f"{pr['personas']:,} personas · egreso conocido en "
           f"{pr['egreso_conocido']}/{pr['cells']}", file=sys.stderr)
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--wui", required=True)
+    p.add_argument("--region", default="Región de Valparaíso")
+    # The validation record's own key for the region, so the page can say
+    # how the hazard did on this region's fires and not only on all six.
+    p.add_argument("--region-id", default="valparaiso")
+    p.add_argument("-o", "--out", required=True)
+    a = p.parse_args()
+
+    s = pd.read_parquet(a.wui)
+    refuse_senapred(s, a.wui)
+    write(export(s, a.region, a.region_id), a.out)
 
 
 if __name__ == "__main__":
