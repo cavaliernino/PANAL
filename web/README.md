@@ -171,7 +171,7 @@ Switchable from the header chip, all keyless:
 | oscuro | CARTO Dark Matter — default; fire colours read best on it |
 | claro | CARTO Positron |
 | callejero | OpenFreeMap Liberty |
-| satélite | EOX Sentinel-2 cloudless, 10 m, with relief shading from the AWS Terrain Tiles and CARTO's place names |
+| satélite | EOX Sentinel-2 cloudless, 10 m, with relief shading from the AWS Terrain Tiles and CARTO's place names; on the exposure map, Esri World Imagery, 30–50 cm, with street names too |
 
 Slope drives fire spread and the fuel is the vegetation, so the satellite
 map is there to read the hexagons against both, not as decoration.
@@ -180,15 +180,23 @@ map is there to read the hexagons against both, not as decoration.
 cloud-free Sentinel-2 mosaic per year, 2016 to 2025. A replay uses the one
 from the year before its fire, so the vegetation under the cells is what
 was there to burn: the 2024 mosaic already shows Viña 2024's scar, the 2023
-one does not. The detection and exposure maps use the newest. The chip
-always names the year; 2014 has no mosaic from before, and its chip says
-*posterior al incendio*. A sharper undated mosaic (Esri's, sub-metre)
-would show houses better and could show either side of a fire without
-saying which.
+one does not. The detection map uses the newest. The chip always names the
+year; 2014 has no mosaic from before, and its chip says *posterior al
+incendio*.
 
 At 10 m the picture is native to about zoom 14; closer in it only gets
 blurrier. The mosaics from 2018 on are CC BY-NC-SA 4.0 — free for
 non-commercial use, commercial use needs EOX's licence.
+
+**The exposure map trades the date for detail.** A cell there is checked
+against the streets and the houses in it, and at 10 m neither shows, so
+its satellite is Esri World Imagery: Vantor imagery at 31–34 cm in Viña
+and Valparaíso, 50 cm in Concepción, 34 cm in rural Biobío, all captured
+in 2026 (Esri's metadata, checked 2026-10-20). Each place is its own
+capture, so the chip names no year. It is native to zoom 19 in the
+cities and 18 in the countryside; past that the last level is stretched.
+CARTO's street names go over it. Esri's terms ask for its attribution on
+the map, which MapLibre shows.
 
 On the exposure map the hexagon fill is halved over the satellite, so the
 houses and the vegetation under each cell show through; the solid edge

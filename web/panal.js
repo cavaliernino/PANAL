@@ -172,15 +172,34 @@ function s2Mosaic(when) {
   return { year: Math.max(S2_FIRST, Math.min(S2_LAST, y)), after: y < S2_FIRST };
 }
 
-/** The satellite style: the mosaic, relief shading from the AWS terrain
+// Esri World Imagery, for the one map where detail matters more than the
+// date: the exposure map is read cell by cell against the streets and the
+// houses, and at 10 m Sentinel-2 shows neither. Vantor imagery at 31–34 cm
+// in Viña and Valparaíso, 50 cm in Concepción and 34 cm in rural Biobío,
+// all from 2026 (Esri's metadata, checked 2026-10-20). Each place is its
+// own capture, so the map has no one date to name. Native to zoom 19 in
+// the cities and 18 in the countryside; past that Esri serves a "Map data
+// not yet available" tile, and blankTile=false makes it a 404 instead, so
+// MapLibre keeps stretching the level above.
+const ESRI_IMAGERY = {
+  type: "raster", tileSize: 256, maxzoom: 19,
+  tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?blankTile=false"],
+  attribution: "Source: Esri, Vantor, Earthstar Geographics, and the GIS User Community",
+};
+
+// Which picture the satellite basemap is: "s2", dated, by default; a page
+// that sets "esri" gets the sharp one, with street names over it.
+let satelliteImagery = "s2";
+
+/** The satellite style: the picture, relief shading from the AWS terrain
  *  tiles, and dark-matter's place names when it can be fetched. */
 async function satellite(when) {
-  const { year } = s2Mosaic(when);
+  const { year } = s2Mosaic(when), sharp = satelliteImagery === "esri";
   const layer = year === 2016 ? "s2cloudless_3857" : `s2cloudless-${year}_3857`;
   const style = {
     version: 8,
     sources: {
-      s2: {
+      imagery: sharp ? ESRI_IMAGERY : {
         type: "raster", tileSize: 256, maxzoom: 14,
         tiles: [`https://tiles.maps.eox.at/wmts/1.0.0/${layer}/default/g/{z}/{y}/{x}.jpg`],
         attribution: `<a href="https://s2maps.eu">Sentinel-2 cloudless ${year}</a> by ` +
@@ -194,7 +213,7 @@ async function satellite(when) {
     },
     layers: [
       { id: "background", type: "background", paint: { "background-color": "#0A2E38" } },
-      { id: "s2", type: "raster", source: "s2" },
+      { id: "imagery", type: "raster", source: "imagery" },
       // Shadows in Petróleo, not black: black is the burn scar's.
       { id: "relief", type: "hillshade", source: "relief", paint: {
         "hillshade-exaggeration": 0.35,
@@ -206,12 +225,15 @@ async function satellite(when) {
   };
   const dark = await darkMatter();
   if (dark) {
-    // Place names only: the roads, rivers and coast are in the picture.
-    // One colour with a heavy halo, because the picture under them is busy.
+    // Place names only: the roads, rivers and coast are in the picture. The
+    // sharp picture also gets the street names, since telling one street
+    // from the next is what it is for. One colour with a heavy halo,
+    // because the picture under them is busy.
     Object.assign(style, { glyphs: dark.glyphs, sprite: dark.sprite });
     style.sources.carto = dark.sources.carto;
+    const named = sharp ? ["place", "transportation_name"] : ["place"];
     for (const l of dark.layers)
-      if (l.type === "symbol" && l["source-layer"] === "place")
+      if (l.type === "symbol" && named.includes(l["source-layer"]))
         style.layers.push({ ...l, paint: { ...l.paint,
           "text-color": "#EAF4F7", "text-halo-color": "rgba(6,34,43,0.85)",
           "text-halo-width": 1.4 } });
@@ -244,11 +266,12 @@ async function setBasemap(map, k, when) {
   return true;
 }
 
-/** The basemap's name as the chip shows it; the satellite one says its
+/** The basemap's name as the chip shows it; the Sentinel-2 one says its
  *  year, because a mosaic is a picture of one year and not of today. */
 function basemapName(k, when) {
   k %= STYLES.length;
-  return k === SATELLITE ? `satélite ${s2Mosaic(when).year}` : STYLES[k][0];
+  if (k !== SATELLITE) return STYLES[k][0];
+  return satelliteImagery === "esri" ? "satélite" : `satélite ${s2Mosaic(when).year}`;
 }
 
 /** Which H3 level to serve at a given zoom.

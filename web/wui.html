@@ -196,6 +196,11 @@ const resOf = h => h3.getResolution(h);
 
 let D, byCell, map, overlay, mode = "hz", styleIdx = 0, selected = null, me = null;
 
+// The satellite here is Esri's sub-metre picture, not the dated
+// Sentinel-2 the other maps use: a cell is checked against the streets
+// and the houses in it, and at 10 m neither shows.
+satelliteImagery = "esri";
+
 const cls = p => BREAKS.filter(b => p >= b).length;
 const ramp = () => RAMP;
 const val = r => mode === "hz" ? r[HZ] : r[CS];
