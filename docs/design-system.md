@@ -369,7 +369,7 @@ misma especificidad, porque el `<style>` va después.
 - Intensidad del fuego en tres niveles (§4.1), en mapas, leyendas y
   tooltips.
 - `sw.js` cachea `panal.css` e `icons/achez.svg`; la CSP (en
-  `deploy/nginx`, todavía *report-only*) admite `fonts.googleapis.com` y
+  `deploy/nginx`, obligatoria) admite `fonts.googleapis.com` y
   `fonts.gstatic.com`.
 
 - Favicon e íconos de la PWA con el isotipo (§1).
