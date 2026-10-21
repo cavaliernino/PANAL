@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""Draw the favicon and the PWA icons from the ACHEZ isotipo.
+"""Draw the PWA icons from the ACHEZ isotipo.
 
     python3 make_icons.py
 
-The favicon (icon.svg) is the isotipo alone on a transparent ground, so it
-sits on whatever the browser tab is. The PWA icons put it on a Petróleo 900
-tile: launchers need an opaque, full shape, and iOS dislikes transparency. achez.svg is used
-as-is — no recolouring, no reshaping — and only scaled and centred here.
+The favicon (icon.svg) is the flame alone on a transparent ground, so it
+sits on whatever the browser tab is. The PWA icons put it at 80% of a
+#1F2D3D tile with rounded corners, the canvas's "favicon oscuro": launchers
+need an opaque, full shape, and iOS dislikes transparency.
+achez.svg is used as-is — no recolouring, no reshaping — and only scaled and
+centred here.
 
-The SVGs are written directly. The PNGs are rasterised by headless Chrome,
-since nothing else on hand renders SVG gradients; set CHROME to another
-binary if it lives elsewhere.
+The PNGs are rasterised by headless Chrome, since nothing else on hand
+renders SVG gradients; set CHROME to another binary if it lives elsewhere.
 
 Maskable icons are cropped by the launcher to any shape inside a circle of
 40% radius, so the flame's bounding box stays within that.
@@ -23,7 +24,7 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).parent
-BG = "#0A2E38"            # --bg, Petróleo 900
+BG = "#1F2D3D"            # the favicon tile in the canvas
 CHROME = os.environ.get(
     "CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 
@@ -37,9 +38,9 @@ def isotipo():
     return re.sub(r"<!--.*?-->", "", body, flags=re.S).strip()
 
 
-def svg(n=64, corner=0.22, height=0.68, tile=True):
+def svg(n=64, corner=112 / 512, height=0.80, tile=True):
     """A square of side n with the flame `height` of it tall, centred, on a
-    Petróleo tile unless `tile` is false."""
+    #1F2D3D tile unless `tile` is false."""
     s = height * n / ISO_H
     tx, ty = (n - ISO_W * s) / 2, (n - ISO_H * s) / 2
     rx = f' rx="{corner * n:g}"' if corner else ""

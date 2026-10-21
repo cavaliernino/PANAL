@@ -67,8 +67,7 @@ panel flotante, los dos con `position:absolute` sobre el `#map`:
 
 <header>
   <div>
-    <div class="logo"><img src="icons/achez.svg" alt="" width="30" height="36">
-      <span><b>PANAL</b></span></div>
+    <div class="logo"><img src="icons/logo-horizontal.svg" alt="PANAL" width="154" height="32"></div>
     <nav class="nav">
       <a href="national.html" aria-current="page">Detección</a>
       <a href="wui.html">Exposición</a>

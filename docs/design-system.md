@@ -26,16 +26,18 @@ vienen la paleta, la tipografía y el isotipo.
 `#F4C160` → `#D96704`) y celeste (`#64D9F2` → `#03738C`). Se usa el archivo
 tal cual — sin cambiar proporciones, colores ni degradados.
 
-El logo completo (`.logo`) es isotipo + **PANAL** en Plus Jakarta Sans
-Regular blanco. Va solo sobre fondos oscuros, arriba a la izquierda,
-seguido de los pills de navegación (`.nav`) — nunca centrado, nunca solo.
-En la cabecera: isotipo de 36px de alto, PANAL a 22px.
+El logo completo (`.logo`) es `icons/logo-horizontal.svg`, copiado tal
+cual del lienzo: isotipo + el wordmark **PANAL** dibujado, en `#27A8CC`,
+la versión para fondo oscuro (sobre fondo claro el lienzo usa `#03738C`).
+Va arriba a la izquierda, seguido de los pills de navegación (`.nav`) —
+nunca centrado, nunca solo. En la cabecera mide 32px de alto.
 
-El favicon (`icons/icon.svg`) es el isotipo solo, sobre fondo
-transparente. Los íconos de la PWA (`icon-192.png`, `icon-512.png`,
-`maskable-512.png`, `apple-touch-icon.png`) lo ponen sobre una loseta
-Petróleo 900, porque los lanzadores necesitan una forma opaca y completa.
-Todos los genera `icons/make_icons.py` a partir de `achez.svg`.
+El favicon (`icons/icon.svg`) es la llama sola, sobre fondo transparente.
+Los íconos de la PWA (`icon-192.png`, `icon-512.png`, `maskable-512.png`,
+`apple-touch-icon.png`) la ponen al 80 % de una loseta `#1F2D3D` de
+esquinas redondeadas (el "favicon oscuro" del lienzo), porque los
+lanzadores necesitan una forma opaca y completa. Todos los genera
+`icons/make_icons.py` a partir de `achez.svg`.
 
 ---
 
@@ -237,7 +239,6 @@ Dos voces, desde Google Fonts (un `<link>` por página, `display=swap`):
 |---|---|---|
 | Montserrat 700–800 | `--font-display` | Títulos (`.ttl`, en mayúsculas), antetítulos de sección (`h4`, 700, `letter-spacing: .14em`, en `--accent`), cifras grandes (`.big`, `.clock`), botones |
 | Nunito Sans 400–700 | `--font-text` | Texto e interfaz |
-| Plus Jakarta Sans 400 | — | Solo el logo |
 
 Sin conexión, todo cae a `system-ui`. Monoespaciada únicamente para
 lecturas instrumentales (`brujula.html`, el HUD de la cámara):
@@ -254,7 +255,7 @@ paneles sobre el mapa son más densos y conservan la escala de antes:
 | 10.5–11px | Chips, antetítulos uppercase |
 | 12–12.5px | Cuerpo por defecto dentro de paneles |
 | 13–15px | Texto base del documento, títulos de sección (`.ttl`) |
-| 17–22px | Cifras secundarias, PANAL en el logo |
+| 17–22px | Cifras secundarias |
 | 24–30px | Cifra principal del panel (reloj, conteo) |
 
 Regla fija: **todo número que cambia en vivo lleva
@@ -368,7 +369,7 @@ misma especificidad, porque el `<style>` va después.
 - Tokens Petróleo/Fuego, Montserrat + Nunito Sans, radios y botones píldora.
 - Intensidad del fuego en tres niveles (§4.1), en mapas, leyendas y
   tooltips.
-- `sw.js` cachea `panal.css` e `icons/achez.svg`; la CSP (en
+- `sw.js` cachea `panal.css` e `icons/logo-horizontal.svg`; la CSP (en
   `deploy/nginx`, obligatoria) admite `fonts.googleapis.com` y
   `fonts.gstatic.com`.
 
